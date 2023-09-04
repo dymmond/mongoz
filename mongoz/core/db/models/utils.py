@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Type, cast
 
-from edgy.core.connection.registry import Registry
+from mongoz.core.connection.registry import Registry
 
 if TYPE_CHECKING:
-    from edgy.core.db.models.model import Model
+    from mongoz.core.db.models.model import Model
 
 
 def get_model(registry: Registry, model_name: str) -> Type["Model"]:

@@ -12,11 +12,19 @@ class Registry:
     """
 
     def __init__(
-        self, url: str, event_loop: Union[Callable[[], asyncio.AbstractEventLoop], None] = None
+        self,
+        url: str,
+        database: Database,
+        event_loop: Union[Callable[[], asyncio.AbstractEventLoop], None] = None,
     ) -> None:
         self.event_loop = event_loop or asyncio.get_event_loop
         self._client: AsyncIOMotorClient = AsyncIOMotorClient(url)
         self._client.get_io_loop = self.event_loop
+
+        assert isinstance(
+            database, Database
+        ), "`database` must be an instance of mongoz.core.connection.database.Database"
+        self._database = database
 
     @property
     def address(self) -> Tuple[str, int]:
@@ -48,4 +56,4 @@ class Registry:
 
     async def get_databases(self) -> Sequence[Database]:
         databases = await self._client.list_database_names()
-        return list(map(self.get_database, databases)
+        return list(map(self.get_database, databases))

@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING, Any, Dict, Tuple, Type, Union, cast
 from pydantic import ConfigDict
 
 if TYPE_CHECKING:
-    from edgy import Model
-    from edgy.core.db.models.metaclasses import MetaInfo
+    from mongoz.core.db.models import Model
+    from mongoz.core.db.models.metaclasses import MetaInfo
 
 
 class ProxyModel:
@@ -41,9 +41,9 @@ class ProxyModel:
         """
         Generates the model proxy for the __model__ definition.
         """
-        from edgy.core.utils.models import create_edgy_model
+        from mongoz.core.utils.models import create_mongoz_model
 
-        model: Type["Model"] = create_edgy_model(
+        model: Type["Model"] = create_mongoz_model(
             __name__=self.__name__,
             __module__=self.__module__,
             __bases__=self.__bases__,

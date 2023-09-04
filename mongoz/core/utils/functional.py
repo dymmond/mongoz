@@ -23,14 +23,14 @@ def extract_field_annotations_and_defaults(
 
 def get_model_fields(attrs: Union[Dict, Any]) -> Dict:
     """
-    Gets all the fields in current model class that are Edgy Fields.
+    Gets all the fields in current model class that are Mongoz Fields.
     """
     return {k: v for k, v in attrs.items() if isinstance(v, BaseField)}
 
 
 def populate_pydantic_default_values(attrs: Dict) -> Tuple[Dict, Dict]:
     """
-    Making sure the fields from Edgy are the ones being validated by Edgy models
+    Making sure the fields from Mongoz are the ones being validated by Mongoz models
     and delegates the validations from pydantic to that functionality.
     """
     model_fields = {}

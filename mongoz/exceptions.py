@@ -29,3 +29,15 @@ class MultipleObjectsReturned(MongozException):
 
 class FieldDefinitionError(MongozException):
     ...
+
+
+class ImproperlyConfigured(MongozException):
+    ...
+
+
+class InvalidObjectIdError(MongozException):
+    ...
+
+
+class InvalidKeyError(MongozException):
+    ...

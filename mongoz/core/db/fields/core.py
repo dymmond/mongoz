@@ -1,13 +1,14 @@
-import copy
 import datetime
 import decimal
 import enum
 import re
 import uuid
 from enum import EnumMeta
-from typing import Any, Optional, Pattern, Sequence, Set, Tuple, Union
+from typing import Any, Generator, Optional, Pattern, Sequence, Set, Tuple, Union
 
+import bson
 import pydantic
+from pydantic import EmailStr
 
 from mongoz.core.db.fields.base import BaseField
 from mongoz.exceptions import FieldDefinitionError
@@ -15,21 +16,10 @@ from mongoz.exceptions import FieldDefinitionError
 CLASS_DEFAULTS = ["cls", "__class__", "kwargs"]
 
 
-class Field:
-    def check(self, value: Any) -> Any:
-        """
-        Runs the checks for the fields being validated.
-        """
-        return value
-
-
 class FieldFactory:
-    """The base for all model fields to be used with Edgy"""
+    """The base for all model fields to be used with Mongoz"""
 
-    _bases = (
-        Field,
-        BaseField,
-    )
+    _bases = (BaseField,)
     _type: Any = None
 
     def __new__(cls, *args: Any, **kwargs: Any) -> BaseField:  # type: ignore
@@ -73,9 +63,19 @@ class FieldFactory:
         :type kwargs: Any
         """
 
+
+class ObjectId(FieldFactory, bson.ObjectId):
+    _type: bson.ObjectId
+
     @classmethod
-    def get_constraints(cls, **kwargs: Any) -> Any:
-        return []
+    def __get_validators__(cls) -> Generator[bson.ObjectId, None, None]:
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, value: Any) -> bson.ObjectId:
+        if not bson.ObjectId.is_valid(value):
+            raise ValueError("Invalid value for ObjectId")
+        return bson.ObjectId(value)
 
 
 class CharField(FieldFactory, str):
@@ -189,14 +189,6 @@ class FloatField(Number, float):
             **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
         return super().__new__(cls, **kwargs)
-
-
-class BigIntegerField(IntegerField):
-    """Representation of big integer field"""
-
-
-class SmallIntegerField(IntegerField):
-    """Represents a small integer field"""
 
 
 class DecimalField(Number, decimal.Decimal):
@@ -388,17 +380,5 @@ class ChoiceField(FieldFactory):
             raise FieldDefinitionError("ChoiceField choices must be an Enum")
 
 
-class PasswordField(CharField):
-    """
-    Representation of a Password
-    """
-
-
 class EmailField(CharField):
-    _type = str
-
-
-class URLField(CharField):
-    """
-    URL representation
-    """
+    _type = EmailStr

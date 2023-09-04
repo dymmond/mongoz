@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Type
 from orjson import OPT_OMIT_MICROSECONDS, OPT_SERIALIZE_NUMPY, dumps
 from pydantic import ConfigDict
 
-import edgy
-from edgy.core.db.fields.core import BaseField, Field
+import mongoz
+from mongoz.core.db.fields.core import BaseField, Field
 
 if TYPE_CHECKING:
-    from edgy import Model
-    from edgy.core.db.models.metaclasses import MetaInfo
+    from mongoz import Model
+    from mongoz.core.db.models.metaclasses import MetaInfo
 
-edgy_setattr = object.__setattr__
+mongoz_setattr = object.__setattr__
 
 
 class DateParser:
@@ -100,7 +100,7 @@ class ModelParser:
         return {k: v for k, v in model_class.model_fields.items() if k not in related_names}
 
 
-def create_edgy_model(
+def create_mongoz_model(
     __name__: str,
     __module__: str,
     __definitions__: Optional[Dict[Any, Any]] = None,
@@ -112,12 +112,12 @@ def create_edgy_model(
     __pydantic_extra__: Any = None,
 ) -> Type["Model"]:
     """
-    Generates an `edgy.Model` with all the required definitions to generate the pydantic
+    Generates an `mongoz.Model` with all the required definitions to generate the pydantic
     like model.
     """
 
     if not __bases__:
-        __bases__ = (edgy.Model,)
+        __bases__ = (mongoz.Model,)
 
     qualname = __qualname__ or __name__
     core_definitions = {
@@ -152,8 +152,8 @@ def generify_model_fields(model: Type["Model"]) -> Dict[Any, Any]:
 
     # handle the nested non existing results
     for name, field in model.model_fields.items():
-        edgy_setattr(field, "annotation", Any)
-        edgy_setattr(field, "null", True)
-        edgy_setattr(field, "metadata", [])
+        mongoz_setattr(field, "annotation", Any)
+        mongoz_setattr(field, "null", True)
+        mongoz_setattr(field, "metadata", [])
         fields[name] = field
     return fields

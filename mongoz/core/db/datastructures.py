@@ -1,57 +1,42 @@
-from typing import Any, List, Optional, Sequence
+import enum
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
-from pydantic import model_validator
-from pydantic.dataclasses import dataclass
+import pymongo
 
 
-@dataclass
-class Index:
+class Order(int, enum.Enum):
+    ASCENDING = pymongo.ASCENDING
+    DESCENDING = pymongo.DESCENDING
+
+
+class IndexType(str, enum.Enum):
+    GEO2D = pymongo.GEO2D
+    GEOSPHERE = pymongo.GEOSPHERE
+    HASHED = pymongo.HASHED
+    TEXT = pymongo.TEXT
+
+
+class Index(pymongo.IndexModel):
     """
     Class responsible for handling and declaring the database indexes.
     """
 
-    suffix: str = "idx"
-    max_name_length: int = 30
-    name: Optional[str] = None
-    fields: Optional[Sequence[str]] = None
+    def __init__(
+        self,
+        key: str = None,
+        keys: List[Union[Tuple[str, Order], Tuple[str, IndexType]]] = None,
+        name: str = None,
+        background: bool = False,
+        unique: bool = False,
+        sparse: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        keys = [(key, Order.ASCENDING)] if key else keys or []
+        self.name = name or "_".join([key[0] for key in keys])
+        self.unique = unique
 
-    @model_validator(mode="before")
-    def validate_data(cls, values: Any) -> Any:
-        name = values.kwargs.get("name")
-
-        if name is not None and len(name) > cls.max_name_length:
-            raise ValueError(f"The max length of the index name must be 30. Got {len(name)}")
-
-        fields = values.kwargs.get("fields")
-        if not isinstance(fields, (tuple, list)):
-            raise ValueError("Index.fields must be a list or a tuple.")
-
-        if fields and not all(isinstance(field, str) for field in fields):
-            raise ValueError("Index.fields must contain only strings with field names.")
-
-        if name is None:
-            suffix = values.kwargs.get("suffix", cls.suffix)
-            values["name"] = f"{'_'.join(fields)}_{suffix}"
-
-        return values
-
-
-@dataclass
-class UniqueConstraint:
-    """
-    Class responsible for handling and declaring the database unique_together.
-    """
-
-    fields: List[str]
-
-    @model_validator(mode="before")
-    def validate_data(cls, values: Any) -> Any:
-        fields = values.kwargs.get("fields")
-
-        if not isinstance(fields, (tuple, list)):
-            raise ValueError("UniqueConstraint.fields must be a list or a tuple.")
-
-        if fields and not all(isinstance(field, str) for field in fields):
-            raise ValueError("UniqueConstraint.fields must contain only strings with field names.")
-
-        return values
+        kwargs["name"] = self.name
+        kwargs["background"] = background
+        kwargs["sparse"] = sparse
+        kwargs["unique"] = unique
+        return super().__init__(keys, **kwargs)

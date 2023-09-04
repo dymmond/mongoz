@@ -4,7 +4,7 @@ from typing import Any
 
 import sqlalchemy
 
-from edgy.conf import settings
+from mongoz.conf import settings
 
 DIALECTS = {"postgres": "postgres"}
 

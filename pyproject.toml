@@ -37,7 +37,12 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP",
 ]
-dependencies = ["motor>=3.3.1", "orjson>=3.9.5", "pydantic>=2.3.0"]
+dependencies = [
+    "motor>=3.3.1",
+    "orjson>=3.9.5",
+    "pydantic>=2.3.0",
+    "pydantic-settings>=2.0.3",
+]
 keywords = ["mongoz"]
 
 [project.urls]

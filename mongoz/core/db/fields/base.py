@@ -4,6 +4,7 @@ from typing import Any, Callable, ClassVar, Dict, Optional, Pattern, Sequence, U
 from pydantic._internal import _repr
 from pydantic.fields import FieldInfo
 
+from mongoz.core.connection.database import Database
 from mongoz.core.connection.registry import Registry
 from mongoz.types import Undefined
 
@@ -68,6 +69,7 @@ class BaseField(FieldInfo, _repr.Representation):
             "multiple_of", None
         )
         self.registry: Registry = kwargs.pop("registry", None)
+        self.database: Database = kwargs.pop("database", None)
         self.comment = kwargs.pop("comment", None)
 
         for name, value in kwargs.items():

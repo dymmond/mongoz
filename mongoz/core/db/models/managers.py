@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
-from edgy.core.db.context_vars import get_tenant, set_tenant
-from edgy.core.db.querysets.base import QuerySet
+from mongoz.core.db.context_vars import get_tenant, set_tenant
+from mongoz.core.db.querysets.base import QuerySet
 
 if TYPE_CHECKING:
     pass
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 class Manager:
     """
-    Base Manager for the Edgy Models.
+    Base Manager for the Mongoz Models.
     To create a custom manager, the best approach is to inherit from the ModelManager.
 
     Example:
