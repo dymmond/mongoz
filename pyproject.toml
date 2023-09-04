@@ -10,9 +10,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 dynamic = ['version']
 license = "MIT"
-authors = [
-    { name = "Tiago Silva", email = "tiago.arasivla@gmail.com" },
-]
+authors = [{ name = "Tiago Silva", email = "tiago.arasivla@gmail.com" }]
 classifiers = [
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
@@ -39,7 +37,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP",
 ]
-dependencies = []
+dependencies = ["motor>=3.3.1", "orjson>=3.9.5", "pydantic>=2.3.0"]
 keywords = ["mongoz"]
 
 [project.urls]
