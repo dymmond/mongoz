@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Type, cast
 from mongoz.core.connection.registry import Registry
 
 if TYPE_CHECKING:
-    from mongoz.core.db.models.model import Document
+    from mongoz.core.db.documents.document import Document
 
 
 def get_model(registry: Registry, model_name: str) -> Type["Document"]:

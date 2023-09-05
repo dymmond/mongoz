@@ -7,11 +7,11 @@ from orjson import OPT_OMIT_MICROSECONDS, OPT_SERIALIZE_NUMPY, dumps
 from pydantic import ConfigDict
 
 import mongoz
-from mongoz.core.db.fields.core import BaseField, Field
+from mongoz.core.db.fields.core import BaseField
 
 if TYPE_CHECKING:
     from mongoz import Document
-    from mongoz.core.db.models.metaclasses import MetaInfo
+    from mongoz.core.db.documents.metaclasses import MetaInfo
 
 mongoz_setattr = object.__setattr__
 
@@ -34,7 +34,11 @@ class DateParser:
         Updates the auto fields
         """
         for name, field in fields.items():
-            if isinstance(field, Field) and self.has_auto_now(field) and self.is_datetime(field):
+            if (
+                isinstance(field, BaseField)
+                and self.has_auto_now(field)
+                and self.is_datetime(field)
+            ):
                 values[name] = field.get_default_value()  # type: ignore
         return values
 

@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Protocol, Tuple, TypeVar, Uni
 
 if TYPE_CHECKING:
     from mongoz.core.db.datastructures import Order
-    from mongoz.core.db.models import Document
+    from mongoz.core.db.documents import Document
     from mongoz.core.db.querysets.base import QuerySet
     from mongoz.core.db.querysets.expressions import SortExpression
 
@@ -39,18 +39,18 @@ class QuerySetProtocol(Protocol):
         ...
 
     @overload
-    def sort(self, key: SortExpression) -> "QuerySet[T]":  # pragma: no cover
+    def sort(self, key: "SortExpression") -> "QuerySet[T]":  # pragma: no cover
         ...
 
     @overload
-    def sort(self, key: Any, direction: Order) -> "QuerySet[T]":  # pragma: no cover
+    def sort(self, key: Any, direction: "Order") -> "QuerySet[T]":  # pragma: no cover
         ...
 
     @overload
-    def sort(self, key: List[Tuple[Any, Order]]) -> "QuerySet[T]":  # pragma: no cover
+    def sort(self, key: List[Tuple[Any, "Order"]]) -> "QuerySet[T]":  # pragma: no cover
         ...
 
-    def sort(self, key: Any, direction: Union[Order, None] = None) -> "QuerySet[T]":
+    def sort(self, key: Any, direction: Union["Order", None] = None) -> "QuerySet[T]":
         ...
 
     async def update(self, **kwargs: Any) -> List[T]:

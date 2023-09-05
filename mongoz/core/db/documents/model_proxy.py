@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING, Any, Dict, Tuple, Type, Union, cast
 from pydantic import ConfigDict
 
 if TYPE_CHECKING:
-    from mongoz.core.db.models import Document
-    from mongoz.core.db.models.metaclasses import MetaInfo
+    from mongoz.core.db.documents import Document
+    from mongoz.core.db.documents.metaclasses import MetaInfo
 
 
 class ProxyModel:

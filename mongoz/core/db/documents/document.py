@@ -1,6 +1,6 @@
 from typing import List, Sequence, Type, Union
 
-from mongoz.core.db.models.row import ModelRow
+from mongoz.core.db.documents.row import ModelRow
 from mongoz.exceptions import InvalidKeyError
 
 
@@ -99,3 +99,11 @@ class Document(ModelRow):
         for k, v in self.model_dump(exclude={"id"}).items():
             setattr(self, k, v)
         return self
+
+
+class EmbeddedDocument(Document):
+    """
+    Graphical representation of an Embedded document.
+    """
+
+    ...

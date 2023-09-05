@@ -1,7 +1,6 @@
-import asyncio
-from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple, Union
+from typing import List
 
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from mongoz.core.connection.collections import Collection
 
@@ -18,3 +17,7 @@ class Database:
     def get_collection(self, name: str) -> Collection:
         collection = self._db.get_collection(name)
         return Collection(name, collection=collection)
+
+    async def get_collections(self) -> List[Collection]:
+        collections = await self._db.list_collection_names()
+        return list(map(self.get_collection, collections))

@@ -3,8 +3,10 @@ import inspect
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Dict,
     List,
+    Mapping,
     Optional,
     Set,
     Tuple,
@@ -19,13 +21,13 @@ from pydantic._internal._model_construction import ModelMetaclass
 from mongoz.core.connection.collections import Collection
 from mongoz.core.connection.registry import Registry
 from mongoz.core.db.datastructures import Index
+from mongoz.core.db.documents.managers import Manager
 from mongoz.core.db.fields.core import BaseField
-from mongoz.core.db.models.managers import Manager
 from mongoz.core.utils.functional import extract_field_annotations_and_defaults, mongoz_setattr
 from mongoz.exceptions import ImproperlyConfigured
 
 if TYPE_CHECKING:
-    from mongoz.core.db.models import Document
+    from mongoz.core.db.documents import Document
 
 
 class MetaInfo:
@@ -117,7 +119,7 @@ def _check_manager_for_bases(
 
 
 class BaseModelMeta(ModelMetaclass):
-    __slots__ = ()
+    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
 
     @no_type_check
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
@@ -239,7 +241,7 @@ class BaseModelMeta(ModelMetaclass):
             field.registry = registry
 
         new_class.__db_model__ = True
-        new_class.__mongoz_fields__ = meta.fields_mapping
+        cls.__mongoz_fields__ = meta.fields_mapping
         meta.model = new_class
         meta.manager.model_class = new_class
 
@@ -273,7 +275,7 @@ class BaseModelMeta(ModelMetaclass):
         """
         return cls.__proxy_model__
 
-    def __getattr__(self, name: str) -> Any:
-        if name in self.__mongoz_fields__:
-            return self.__mongoz_fields__[name]
-        return super().__getattribute__(name)
+    # def __getattr__(self, name: str) -> Any:
+    #     if name in self.__mongoz_fields__:
+    #         return self.__mongoz_fields__[name]
+    #     return super().__getattribute__(name)

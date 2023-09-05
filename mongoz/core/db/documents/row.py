@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Any, Optional, Type
 
-from mongoz.core.db.models.base import MongozBaseModel
+from mongoz.core.db.documents.base import MongozBaseModel
 
 if TYPE_CHECKING:  # pragma: no cover
-    from mongoz.core.db.models import Document
+    from mongoz.core.db.documents import Document
 
 
 class ModelRow(MongozBaseModel):

@@ -1,13 +1,13 @@
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Generic, List, Type, TypeVar, Union
 
+from mongoz.core.db.datastructures import Order
 from mongoz.core.db.fields.base import BaseField
+from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.exceptions import MultipleObjectsReturned, ObjectNotFound
 from mongoz.protocols.queryset import QuerySetProtocol
 
 if TYPE_CHECKING:
-    from mongoz.core.db.datastructures import Order
-    from mongoz.core.db.models import Document
-    from mongoz.core.db.querysets.expressions import Expression, SortExpression
+    from mongoz.core.db.documents import Document
 
 T = TypeVar("T", bound="Document")
 

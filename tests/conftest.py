@@ -6,8 +6,8 @@ import pytest
 
 from mongoz.core.connection.registry import Registry
 
-database_uri = os.environ.get("DATABASE_URI", "mongodb://localhost:27017")
-client = Registry(database_uri, get_event_loop=asyncio.get_running_loop)
+database_uri = os.environ.get("DATABASE_URI", "mongodb://root:mongoadmin@localhost:27017")
+client = Registry(database_uri, event_loop=asyncio.get_running_loop)
 
 
 @pytest.fixture(scope="session")

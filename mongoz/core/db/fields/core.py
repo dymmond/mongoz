@@ -1,10 +1,9 @@
 import datetime
 import decimal
 import enum
-import re
 import uuid
 from enum import EnumMeta
-from typing import Any, Generator, Optional, Pattern, Sequence, Set, Tuple, Union
+from typing import Any, Generator, List, Optional, Sequence, Set, Tuple, Union
 
 import bson
 import pydantic
@@ -33,9 +32,13 @@ class FieldFactory:
         choices: Set[Any] = set(kwargs.pop("choices", []))
         comment: str = kwargs.pop("comment", None)
         owner = kwargs.pop("owner", None)
-        format: str = kwargs.pop("format", None)
         read_only: bool = kwargs.pop("read_only", False)
-        field_type = cls._type
+        list_type: type = kwargs.pop("list_type", None)
+
+        if list_type is None:
+            field_type = cls._type
+        else:
+            field_type = List[list_type]
 
         namespace = dict(
             __type__=field_type,
@@ -48,7 +51,6 @@ class FieldFactory:
             choices=choices,
             comment=comment,
             owner=owner,
-            format=format,
             read_only=read_only,
             **kwargs,
         )
@@ -72,13 +74,13 @@ class ObjectId(FieldFactory, bson.ObjectId):
         yield cls.validate
 
     @classmethod
-    def validate(cls, value: Any) -> bson.ObjectId:
-        if not bson.ObjectId.is_valid(value):
+    def validate(cls, **kwargs: Any) -> bson.ObjectId:
+        if not bson.ObjectId.is_valid(**kwargs):
             raise ValueError("Invalid value for ObjectId")
-        return bson.ObjectId(value)
+        return bson.ObjectId(**kwargs)
 
 
-class CharField(FieldFactory, str):
+class String(FieldFactory, str):
     """String field representation that constructs the Field class and populates the values"""
 
     _type = str
@@ -88,19 +90,8 @@ class CharField(FieldFactory, str):
         *,
         max_length: Optional[int] = 0,
         min_length: Optional[int] = None,
-        regex: Union[str, Pattern] = None,
         **kwargs: Any,
     ) -> BaseField:
-        if regex is None:
-            regex = None
-            kwargs["pattern_regex"] = None
-        elif isinstance(regex, str):
-            regex = regex
-            kwargs["pattern_regex"] = re.compile(regex)
-        else:
-            regex = regex.pattern
-            kwargs["pattern_regex"] = regex
-
         kwargs = {
             **kwargs,
             **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
@@ -115,24 +106,9 @@ class CharField(FieldFactory, str):
             raise FieldDefinitionError(detail=f"'max_length' is required for {cls.__name__}")
 
         min_length = kwargs.get("min_length")
-        pattern = kwargs.get("regex")
 
         assert min_length is None or isinstance(min_length, int)
         assert max_length is None or isinstance(max_length, int)
-        assert pattern is None or isinstance(pattern, (str, Pattern))
-
-
-class TextField(FieldFactory, str):
-    """String representation of a text field which means no max_length required"""
-
-    _type = str
-
-    def __new__(cls, **kwargs: Any) -> BaseField:  # type: ignore
-        kwargs = {
-            **kwargs,
-            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
-        }
-        return super().__new__(cls, **kwargs)
 
 
 class Number(FieldFactory):
@@ -145,7 +121,7 @@ class Number(FieldFactory):
             raise FieldDefinitionError(detail="'minimum' cannot be bigger than 'maximum'")
 
 
-class IntegerField(Number, int):
+class Integer(Number, int):
     """
     Integer field factory that construct Field classes and populated their values.
     """
@@ -171,7 +147,7 @@ class IntegerField(Number, int):
         return super().__new__(cls, **kwargs)
 
 
-class FloatField(Number, float):
+class Double(Number, float):
     """Representation of a int32 and int64"""
 
     _type = float
@@ -191,7 +167,7 @@ class FloatField(Number, float):
         return super().__new__(cls, **kwargs)
 
 
-class DecimalField(Number, decimal.Decimal):
+class Decimal(Number, decimal.Decimal):
     _type = decimal.Decimal
 
     def __new__(  # type: ignore
@@ -222,7 +198,7 @@ class DecimalField(Number, decimal.Decimal):
             )
 
 
-class BooleanField(FieldFactory, int):
+class Boolean(FieldFactory, int):
     """Representation of a boolean"""
 
     _type = bool
@@ -261,7 +237,7 @@ class AutoNowMixin(FieldFactory):
         return super().__new__(cls, **kwargs)
 
 
-class DateTimeField(AutoNowMixin, datetime.datetime):
+class DateTime(AutoNowMixin, datetime.datetime):
     """Representation of a datetime field"""
 
     _type = datetime.datetime
@@ -283,7 +259,7 @@ class DateTimeField(AutoNowMixin, datetime.datetime):
         return super().__new__(cls, **kwargs)
 
 
-class DateField(AutoNowMixin, datetime.date):
+class Date(AutoNowMixin, datetime.date):
     """Representation of a date field"""
 
     _type = datetime.date
@@ -305,7 +281,7 @@ class DateField(AutoNowMixin, datetime.date):
         return super().__new__(cls, **kwargs)
 
 
-class TimeField(FieldFactory, datetime.time):
+class Time(FieldFactory, datetime.time):
     """Representation of a time field"""
 
     _type = datetime.time
@@ -318,13 +294,13 @@ class TimeField(FieldFactory, datetime.time):
         return super().__new__(cls, **kwargs)
 
 
-class JSONField(FieldFactory, pydantic.Json):  # type: ignore
+class Object(FieldFactory, pydantic.Json):  # type: ignore
     """Representation of a JSONField"""
 
     _type = Any
 
 
-class BinaryField(FieldFactory, bytes):
+class Binary(FieldFactory, bytes):
     """Representation of a binary"""
 
     _type = bytes
@@ -343,7 +319,7 @@ class BinaryField(FieldFactory, bytes):
             raise FieldDefinitionError(detail="Parameter 'max_length' is required for BinaryField")
 
 
-class UUIDField(FieldFactory, uuid.UUID):
+class UUID(FieldFactory, uuid.UUID):
     """Representation of a uuid"""
 
     _type = uuid.UUID
@@ -357,7 +333,7 @@ class UUIDField(FieldFactory, uuid.UUID):
         return super().__new__(cls, **kwargs)
 
 
-class ChoiceField(FieldFactory):
+class Choice(FieldFactory):
     """Representation of an Enum"""
 
     _type = enum.Enum
@@ -380,5 +356,35 @@ class ChoiceField(FieldFactory):
             raise FieldDefinitionError("ChoiceField choices must be an Enum")
 
 
-class EmailField(CharField):
+class EmailField(String):
     _type = EmailStr
+
+
+class Array(FieldFactory, list):
+    _type = list
+
+    def __new__(  # type: ignore
+        cls,
+        list_type: type,
+        **kwargs: Any,
+    ) -> BaseField:
+        kwargs = {
+            **kwargs,
+            **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
+        }
+        return super().__new__(cls, **kwargs)
+
+
+class ArrayList(FieldFactory, list):
+    _type = list
+
+    def __new__(  # type: ignore
+        cls,
+        **kwargs: Any,
+    ) -> BaseField:
+        kwargs = {
+            **kwargs,
+            **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
+        }
+        kwargs["list_type"] = Any
+        return super().__new__(cls, **kwargs)

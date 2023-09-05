@@ -55,8 +55,6 @@ class BaseField(FieldInfo, _repr.Representation):
         self.owner: Any = kwargs.pop("owner", None)
         self.name: str = kwargs.pop("name", None)
         self.alias: str = kwargs.pop("alias", None)
-        self.regex: str = kwargs.pop("regex", None)
-        self.format: str = kwargs.pop("format", None)
         self.min_length: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop(
             "min_length", None
         )
@@ -114,3 +112,7 @@ class BaseField(FieldInfo, _repr.Representation):
         if callable(default):
             return default()
         return default
+
+
+class MongozField(BaseField):
+    ...
