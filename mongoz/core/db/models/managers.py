@@ -1,9 +1,6 @@
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from mongoz.core.db.querysets.base import QuerySet
-
-if TYPE_CHECKING:
-    pass
 
 
 class Manager:
