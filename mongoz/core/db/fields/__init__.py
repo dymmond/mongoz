@@ -1,5 +1,7 @@
 from .core import (
     UUID,
+    Array,
+    ArrayList,
     AutoNowMixin,
     BaseField,
     Binary,
@@ -10,6 +12,7 @@ from .core import (
     Decimal,
     Double,
     EmailField,
+    Embed,
     Integer,
     Object,
     String,
@@ -17,6 +20,8 @@ from .core import (
 )
 
 __all__ = [
+    "Array",
+    "ArrayList",
     "AutoNowMixin",
     "BaseField",
     "Binary",
@@ -32,4 +37,5 @@ __all__ = [
     "Object",
     "Time",
     "UUID",
+    "Embed",
 ]

@@ -1,11 +1,9 @@
 import re
-from typing import TYPE_CHECKING, Any, List, Union
+from typing import Any, List, Union
 
+from mongoz.core.db.datastructures import Order
+from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.exceptions import FieldDefinitionError
-
-if TYPE_CHECKING:
-    from mongoz.core.db.datastructures import Order
-    from mongoz.core.db.querysets.expressions import Expression, SortExpression
 
 
 class Q:

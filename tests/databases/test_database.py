@@ -16,7 +16,6 @@ collection = db.get_collection("movies")
 async def test_client_class() -> None:
     assert client.host == "localhost"
     assert client.port == 27017
-    # assert client.address == ("localhost", 27017)
 
     await client.drop_database("sample")
     await client.drop_database(db)

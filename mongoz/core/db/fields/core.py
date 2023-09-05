@@ -3,7 +3,7 @@ import decimal
 import enum
 import uuid
 from enum import EnumMeta
-from typing import Any, Generator, List, Optional, Sequence, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Generator, List, Optional, Sequence, Set, Tuple, Type, Union
 
 import bson
 import pydantic
@@ -11,6 +11,10 @@ from pydantic import EmailStr
 
 from mongoz.core.db.fields.base import BaseField
 from mongoz.exceptions import FieldDefinitionError
+
+if TYPE_CHECKING:
+    from mongoz.core.db.documents.document import Document
+
 
 CLASS_DEFAULTS = ["cls", "__class__", "kwargs"]
 
@@ -99,16 +103,16 @@ class String(FieldFactory, str):
 
         return super().__new__(cls, **kwargs)
 
-    @classmethod
-    def validate(cls, **kwargs: Any) -> None:
-        max_length = kwargs.get("max_length", 0)
-        if max_length <= 0:
-            raise FieldDefinitionError(detail=f"'max_length' is required for {cls.__name__}")
+    # @classmethod
+    # def validate(cls, **kwargs: Any) -> None:
+    #     max_length = kwargs.get("max_length", 0)
+    #     if max_length <= 0:
+    #         raise FieldDefinitionError(detail=f"'max_length' is required for {cls.__name__}")
 
-        min_length = kwargs.get("min_length")
+    #     min_length = kwargs.get("min_length")
 
-        assert min_length is None or isinstance(min_length, int)
-        assert max_length is None or isinstance(max_length, int)
+    #     assert min_length is None or isinstance(min_length, int)
+    #     assert max_length is None or isinstance(max_length, int)
 
 
 class Number(FieldFactory):
@@ -365,13 +369,14 @@ class Array(FieldFactory, list):
 
     def __new__(  # type: ignore
         cls,
-        list_type: type,
+        document: type,
         **kwargs: Any,
     ) -> BaseField:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
         }
+        kwargs["list_type"] = document
         return super().__new__(cls, **kwargs)
 
 
@@ -388,3 +393,29 @@ class ArrayList(FieldFactory, list):
         }
         kwargs["list_type"] = Any
         return super().__new__(cls, **kwargs)
+
+
+class Embed(FieldFactory):
+    _type = None
+
+    def __new__(  # type: ignore
+        cls,
+        document: Type["Document"],
+        **kwargs: Any,
+    ) -> BaseField:
+        kwargs = {
+            **kwargs,
+            **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
+        }
+        cls._type = document
+        return super().__new__(cls, **kwargs)
+
+    @classmethod
+    def validate(cls, **kwargs: Any) -> None:
+        from mongoz.core.db.documents.document import Document, EmbeddedDocument
+
+        document = kwargs.get("document")
+        if not issubclass(document, (Document, EmbeddedDocument)):
+            raise FieldDefinitionError(
+                "'document' must be of type mongoz.Document or mongoz.EmbeddedDocument"
+            )

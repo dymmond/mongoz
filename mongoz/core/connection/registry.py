@@ -14,20 +14,12 @@ class Registry:
     def __init__(
         self,
         url: str,
-        database: Union[Database, None] = None,
         event_loop: Union[Callable[[], asyncio.AbstractEventLoop], None] = None,
     ) -> None:
         self.event_loop = event_loop or asyncio.get_event_loop
         self.url = url
         self._client: AsyncIOMotorClient = AsyncIOMotorClient(self.url)
         self._client.get_io_loop = self.event_loop
-
-        if database:
-            assert isinstance(
-                database, Database
-            ), "`database` must be an instance of mongoz.core.connection.database.Database"
-
-        self._database = database
 
     @property
     def address(self) -> Tuple[str, int]:

@@ -1,4 +1,3 @@
-import copy
 import inspect
 from typing import (
     TYPE_CHECKING,
@@ -170,10 +169,10 @@ class BaseModelMeta(ModelMetaclass):
 
         for key, value in attrs.items():
             if isinstance(value, BaseField):
-                getattr(meta_class, "abstract", None)
-                if getattr(meta_class, "abstract", None):
-                    value = copy.copy(value)
-
+                if (
+                    getattr(meta_class, "abstract", None) is None
+                    or getattr(meta_class, "abstract", False) is False
+                ):
                     fields[key] = value
 
         for slot in fields:
@@ -215,7 +214,12 @@ class BaseModelMeta(ModelMetaclass):
 
         # Handle the registry of models
         if getattr(meta, "registry", None) is None:
-            if hasattr(new_class, "__db_model__") and new_class.__db_model__:
+            if (
+                hasattr(new_class, "__db_model__")
+                and new_class.__db_model__
+                and hasattr(new_class, "__embedded__")
+                and new_class.__embedded__
+            ):
                 meta.registry = _check_model_inherited_registry(bases)
             else:
                 return new_class
@@ -246,7 +250,7 @@ class BaseModelMeta(ModelMetaclass):
         meta.manager.model_class = new_class
 
         # Set the owner of the field
-        for _, value in new_class.fields.items():
+        for _, value in new_class.__mongoz_fields__.items():
             value.owner = new_class
 
         # Set the manager

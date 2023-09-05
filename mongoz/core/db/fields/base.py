@@ -95,7 +95,7 @@ class BaseField(FieldInfo, _repr.Representation):
             `True` if the argument is required, `False` otherwise.
         """
         required = False if self.null else True
-        return bool(required and not self.primary_key)
+        return bool(required)
 
     def get_alias(self) -> str:
         """

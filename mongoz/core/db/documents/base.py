@@ -62,7 +62,7 @@ class MongozBaseModel(BaseModel, DateParser, ModelParser, metaclass=BaseModelMet
         if cls.__proxy_model__:
             return cls.__proxy_model__
 
-        fields = {key: copy.copy(field) for key, field in cls.fields.items()}
+        fields = {key: copy.copy(field) for key, field in cls.__mongoz_fields__.items()}
         proxy_model = ProxyModel(
             name=cls.__name__,
             module=cls.__module__,

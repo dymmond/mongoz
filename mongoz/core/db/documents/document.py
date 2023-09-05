@@ -1,15 +1,16 @@
-from typing import List, Sequence, Type, Union
+from typing import ClassVar, List, Sequence, Type, Union
 
-from mongoz.core.db.documents.row import ModelRow
+# from mongoz.core.db.documents.row import ModelRow
+from mongoz.core.db.documents.base import MongozBaseModel
 from mongoz.exceptions import InvalidKeyError
 
 
-class Document(ModelRow):
+class Document(MongozBaseModel):
     """
     Representation of an Mongoz Document.
-    This also means it can generate declarative SQLAlchemy models
-    from anywhere.
     """
+
+    __embedded__: ClassVar[bool] = False
 
     async def insert(self: Type["Document"]) -> Type["Document"]:
         """
@@ -32,7 +33,7 @@ class Document(ModelRow):
 
         data = {model.model_dump(exclude={"id"}) for model in models}
         results = await cls.meta.collection._collection.insert_many(data)
-        for model, inserted_id in zip(models, results.inserted_ids):
+        for model, inserted_id in zip(models, results.inserted_ids, strict=True):
             model.id = inserted_id
         return models
 
@@ -81,12 +82,6 @@ class Document(ModelRow):
         index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
         return index_names
 
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}: {self}>"
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}({self.pkname}={self.pk})"
-
     async def save(self: Type["Document"]) -> Type["Document"]:
         """Save the document.
 
@@ -100,10 +95,16 @@ class Document(ModelRow):
             setattr(self, k, v)
         return self
 
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}: {self}>"
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({self.pkname}={self.pk})"
+
 
 class EmbeddedDocument(Document):
     """
     Graphical representation of an Embedded document.
     """
 
-    ...
+    __embedded__: ClassVar[bool] = True
