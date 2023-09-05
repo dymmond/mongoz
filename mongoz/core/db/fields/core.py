@@ -92,7 +92,7 @@ class String(FieldFactory, str):
     def __new__(  # type: ignore
         cls,
         *,
-        max_length: Optional[int] = 0,
+        max_length: Optional[int] = None,
         min_length: Optional[int] = None,
         **kwargs: Any,
     ) -> BaseField:

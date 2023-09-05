@@ -1,7 +1,10 @@
 from typing import ClassVar, List, Sequence, Type, Union
 
+from pydantic import BaseModel
+
 # from mongoz.core.db.documents.row import ModelRow
 from mongoz.core.db.documents.base import MongozBaseModel
+from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.exceptions import InvalidKeyError
 
 
@@ -102,7 +105,7 @@ class Document(MongozBaseModel):
         return f"{self.__class__.__name__}({self.pkname}={self.pk})"
 
 
-class EmbeddedDocument(Document):
+class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
     """
     Graphical representation of an Embedded document.
     """

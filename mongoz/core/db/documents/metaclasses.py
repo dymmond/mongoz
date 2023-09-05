@@ -279,7 +279,14 @@ class BaseModelMeta(ModelMetaclass):
         """
         return cls.__proxy_model__
 
-    # def __getattr__(self, name: str) -> Any:
-    #     if name in self.__mongoz_fields__:
-    #         return self.__mongoz_fields__[name]
-    #     return super().__getattribute__(name)
+
+class EmbeddedModelMetaClass(ModelMetaclass):
+    __mongoz_fields__: Mapping[str, BaseField]
+
+    @no_type_check
+    def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
+        # Extract the custom Mongoz Fields in a pydantic format.
+        attrs, model_fields = extract_field_annotations_and_defaults(attrs)
+        cls = super().__new__(cls, name, bases, attrs)
+        cls.__mongoz_fields__ = model_fields
+        return cls
