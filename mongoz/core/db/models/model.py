@@ -1,21 +1,17 @@
-from typing import Any, Dict, List, Optional, Sequence, Set, Type, Union
-
-import bson
-from bson.errors import InvalidId
+from typing import List, Sequence, Type, Union
 
 from mongoz.core.db.models.row import ModelRow
-from mongoz.core.utils.functional import mongoz_setattr
-from mongoz.exceptions import InvalidKeyError, InvalidObjectIdError
+from mongoz.exceptions import InvalidKeyError
 
 
-class Model(ModelRow):
+class Document(ModelRow):
     """
-    Representation of an Mongoz Model.
+    Representation of an Mongoz Document.
     This also means it can generate declarative SQLAlchemy models
     from anywhere.
     """
 
-    async def insert(self: Type["Model"]) -> Type["Model"]:
+    async def insert(self: Type["Document"]) -> Type["Document"]:
         """
         Inserts a document.
         """
@@ -26,8 +22,8 @@ class Model(ModelRow):
 
     @classmethod
     async def insert_many(
-        cls: Type["Model"], models: Sequence[Type["Model"]]
-    ) -> List[Type["Model"]]:
+        cls: Type["Document"], models: Sequence[Type["Document"]]
+    ) -> List[Type["Document"]]:
         """
         Insert many documents
         """
@@ -91,7 +87,7 @@ class Model(ModelRow):
     def __str__(self) -> str:
         return f"{self.__class__.__name__}({self.pkname}={self.pk})"
 
-    async def save(self: Type["Model"]) -> Type["Model"]:
+    async def save(self: Type["Document"]) -> Type["Document"]:
         """Save the document.
 
         This is equivalent of a single instance update.

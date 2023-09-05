@@ -6,28 +6,26 @@ from typing import (
     Dict,
     List,
     Optional,
-    Sequence,
     Set,
     Tuple,
     Type,
     Union,
     cast,
+    no_type_check,
 )
 
 from pydantic._internal._model_construction import ModelMetaclass
 
 from mongoz.core.connection.collections import Collection
-from mongoz.core.connection.database import Database
 from mongoz.core.connection.registry import Registry
-from mongoz.core.db import fields as mongoz_fields
 from mongoz.core.db.datastructures import Index
-from mongoz.core.db.fields.core import BaseField, BigIntegerField
+from mongoz.core.db.fields.core import BaseField
 from mongoz.core.db.models.managers import Manager
 from mongoz.core.utils.functional import extract_field_annotations_and_defaults, mongoz_setattr
 from mongoz.exceptions import ImproperlyConfigured
 
 if TYPE_CHECKING:
-    from mongoz.core.db.models import Model
+    from mongoz.core.db.models import Document
 
 
 class MetaInfo:
@@ -57,11 +55,11 @@ class MetaInfo:
         self.registry: Optional[Type[Registry]] = getattr(meta, "registry", None)
         self.collection: Optional[Collection] = getattr(meta, "collection", None)
         self.parents: Any = getattr(meta, "parents", None) or []
-        self.model: Optional[Type["Model"]] = None
+        self.model: Optional[Type["Document"]] = None
         self.manager: "Manager" = getattr(meta, "manager", Manager())
         self.indexes: List[Index] = getattr(meta, "indexes", None)
         self.managers: List[Manager] = getattr(meta, "managers", [])
-        self.signals: Optional[Broadcaster] = {}  # type: ignore
+        # self.signals: Optional[Broadcaster] = {}  # type: ignore
 
     def model_dump(self) -> Dict[Any, Any]:
         return {k: getattr(self, k, None) for k in self.__slots__}
@@ -121,6 +119,7 @@ def _check_manager_for_bases(
 class BaseModelMeta(ModelMetaclass):
     __slots__ = ()
 
+    @no_type_check
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
         fields: Dict[str, BaseField] = {}
         meta_class: "object" = attrs.get("Meta", type("Meta", (), {}))
@@ -138,8 +137,6 @@ class BaseModelMeta(ModelMetaclass):
 
             If a class attribute is an instance of the Field, then it will be added to the
             field_mapping but only if the key does not exist already.
-
-            If a primary_key field is not provided, it it automatically generate one BigIntegerField for the model.
             """
             for parent in base.__mro__[1:]:
                 __search_for_fields(parent, attrs)
@@ -191,13 +188,13 @@ class BaseModelMeta(ModelMetaclass):
 
         model_class = super().__new__
 
-        # Ensure the initialization is only performed for subclasses of Model
+        # Ensure the initialization is only performed for subclasses of Document
         parents = [parent for parent in bases if isinstance(parent, BaseModelMeta)]
         if not parents:
             return model_class(cls, name, bases, attrs)
 
         meta.parents = parents
-        new_class = cast("Type[Model]", model_class(cls, name, bases, attrs))
+        new_class = cast("Type[Document]", model_class(cls, name, bases, attrs))
 
         # Update the model_fields are updated to the latest
         new_class.model_fields.update(model_fields)
@@ -238,7 +235,7 @@ class BaseModelMeta(ModelMetaclass):
                 if not all(isinstance(value, Index) for value in indexes):
                     raise ValueError("Meta.indexes must be a list of Index types.")
 
-        for name, field in meta.fields_mapping.items():
+        for _, field in meta.fields_mapping.items():
             field.registry = registry
 
         new_class.__db_model__ = True
@@ -265,7 +262,6 @@ class BaseModelMeta(ModelMetaclass):
             new_class.__proxy_model__ = proxy_model
             new_class.__proxy_model__.parent = new_class
             new_class.__proxy_model__.model_rebuild(force=True)
-            meta.registry.models[new_class.__name__] = new_class  # type: ignore
 
         new_class.model_rebuild(force=True)
         return new_class
@@ -273,7 +269,7 @@ class BaseModelMeta(ModelMetaclass):
     @property
     def proxy_model(cls) -> Any:
         """
-        Returns the proxy_model from the Model when called using the cache.
+        Returns the proxy_model from the Document when called using the cache.
         """
         return cls.__proxy_model__
 

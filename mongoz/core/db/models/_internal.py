@@ -8,7 +8,7 @@ class DescriptiveMeta:
 
     .. code-block:: python3
 
-        class User(Model):
+        class User(Document):
             ...
 
             class Meta:

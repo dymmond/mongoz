@@ -54,7 +54,7 @@ class BaseField(FieldInfo, _repr.Representation):
         self.choices: Sequence = kwargs.pop("choices", None)
         self.owner: Any = kwargs.pop("owner", None)
         self.name: str = kwargs.pop("name", None)
-        self.alias: str = kwargs.pop("name", None)
+        self.alias: str = kwargs.pop("alias", None)
         self.regex: str = kwargs.pop("regex", None)
         self.format: str = kwargs.pop("format", None)
         self.min_length: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop(
@@ -71,6 +71,12 @@ class BaseField(FieldInfo, _repr.Representation):
         self.registry: Registry = kwargs.pop("registry", None)
         self.database: Database = kwargs.pop("database", None)
         self.comment = kwargs.pop("comment", None)
+
+        if self.name and not self.alias:
+            self.alias = self.name
+
+        if self.alias and not self.name:
+            self.name = self.alias
 
         for name, value in kwargs.items():
             mongoz_setattr(self, name, value)

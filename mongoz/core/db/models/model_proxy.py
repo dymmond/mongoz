@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, Dict, Tuple, Type, Union, cast
 from pydantic import ConfigDict
 
 if TYPE_CHECKING:
-    from mongoz.core.db.models import Model
+    from mongoz.core.db.models import Document
     from mongoz.core.db.models.metaclasses import MetaInfo
 
 
@@ -18,7 +18,7 @@ class ProxyModel:
         name: str,
         module: str,
         *,
-        bases: Union[Tuple[Type["Model"]], None] = None,
+        bases: Union[Tuple[Type["Document"]], None] = None,
         definitions: Union[Dict[Any, Any], None] = None,
         metadata: Union[Type["MetaInfo"], None] = None,
         qualname: Union[str, None] = None,
@@ -28,7 +28,7 @@ class ProxyModel:
     ) -> None:
         self.__name__: str = name
         self.__module__: str = module
-        self.__bases__: Union[Tuple[Type["Model"]], None] = bases
+        self.__bases__: Union[Tuple[Type["Document"]], None] = bases
         self.__definitions__: Union[Dict[Any, Any], None] = definitions
         self.__metadata__: Union[Type["MetaInfo"], None] = metadata
         self.__qualname__: Union[str, None] = qualname
@@ -43,7 +43,7 @@ class ProxyModel:
         """
         from mongoz.core.utils.models import create_mongoz_model
 
-        model: Type["Model"] = create_mongoz_model(
+        model: Type["Document"] = create_mongoz_model(
             __name__=self.__name__,
             __module__=self.__module__,
             __bases__=self.__bases__,
@@ -58,11 +58,11 @@ class ProxyModel:
         return self
 
     @property
-    def model(self) -> Type["Model"]:
-        return cast("Type[Model]", self.__model__)
+    def model(self) -> Type["Document"]:
+        return cast("Type[Document]", self.__model__)
 
     @model.setter
-    def model(self, value: Type["Model"]) -> None:
+    def model(self, value: Type["Document"]) -> None:
         self.__model__ = value  # type: ignore
 
     def __repr__(self) -> str:

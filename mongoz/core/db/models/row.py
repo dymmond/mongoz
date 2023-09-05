@@ -1,10 +1,9 @@
-import asyncio
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, Type
 
 from mongoz.core.db.models.base import MongozBaseModel
 
 if TYPE_CHECKING:  # pragma: no cover
-    from mongoz.core.db.models import Model
+    from mongoz.core.db.models import Document
 
 
 class ModelRow(MongozBaseModel):
@@ -13,7 +12,7 @@ class ModelRow(MongozBaseModel):
     """
 
     @classmethod
-    def from_row(cls, **kwargs: Any) -> Optional[Type["Model"]]:
+    def from_row(cls, **kwargs: Any) -> Optional[Type["Document"]]:
         """
         Class method to convert a SQLAlchemy Row result into a EdgyModel row type.
 
@@ -26,6 +25,6 @@ class ModelRow(MongozBaseModel):
         If there is no select_related, then goes through the related field where it **should**
         only return the instance of the the ForeignKey with the ID, making it lazy loaded.
 
-        :return: Model class.
+        :return: Document class.
         """
         ...
