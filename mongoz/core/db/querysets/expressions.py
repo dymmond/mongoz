@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Any, Dict, List, Union
 from mongoz.core.db.datastructures import Order
 
 if TYPE_CHECKING:  # pragma: no cover
-    from mongoz.core.db.fields.base import BaseField
+    from mongoz.core.db.fields.base import MongozField
 
 
 class Expression:
-    def __init__(self, key: Union[str, "BaseField"], operator: str, value: Any) -> None:
-        self.key = key if isinstance(key, str) else key.alias
+    def __init__(self, key: Union[str, "MongozField"], operator: str, value: Any) -> None:
+        self.key = key if isinstance(key, str) else key._name
         self.operator = operator
         self.value = value
 
@@ -71,7 +71,7 @@ class Expression:
 
 
 class SortExpression:
-    def __init__(self, key: typing.Union[str, "BaseField"], direction: Order) -> None:
+    def __init__(self, key: typing.Union[str, "MongozField"], direction: Order) -> None:
         self.key = key if isinstance(key, str) else key._name
         self.direction = direction
 

@@ -15,7 +15,7 @@ class Document(MongozBaseModel):
 
     __embedded__: ClassVar[bool] = False
 
-    async def insert(self: Type["Document"]) -> Type["Document"]:
+    async def create(self: Type["Document"]) -> Type["Document"]:
         """
         Inserts a document.
         """
@@ -25,7 +25,7 @@ class Document(MongozBaseModel):
         return self
 
     @classmethod
-    async def insert_many(
+    async def create_many(
         cls: Type["Document"], models: Sequence[Type["Document"]]
     ) -> List[Type["Document"]]:
         """
@@ -99,10 +99,10 @@ class Document(MongozBaseModel):
         return self
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}: {self}>"
+        return str(self)
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}({self.pkname}={self.pk})"
+        return f"{self.__class__.__name__}(id={self.id})"
 
 
 class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):

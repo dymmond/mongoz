@@ -3,7 +3,19 @@ import decimal
 import enum
 import uuid
 from enum import EnumMeta
-from typing import TYPE_CHECKING, Any, Generator, List, Optional, Sequence, Set, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 import bson
 import pydantic
@@ -71,11 +83,15 @@ class FieldFactory:
 
 
 class ObjectId(FieldFactory, bson.ObjectId):
-    _type: bson.ObjectId
+    _type = bson.ObjectId
 
     @classmethod
     def __get_validators__(cls) -> Generator[bson.ObjectId, None, None]:
         yield cls.validate
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, field_schema: Dict[str, Any]) -> None:
+        field_schema.update(type="string")
 
     @classmethod
     def validate(cls, **kwargs: Any) -> bson.ObjectId:

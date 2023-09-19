@@ -6,6 +6,12 @@ import pytest
 
 from mongoz.core.connection.registry import Registry
 
+
+@pytest.fixture(scope="module")
+def anyio_backend():
+    return ("asyncio", {"debug": False})
+
+
 database_uri = os.environ.get("DATABASE_URI", "mongodb://root:mongoadmin@localhost:27017")
 client = Registry(database_uri, event_loop=asyncio.get_running_loop)
 
@@ -17,7 +23,7 @@ def event_loop() -> typing.Generator[asyncio.AbstractEventLoop, None, None]:
     loop.close()
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(autouse=True)
 async def test_database() -> typing.AsyncGenerator:
     await client.drop_database("test_db")
     yield

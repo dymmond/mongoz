@@ -1,5 +1,5 @@
 import enum
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, List, Tuple, Union
 
 import pymongo
 
@@ -23,7 +23,7 @@ class Index(pymongo.IndexModel):
 
     def __init__(
         self,
-        key: str = None,
+        key: Union[str, None] = None,
         keys: List[Union[Tuple[str, Order], Tuple[str, IndexType]]] = None,
         name: str = None,
         background: bool = False,

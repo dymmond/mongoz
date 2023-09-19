@@ -88,7 +88,6 @@ class QuerySet(QuerySetProtocol, Generic[T]):
 
     async def get(self) -> T:
         """Gets the document of a matching criteria."""
-
         objects = await self.limit(2).all()
         if len(objects) == 0:
             raise ObjectNotFound()
@@ -141,4 +140,17 @@ class QuerySet(QuerySetProtocol, Generic[T]):
             self._sort.append(sort_expression)
         else:
             self._sort.append(key)
+        return self
+
+    def query(self, *args: Union[bool, Dict, Expression]) -> "QuerySet[T]":
+        """Filter query criteria."""
+
+        for arg in args:
+            assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
+            if isinstance(arg, dict):
+                query_expressions = Expression.unpack(arg)
+                self._filter.extend(query_expressions)
+            else:
+                self._filter.append(arg)
+
         return self

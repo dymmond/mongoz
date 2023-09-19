@@ -1,5 +1,6 @@
 __version__ = "0.1.0"
 
+from .core.connection.database import Database
 from .core.connection.registry import Registry
 from .core.db.documents import Document, EmbeddedDocument
 from .core.db.documents.managers import Manager
@@ -30,6 +31,7 @@ __all__ = [
     "Binary",
     "Boolean",
     "Choice",
+    "Database",
     "Date",
     "DateTime",
     "Decimal",

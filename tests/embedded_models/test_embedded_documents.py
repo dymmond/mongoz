@@ -1,18 +1,17 @@
 import asyncio
-import os
 from typing import List
 
 import pytest
+from tests.settings import TEST_DATABASE_URL
 
 import mongoz
 from mongoz import Document, EmbeddedDocument, Registry
 from mongoz.exceptions import InvalidKeyError
 
-pytestmark = pytest.mark.asyncio
+pytestmark = pytest.mark.anyio
 
-database_uri = os.environ.get("DATABASE_URI", "mongodb://localhost:27017")
+database_uri = TEST_DATABASE_URL
 client = Registry(database_uri, event_loop=asyncio.get_running_loop)
-db = client.get_database("test_db")
 
 
 class Award(EmbeddedDocument):
@@ -41,9 +40,10 @@ class Movie(Document):
 
     class Meta:
         registry = client
+        database = "test_db"
 
 
-async def xtest_embedded_model() -> None:
+async def test_embedded_model() -> None:
     actor = Actor(name="Tom Hanks")
     genre = Genre(title="Action")
     award = Award(name="Academy Award")
@@ -55,7 +55,7 @@ async def xtest_embedded_model() -> None:
         director=director,
         year=1990,
         genre=genre,
-    ).insert()
+    ).create()
 
     movie = await Movie.query(Movie.genre.title == "Action").get()
     assert movie.name == "Saving Private Ryan"
