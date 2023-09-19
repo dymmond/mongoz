@@ -122,7 +122,7 @@ class BaseField(FieldInfo, _repr.Representation):
         """
         Used to translate the model column names into database column tables.
         """
-        return self.name
+        return self.alias
 
     def has_default(self) -> bool:
         """Checks if the field has a default value set"""
@@ -149,8 +149,8 @@ class MongozField:
     @property
     def _name(self) -> str:
         if self.parent:
-            return self.parent._name + "." + self.pydantic_field.name
-        return self.pydantic_field.name
+            return self.parent._name + "." + self.pydantic_field.alias
+        return self.pydantic_field.alias
 
     def __lt__(self, other: Any) -> Expression:
         return Expression(self._name, "$lt", other)

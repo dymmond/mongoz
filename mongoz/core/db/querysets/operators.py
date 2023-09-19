@@ -46,5 +46,5 @@ class Q:
         if key.annotation is str:
             expression = value.pattern if isinstance(value, re.Pattern) else value
             return Expression(key=key, operator="$regex", value=expression)
-        name = key if isinstance(key, str) else key.name
+        name = key if isinstance(key, str) else key._name
         raise FieldDefinitionError(f"The {name} field is not of type str")

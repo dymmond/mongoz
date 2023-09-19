@@ -307,8 +307,8 @@ class BaseModelMeta(ModelMetaclass):
 
         mongoz_fields: Dict[str, MongozField] = {}
         for field_name, field in new_class.model_fields.items():
-            if not field.name:
-                field.name = field_name
+            if not field.alias:
+                field.alias = field_name
 
             new_field = MongozField(pydantic_field=field, model_class=field.annotation)
             mongoz_fields[field_name] = new_field
@@ -333,8 +333,8 @@ class EmbeddedModelMetaClass(ModelMetaclass):
 
         mongoz_fields: Dict[str, MongozField] = {}
         for field_name, field in cls.model_fields.items():
-            if not field.name:
-                field.name = field_name
+            if not field.alias:
+                field.alias = field_name
             new_field = MongozField(pydantic_field=field, model_class=cls)
             mongoz_fields[field_name] = new_field
 

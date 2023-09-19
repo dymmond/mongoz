@@ -101,7 +101,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
 
         data = {expression.key: expression.value for expression in self._filter}
         defaults = {
-            (key if isinstance(key, str) else key.name): value for key, value in defaults.items()
+            (key if isinstance(key, str) else key._name): value for key, value in defaults.items()
         }
 
         try:

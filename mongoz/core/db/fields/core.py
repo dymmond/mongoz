@@ -6,7 +6,7 @@ from enum import EnumMeta
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
+    Callable,
     Generator,
     List,
     Optional,
@@ -15,14 +15,26 @@ from typing import (
     Tuple,
     Type,
     Union,
+    cast,
 )
 
 import bson
 import pydantic
+from bson.objectid import ObjectId
 from pydantic import EmailStr
+from pydantic._internal._schema_generation_shared import (
+    GetJsonSchemaHandler as GetJsonSchemaHandler,
+)
+from pydantic.json_schema import JsonSchemaValue as JsonSchemaValue
+from pydantic_core.core_schema import CoreSchema
+from pydantic_core.core_schema import (
+    general_plain_validator_function as general_plain_validator_function,
+)
 
 from mongoz.core.db.fields.base import BaseField
 from mongoz.exceptions import FieldDefinitionError
+
+mongoz_setattr = object.__setattr__
 
 if TYPE_CHECKING:
     from mongoz.core.db.documents.document import Document
@@ -78,33 +90,41 @@ class FieldFactory:
         ...
 
 
-class ObjectId(FieldFactory, bson.ObjectId):
-    _type = bson.ObjectId
-
-    def __new__(  # type: ignore
-        cls,
-        **kwargs: Any,
-    ) -> BaseField:
-        kwargs = {
-            **kwargs,
-            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
-        }
-
-        return super().__new__(cls, **kwargs)
+class ObjectId(bson.ObjectId):
+    def __init__(self, oid: Union[str, ObjectId, bytes, None] = None, null: bool = False) -> None:
+        super().__init__(oid)
+        self.null = null
+        self.name: Union[str, None] = None
 
     @classmethod
     def __get_validators__(cls) -> Generator[bson.ObjectId, None, None]:
         yield cls.validate
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, field_schema: Dict[str, Any]) -> None:
-        field_schema.update(type="string")
+    def validate(cls: Type["bson.ObjectId"], v: Any) -> Any:
+        if not isinstance(v, bson.ObjectId):
+            raise ValueError(f"Expected ObjectId, got: {type(v)}")
+        return v
 
     @classmethod
-    def validate(cls, value: Any) -> bson.ObjectId:
-        if not bson.ObjectId.is_valid(value):
+    def _validate(cls, __input_value: Any, _: Any) -> "ObjectId":
+        if not isinstance(__input_value, bson.ObjectId):
+            raise ValueError(f"Expected ObjectId, got: {type(__input_value)}")
+        if not bson.ObjectId.is_valid(__input_value):
             raise ValueError("Invalid value for ObjectId")
-        return bson.ObjectId(value)
+        return cast(ObjectId, __input_value)
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        return {"type": "string"}
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source: Type[Any], handler: Callable[[Any], CoreSchema]
+    ) -> CoreSchema:
+        return general_plain_validator_function(cls._validate)
 
 
 class String(FieldFactory, str):
