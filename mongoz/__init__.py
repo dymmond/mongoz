@@ -2,6 +2,7 @@ __version__ = "0.1.0"
 
 from .core.connection.database import Database
 from .core.connection.registry import Registry
+from .core.db.datastructures import Index, IndexType, Order
 from .core.db.documents import Document, EmbeddedDocument
 from .core.db.documents.managers import Manager
 from .core.db.fields import (
@@ -19,6 +20,7 @@ from .core.db.fields import (
     Embed,
     Integer,
     Object,
+    ObjectId,
     String,
     Time,
 )
@@ -40,9 +42,13 @@ __all__ = [
     "Embed",
     "EmailField",
     "EmbeddedDocument",
+    "Index",
+    "IndexType",
     "Integer",
     "Manager",
     "Object",
+    "ObjectId",
+    "Order",
     "Q",
     "QuerySet",
     "Registry",

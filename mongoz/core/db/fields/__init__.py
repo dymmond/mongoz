@@ -15,6 +15,7 @@ from .core import (
     Embed,
     Integer,
     Object,
+    ObjectId,
     String,
     Time,
 )
@@ -35,6 +36,7 @@ __all__ = [
     "Double",
     "Integer",
     "Object",
+    "ObjectId",
     "Time",
     "UUID",
     "Embed",

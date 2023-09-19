@@ -38,7 +38,7 @@ class FieldFactory:
     _type: Any = None
 
     def __new__(cls, *args: Any, **kwargs: Any) -> BaseField:  # type: ignore
-        cls.validate(**kwargs)
+        cls.validate_field(**kwargs)
 
         default = kwargs.pop("default", None)
         null: bool = kwargs.pop("null", False)
@@ -74,16 +74,23 @@ class FieldFactory:
         return Field(**namespace)  # type: ignore
 
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:  # pragma no cover
-        """
-        Used to validate if all required parameters on a given field type are set.
-        :param kwargs: all params passed during construction
-        :type kwargs: Any
-        """
+    def validate_field(cls, **kwargs: Any) -> None:  # pragma no cover
+        ...
 
 
 class ObjectId(FieldFactory, bson.ObjectId):
     _type = bson.ObjectId
+
+    def __new__(  # type: ignore
+        cls,
+        **kwargs: Any,
+    ) -> BaseField:
+        kwargs = {
+            **kwargs,
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
+        }
+
+        return super().__new__(cls, **kwargs)
 
     @classmethod
     def __get_validators__(cls) -> Generator[bson.ObjectId, None, None]:
@@ -94,10 +101,10 @@ class ObjectId(FieldFactory, bson.ObjectId):
         field_schema.update(type="string")
 
     @classmethod
-    def validate(cls, **kwargs: Any) -> bson.ObjectId:
-        if not bson.ObjectId.is_valid(**kwargs):
+    def validate(cls, value: Any) -> bson.ObjectId:
+        if not bson.ObjectId.is_valid(value):
             raise ValueError("Invalid value for ObjectId")
-        return bson.ObjectId(**kwargs)
+        return bson.ObjectId(value)
 
 
 class String(FieldFactory, str):
@@ -119,21 +126,10 @@ class String(FieldFactory, str):
 
         return super().__new__(cls, **kwargs)
 
-    # @classmethod
-    # def validate(cls, **kwargs: Any) -> None:
-    #     max_length = kwargs.get("max_length", 0)
-    #     if max_length <= 0:
-    #         raise FieldDefinitionError(detail=f"'max_length' is required for {cls.__name__}")
-
-    #     min_length = kwargs.get("min_length")
-
-    #     assert min_length is None or isinstance(min_length, int)
-    #     assert max_length is None or isinstance(max_length, int)
-
 
 class Number(FieldFactory):
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:
+    def validate_field(cls, **kwargs: Any) -> None:
         minimum = kwargs.get("minimum", None)
         maximum = kwargs.get("maximum", None)
 
@@ -207,8 +203,8 @@ class Decimal(Number, decimal.Decimal):
         return super().__new__(cls, **kwargs)
 
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:
-        super().validate(**kwargs)
+    def validate_field(cls, **kwargs: Any) -> None:
+        super().validate_field(**kwargs)
 
         max_digits = kwargs.get("max_digits")
         decimal_places = kwargs.get("decimal_places")
@@ -333,7 +329,7 @@ class Binary(FieldFactory, bytes):
         return super().__new__(cls, **kwargs)
 
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:
+    def validate_field(cls, **kwargs: Any) -> None:
         max_length = kwargs.get("max_length", None)
         if max_length <= 0:
             raise FieldDefinitionError(detail="Parameter 'max_length' is required for BinaryField")
@@ -370,7 +366,7 @@ class Choice(FieldFactory):
         return super().__new__(cls, **kwargs)
 
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:
+    def validate_field(cls, **kwargs: Any) -> None:
         choice_class = kwargs.get("choices")
         if choice_class is None or not isinstance(choice_class, EnumMeta):
             raise FieldDefinitionError("ChoiceField choices must be an Enum")
@@ -427,7 +423,7 @@ class Embed(FieldFactory):
         return super().__new__(cls, **kwargs)
 
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:
+    def validate_field(cls, **kwargs: Any) -> None:
         from mongoz.core.db.documents.document import Document, EmbeddedDocument
 
         document = kwargs.get("document")

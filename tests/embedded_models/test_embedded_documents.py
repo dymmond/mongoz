@@ -1,17 +1,13 @@
-import asyncio
 from typing import List
 
 import pytest
-from tests.settings import TEST_DATABASE_URL
 
 import mongoz
-from mongoz import Document, EmbeddedDocument, Registry
+from mongoz import Document, EmbeddedDocument
 from mongoz.exceptions import InvalidKeyError
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
-
-database_uri = TEST_DATABASE_URL
-client = Registry(database_uri, event_loop=asyncio.get_running_loop)
 
 
 class Award(EmbeddedDocument):

@@ -313,15 +313,8 @@ class BaseModelMeta(ModelMetaclass):
             new_field = MongozField(pydantic_field=field, model_class=field.annotation)
             mongoz_fields[field_name] = new_field
 
-        cls.__mongoz_fields__ = mongoz_fields
+        new_class.__mongoz_fields__ = mongoz_fields
         return new_class
-
-    @property
-    def proxy_model(cls) -> Any:
-        """
-        Returns the proxy_model from the Document when called using the cache.
-        """
-        return cls.__proxy_model__
 
     def __getattr__(self, name: str) -> Any:
         if name in self.__mongoz_fields__:
@@ -330,12 +323,10 @@ class BaseModelMeta(ModelMetaclass):
 
 
 class EmbeddedModelMetaClass(ModelMetaclass):
-    __mongoz_fields__: Mapping[str, BaseField]
+    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
 
     @no_type_check
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
-        # Extract the custom Mongoz Fields in a pydantic format.
-
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
         cls.__mongoz_fields__ = model_fields
         cls = super().__new__(cls, name, bases, attrs)
@@ -346,5 +337,6 @@ class EmbeddedModelMetaClass(ModelMetaclass):
                 field.name = field_name
             new_field = MongozField(pydantic_field=field, model_class=cls)
             mongoz_fields[field_name] = new_field
+
         cls.__mongoz_fields__ = mongoz_fields
         return cls

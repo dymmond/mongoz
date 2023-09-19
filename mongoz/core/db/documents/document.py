@@ -2,7 +2,6 @@ from typing import ClassVar, List, Sequence, Type, Union
 
 from pydantic import BaseModel
 
-# from mongoz.core.db.documents.row import ModelRow
 from mongoz.core.db.documents.base import MongozBaseModel
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.exceptions import InvalidKeyError
@@ -49,7 +48,7 @@ class Document(MongozBaseModel):
             if index.name == name:
                 await cls.meta.collection._collection.create_indexes([index])
                 return index.name
-        raise IndentationError(f"Unable to find index: {name}")
+        raise InvalidKeyError(f"Unable to find index: {name}")
 
     @classmethod
     async def create_indexes(cls) -> List[str]:

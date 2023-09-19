@@ -1,16 +1,9 @@
-import asyncio
-import os
-
 import pytest
+from tests.conftest import client
 
-from mongoz.core.connection.registry import Registry
-
-pytestmark = pytest.mark.asyncio
-
-database_uri = os.environ.get("DATABASE_URI", "mongodb://root:mongoadmin@localhost:27017")
-client = Registry(database_uri, event_loop=asyncio.get_running_loop)
 db = client.get_database("test_db")
 collection = db.get_collection("movies")
+pytestmark = pytest.mark.asyncio
 
 
 async def test_client_class() -> None:
