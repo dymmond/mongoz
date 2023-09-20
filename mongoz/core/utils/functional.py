@@ -30,7 +30,7 @@ def get_model_fields(attrs: Union[Dict, Any]) -> Dict:
 
 def populate_pydantic_default_values(attrs: Dict) -> Tuple[Dict, Dict]:
     """
-    Making sure the fields from Mongoz are the ones being validated by Mongoz models
+    Making sure the fields from Mongoz are the ones being validated by Mongoz documents
     and delegates the validations from pydantic to that functionality.
     """
     model_fields = {}
