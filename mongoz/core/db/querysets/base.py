@@ -1,9 +1,11 @@
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Generic, List, Type, TypeVar, Union
 
+import pydantic
+
 from mongoz.core.db.datastructures import Order
-from mongoz.core.db.fields.base import BaseField
+from mongoz.core.db.fields.base import MongozField
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
-from mongoz.exceptions import MultipleObjectsReturned, ObjectNotFound
+from mongoz.exceptions import DocumentNotFound, MultipleDumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
 
 if TYPE_CHECKING:
@@ -80,22 +82,20 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         """
         Returns the last document of a matching criteria.
         """
-
         objects = await self.all()
         if not objects:
             return None
         return objects[-1]
 
     async def get(self) -> T:
-        """Gets the document of a matching criteria."""
         objects = await self.limit(2).all()
         if len(objects) == 0:
-            raise ObjectNotFound()
+            raise DocumentNotFound()
         elif len(objects) == 2:
-            raise MultipleObjectsReturned()
+            raise MultipleDumentsReturned()
         return objects[0]
 
-    async def get_or_create(self, defaults: Union[Dict[str, Any], None]) -> T:
+    async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
         if not defaults:
             defaults = {}
 
@@ -135,7 +135,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
             for key_dir in key:
                 sort_expression = SortExpression(*key_dir)
                 self._sort.append(sort_expression)
-        elif isinstance(key, (str, BaseField)):
+        elif isinstance(key, (str, MongozField)):
             sort_expression = SortExpression(key, direction)
             self._sort.append(sort_expression)
         else:
@@ -143,8 +143,6 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         return self
 
     def query(self, *args: Union[bool, Dict, Expression]) -> "QuerySet[T]":
-        """Filter query criteria."""
-
         for arg in args:
             assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
             if isinstance(arg, dict):
@@ -152,5 +150,29 @@ class QuerySet(QuerySetProtocol, Generic[T]):
                 self._filter.extend(query_expressions)
             else:
                 self._filter.append(arg)
-
         return self
+
+    async def update(self, **kwargs: Any) -> List[T]:
+        field_definitions = {
+            name: (annotations, ...)
+            for name, annotations in self.model_class.__annotations__.items()
+            if name in kwargs
+        }
+
+        if field_definitions:
+            pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
+                __model_name=self.model_class.__name__,
+                __config__=self.model_class.model_config,
+                **field_definitions,
+            )
+            model = pydantic_model.model_validate(kwargs)
+            values = model.model_dump()
+
+            filter_query = Expression.compile_many(self._filter)
+            await self._collection.update_many(filter_query, {"$set": values})
+
+            _filter = [expression for expression in self._filter if expression.key not in values]
+            _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
+
+            self._filter = _filter
+        return await self.all()

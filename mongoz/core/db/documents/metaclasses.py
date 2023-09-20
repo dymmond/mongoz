@@ -236,9 +236,6 @@ class BaseModelMeta(ModelMetaclass):
         if "id" in new_class.model_fields:
             new_class.model_fields["id"].default = None
 
-        # # Update the model_fields are updated to the latest
-        # new_class.model_fields = model_fields
-
         # Abstract classes do not allow multiple managers. This make sure it is enforced.
         if meta.abstract:
             managers = [k for k, v in attrs.items() if isinstance(v, Manager)]
@@ -313,6 +310,7 @@ class BaseModelMeta(ModelMetaclass):
             new_field = MongozField(pydantic_field=field, model_class=field.annotation)
             mongoz_fields[field_name] = new_field
 
+        new_class.Meta = meta
         new_class.__mongoz_fields__ = mongoz_fields
         return new_class
 
@@ -329,14 +327,14 @@ class EmbeddedModelMetaClass(ModelMetaclass):
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
         cls.__mongoz_fields__ = model_fields
-        cls = super().__new__(cls, name, bases, attrs)
+        new_class = super().__new__(cls, name, bases, attrs)
 
         mongoz_fields: Dict[str, MongozField] = {}
-        for field_name, field in cls.model_fields.items():
+        for field_name, field in new_class.model_fields.items():
             if not field.alias:
                 field.alias = field_name
-            new_field = MongozField(pydantic_field=field, model_class=cls)
+            new_field = MongozField(pydantic_field=field, model_class=new_class)
             mongoz_fields[field_name] = new_field
 
-        cls.__mongoz_fields__ = mongoz_fields
-        return cls
+        new_class.__mongoz_fields__ = mongoz_fields
+        return new_class

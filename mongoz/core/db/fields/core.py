@@ -37,7 +37,7 @@ from mongoz.exceptions import FieldDefinitionError
 mongoz_setattr = object.__setattr__
 
 if TYPE_CHECKING:
-    from mongoz.core.db.documents.document import Document
+    from mongoz.core.db.documents.document import EmbeddedDocument
 
 
 CLASS_DEFAULTS = ["cls", "__class__", "kwargs"]
@@ -401,14 +401,14 @@ class Array(FieldFactory, list):
 
     def __new__(  # type: ignore
         cls,
-        document: type,
+        type_of: type,
         **kwargs: Any,
     ) -> BaseField:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
         }
-        kwargs["list_type"] = document
+        kwargs["list_type"] = type_of
         return super().__new__(cls, **kwargs)
 
 
@@ -432,7 +432,7 @@ class Embed(FieldFactory):
 
     def __new__(  # type: ignore
         cls,
-        document: Type["Document"],
+        document: Type["EmbeddedDocument"],
         **kwargs: Any,
     ) -> BaseField:
         kwargs = {
@@ -444,10 +444,10 @@ class Embed(FieldFactory):
 
     @classmethod
     def validate_field(cls, **kwargs: Any) -> None:
-        from mongoz.core.db.documents.document import Document, EmbeddedDocument
+        from mongoz.core.db.documents.document import EmbeddedDocument
 
         document = kwargs.get("document")
-        if not issubclass(document, (Document, EmbeddedDocument)):
+        if not issubclass(document, EmbeddedDocument):
             raise FieldDefinitionError(
                 "'document' must be of type mongoz.Document or mongoz.EmbeddedDocument"
             )

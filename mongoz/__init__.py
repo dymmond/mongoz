@@ -25,6 +25,7 @@ from .core.db.fields import (
     Time,
 )
 from .core.db.querysets.base import QuerySet
+from .core.db.querysets.expressions import Expression, SortExpression
 from .core.db.querysets.operators import Q
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "Embed",
     "EmailField",
     "EmbeddedDocument",
+    "Expression",
     "Index",
     "IndexType",
     "Integer",
@@ -52,6 +54,7 @@ __all__ = [
     "Q",
     "QuerySet",
     "Registry",
+    "SortExpression",
     "String",
     "Time",
     "UUID",

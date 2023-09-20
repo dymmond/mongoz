@@ -37,13 +37,13 @@ class Q:
 
     @classmethod
     def contains(cls, key: Any, value: Any) -> Expression:
-        if key.annotation is str:
+        if key.pydantic_field.annotation is str:
             return Expression(key=key, operator="$regex", value=value)
         return Expression(key=key, operator="$eq", value=value)
 
     @classmethod
     def pattern(cls, key: Any, value: Union[str, re.Pattern]) -> Expression:
-        if key.annotation is str:
+        if key.pydantic_field.annotation is str:
             expression = value.pattern if isinstance(value, re.Pattern) else value
             return Expression(key=key, operator="$regex", value=expression)
         name = key if isinstance(key, str) else key._name

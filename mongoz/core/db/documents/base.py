@@ -1,4 +1,4 @@
-from typing import ClassVar, Dict, List, Type, TypeVar, Union
+from typing import ClassVar, Dict, List, Mapping, Type, TypeVar, Union
 
 import bson
 import pydantic
@@ -8,6 +8,7 @@ from typing_extensions import Self
 
 from mongoz.core.db.documents._internal import DescriptiveMeta
 from mongoz.core.db.documents.metaclasses import BaseModelMeta, MetaInfo
+from mongoz.core.db.fields.base import BaseField
 from mongoz.core.db.fields.core import ObjectId
 from mongoz.core.db.querysets.base import QuerySet
 from mongoz.core.db.querysets.expressions import Expression
@@ -65,4 +66,5 @@ class BaseMongoz(BaseModel, DateParser, ModelParser, metaclass=BaseModelMeta):
 
 
 class MongozBaseModel(BaseMongoz):
+    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
     id: Union[ObjectId, None] = pydantic.Field(alias="_id")

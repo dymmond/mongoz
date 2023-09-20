@@ -1,10 +1,15 @@
-from typing import ClassVar, List, Sequence, Type, Union
+from typing import ClassVar, List, Mapping, Sequence, Type, TypeVar, Union
 
+import bson
+from bson.errors import InvalidId
 from pydantic import BaseModel
 
 from mongoz.core.db.documents.base import MongozBaseModel
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
+from mongoz.core.db.fields.base import BaseField
 from mongoz.exceptions import InvalidKeyError
+
+T = TypeVar("T", bound="Document")
 
 
 class Document(MongozBaseModel):
@@ -33,7 +38,7 @@ class Document(MongozBaseModel):
         if not all(isinstance(model, cls) for model in models):
             raise TypeError(f"All models must be of type {cls.__name__}")
 
-        data = {model.model_dump(exclude={"id"}) for model in models}
+        data = (model.model_dump(exclude={"id"}) for model in models)
         results = await cls.meta.collection._collection.insert_many(data)
         for model, inserted_id in zip(models, results.inserted_ids, strict=True):
             model.id = inserted_id
@@ -97,6 +102,16 @@ class Document(MongozBaseModel):
             setattr(self, k, v)
         return self
 
+    @classmethod
+    async def get_document_by_id(cls: Type[T], id: Union[str, bson.ObjectId]) -> T:
+        if isinstance(id, str):
+            try:
+                id = bson.ObjectId(id)
+            except InvalidId as e:
+                raise InvalidKeyError(f'"{id}" is not a valid ObjectId') from e
+
+        return await cls.query({"_id": id}).get()
+
     def __repr__(self) -> str:
         return str(self)
 
@@ -109,4 +124,5 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
     Graphical representation of an Embedded document.
     """
 
+    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
     __embedded__: ClassVar[bool] = True
