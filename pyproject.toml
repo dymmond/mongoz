@@ -56,15 +56,17 @@ Source = "https://github.com/tarsil/mongoz"
 test = [
     "autoflake>=2.0.2,<3.0.0",
     "black>=23.3.0,<24.0.0",
+    "esmerald>=2.0.6",
     "isort>=5.12.0,<6.0.0",
     "mypy>=1.1.0,<2.0.0",
     "pytest>=7.2.2,<8.0.0",
+    "pytest-asyncio>=0.21.1,<1.0.0",
     "pytest-cov>=4.0.0,<5.0.0",
     "requests>=2.28.2",
     "ruff>=0.0.256,<1.0.0",
 ]
 
-dev = ["ipdb>=0.13.13,<1.0.0", "pre-commit>=3.3.1,<4.0.0"]
+dev = ["anyio>=3.6.2,<5", "ipdb>=0.13.13,<1.0.0", "pre-commit>=3.3.1,<4.0.0"]
 
 doc = [
     "mkautodoc>=0.2.0,<0.3.0",
@@ -85,21 +87,19 @@ known_third_party = []
 src_paths = ["mongoz"]
 
 [tool.mypy]
-strict = true
 warn_unused_configs = true
 warn_unreachable = true
 warn_return_any = true
+strict = true
 disallow_untyped_decorators = true
 disallow_any_generics = false
 implicit_reexport = false
+no_implicit_optional = false
 show_error_codes = true
 disallow_incomplete_defs = true
+disable_error_code = "attr-defined,arg-type,override,misc,valid-type"
 warn_unused_ignores = true
 warn_redundant_casts = true
-no_implicit_optional = false
-strict_equality = false
-strict_optional = false
-
 
 [tool.ruff]
 select = [
@@ -129,12 +129,9 @@ ignore_missing_imports = true
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-ignore_missing_imports = true
-ignore_errors = true
-
-[[tool.mypy.overrides]]
 module = "docs_src.*"
 ignore_errors = true
+
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]

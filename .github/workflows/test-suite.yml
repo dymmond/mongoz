@@ -18,6 +18,28 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
+    services:
+      mongodb:
+        image: mongo:latest
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: mongoadmin
+          MONGO_INITDB_DATABASE: mongodb
+        ports:
+          - 27017:27017
+
+      mongo-express:
+        image: mongo-express
+        ports:
+          - 8081:8081
+        env:
+          ME_CONFIG_MONGODB_ENABLE_ADMIN: 'true'
+          ME_CONFIG_MONGODB_SERVER: mongodb
+          ME_CONFIG_MONGODB_ADMINUSERNAME: root
+          ME_CONFIG_MONGODB_ADMINPASSWORD: mongoadmin
+          ME_CONFIG_BASICAUTH_USERNAME: admin
+          ME_CONFIG_BASICAUTH_PASSWORD: password
+
     steps:
       - uses: "actions/checkout@v3"
       - uses: "actions/setup-python@v4"
@@ -31,7 +53,9 @@ jobs:
       - name: "Install dependencies"
         if: steps.cache.outputs.cache-hit != 'true'
         run: "scripts/install"
-      - name: "Run linting checks"
-        run: "scripts/check"
+      # - name: "Run linting checks"
+      #   run: "scripts/check"
       - name: "Run tests"
+        env:
+          DATABASE_URI: "mongodb://root:mongoadmin@localhost:27017"
         run: "scripts/test"

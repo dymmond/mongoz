@@ -1,10 +1,6 @@
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from mongoz.core.db.context_vars import get_tenant, set_tenant
 from mongoz.core.db.querysets.base import QuerySet
-
-if TYPE_CHECKING:
-    pass
 
 
 class Manager:
@@ -13,8 +9,8 @@ class Manager:
     To create a custom manager, the best approach is to inherit from the ModelManager.
 
     Example:
-        from saffier.managers import ModelManager
-        from saffier.models import Model
+        from mongoz.managers import ModelManager
+        from mongoz.models import Document
 
 
         class MyCustomManager(ModelManager):
@@ -25,7 +21,7 @@ class Manager:
             ...
 
 
-        class MyModel(saffier.Model):
+        class MyModel(mongoz.Document):
             query = MyCustomManager()
             active = MyOtherManager()
 
@@ -41,12 +37,6 @@ class Manager:
 
         Checks for a global possible tenant and returns the corresponding queryset.
         """
-        tenant = get_tenant()
-        if tenant:
-            set_tenant(None)
-            return QuerySet(
-                self.model_class, table=self.model_class.table_schema(tenant)  # type: ignore
-            )
         return QuerySet(self.model_class)
 
     def __getattr__(self, item: Any) -> Any:

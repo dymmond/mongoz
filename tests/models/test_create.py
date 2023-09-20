@@ -1,0 +1,62 @@
+from typing import AsyncGenerator, List, Optional
+
+import bson
+import pydantic
+import pytest
+from pydantic import ValidationError
+from pymongo import errors
+from tests.conftest import client
+
+import mongoz
+from mongoz import Document, Index, IndexType, ObjectId, Order
+
+pytestmark = pytest.mark.anyio
+pydantic_version = pydantic.__version__[:3]
+
+indexes = [
+    Index("name", unique=True),
+    Index(keys=[("year", Order.DESCENDING), ("genre", IndexType.HASHED)]),
+]
+
+
+class Movie(Document):
+    name: str = mongoz.String()
+    year: int = mongoz.Integer()
+    tags: Optional[List[str]] = mongoz.Array(str, null=True)
+    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+
+    class Meta:
+        registry = client
+        database = "test_db"
+        indexes = indexes
+
+
+@pytest.fixture(scope="function", autouse=True)
+async def prepare_database() -> AsyncGenerator:
+    await Movie.drop_indexes(force=True)
+    await Movie.query().delete()
+    await Movie.create_indexes()
+    yield
+    await Movie.drop_indexes(force=True)
+    await Movie.query().delete()
+    await Movie.create_indexes()
+
+
+async def test_model_create() -> None:
+    movie = await Movie(name="Barbie", year=2023).create()
+    assert movie.name == "Barbie"
+    assert movie.year == 2023
+    assert isinstance(movie.id, bson.ObjectId)
+
+    with pytest.raises(ValidationError) as exc:
+        await Movie(name="Justice League", year=2017, uuid="1").create()
+
+    error = exc.value.errors()[0]
+
+    assert error["type"] == "value_error"
+    assert error["loc"] == ("uuid",)
+    assert error["msg"] == "Value error, Expected ObjectId, got: <class 'str'>"
+    assert error["input"] == "1"
+
+    with pytest.raises(errors.DuplicateKeyError):
+        await Movie(name="Barbie", year=2023).create()

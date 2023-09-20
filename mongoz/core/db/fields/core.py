@@ -1,17 +1,44 @@
 import datetime
 import decimal
 import enum
-import re
 import uuid
 from enum import EnumMeta
-from typing import Any, Generator, Optional, Pattern, Sequence, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 import bson
 import pydantic
+from bson.objectid import ObjectId
 from pydantic import EmailStr
+from pydantic._internal._schema_generation_shared import (
+    GetJsonSchemaHandler as GetJsonSchemaHandler,
+)
+from pydantic.json_schema import JsonSchemaValue as JsonSchemaValue
+from pydantic_core.core_schema import CoreSchema
+from pydantic_core.core_schema import (
+    general_plain_validator_function as general_plain_validator_function,
+)
 
 from mongoz.core.db.fields.base import BaseField
 from mongoz.exceptions import FieldDefinitionError
+
+mongoz_setattr = object.__setattr__
+
+if TYPE_CHECKING:
+    from mongoz.core.db.documents.document import EmbeddedDocument
+
 
 CLASS_DEFAULTS = ["cls", "__class__", "kwargs"]
 
@@ -23,7 +50,7 @@ class FieldFactory:
     _type: Any = None
 
     def __new__(cls, *args: Any, **kwargs: Any) -> BaseField:  # type: ignore
-        cls.validate(**kwargs)
+        cls.validate_field(**kwargs)
 
         default = kwargs.pop("default", None)
         null: bool = kwargs.pop("null", False)
@@ -33,9 +60,13 @@ class FieldFactory:
         choices: Set[Any] = set(kwargs.pop("choices", []))
         comment: str = kwargs.pop("comment", None)
         owner = kwargs.pop("owner", None)
-        format: str = kwargs.pop("format", None)
         read_only: bool = kwargs.pop("read_only", False)
-        field_type = cls._type
+        list_type: type = kwargs.pop("list_type", None)
+
+        if list_type is None:
+            field_type = cls._type
+        else:
+            field_type = List[list_type]
 
         namespace = dict(
             __type__=field_type,
@@ -48,7 +79,6 @@ class FieldFactory:
             choices=choices,
             comment=comment,
             owner=owner,
-            format=format,
             read_only=read_only,
             **kwargs,
         )
@@ -56,29 +86,48 @@ class FieldFactory:
         return Field(**namespace)  # type: ignore
 
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:  # pragma no cover
-        """
-        Used to validate if all required parameters on a given field type are set.
-        :param kwargs: all params passed during construction
-        :type kwargs: Any
-        """
+    def validate_field(cls, **kwargs: Any) -> None:  # pragma no cover
+        ...
 
 
-class ObjectId(FieldFactory, bson.ObjectId):
-    _type: bson.ObjectId
+class ObjectId(bson.ObjectId):
+    def __init__(self, oid: Union[str, ObjectId, bytes, None] = None, null: bool = False) -> None:
+        super().__init__(oid)
+        self.null = null
+        self.name: Union[str, None] = None
 
     @classmethod
     def __get_validators__(cls) -> Generator[bson.ObjectId, None, None]:
         yield cls.validate
 
     @classmethod
-    def validate(cls, value: Any) -> bson.ObjectId:
-        if not bson.ObjectId.is_valid(value):
+    def validate(cls: Type["bson.ObjectId"], v: Any) -> Any:
+        if not isinstance(v, bson.ObjectId):
+            raise ValueError(f"Expected ObjectId, got: {type(v)}")
+        return v
+
+    @classmethod
+    def _validate(cls, __input_value: Any, _: Any) -> "ObjectId":
+        if not isinstance(__input_value, bson.ObjectId):
+            raise ValueError(f"Expected ObjectId, got: {type(__input_value)}")
+        if not bson.ObjectId.is_valid(__input_value):
             raise ValueError("Invalid value for ObjectId")
-        return bson.ObjectId(value)
+        return cast(ObjectId, __input_value)
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        return {"type": "string"}
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source: Type[Any], handler: Callable[[Any], CoreSchema]
+    ) -> CoreSchema:
+        return general_plain_validator_function(cls._validate)
 
 
-class CharField(FieldFactory, str):
+class String(FieldFactory, str):
     """String field representation that constructs the Field class and populates the values"""
 
     _type = str
@@ -86,58 +135,21 @@ class CharField(FieldFactory, str):
     def __new__(  # type: ignore
         cls,
         *,
-        max_length: Optional[int] = 0,
+        max_length: Optional[int] = None,
         min_length: Optional[int] = None,
-        regex: Union[str, Pattern] = None,
         **kwargs: Any,
     ) -> BaseField:
-        if regex is None:
-            regex = None
-            kwargs["pattern_regex"] = None
-        elif isinstance(regex, str):
-            regex = regex
-            kwargs["pattern_regex"] = re.compile(regex)
-        else:
-            regex = regex.pattern
-            kwargs["pattern_regex"] = regex
-
         kwargs = {
             **kwargs,
             **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
 
-        return super().__new__(cls, **kwargs)
-
-    @classmethod
-    def validate(cls, **kwargs: Any) -> None:
-        max_length = kwargs.get("max_length", 0)
-        if max_length <= 0:
-            raise FieldDefinitionError(detail=f"'max_length' is required for {cls.__name__}")
-
-        min_length = kwargs.get("min_length")
-        pattern = kwargs.get("regex")
-
-        assert min_length is None or isinstance(min_length, int)
-        assert max_length is None or isinstance(max_length, int)
-        assert pattern is None or isinstance(pattern, (str, Pattern))
-
-
-class TextField(FieldFactory, str):
-    """String representation of a text field which means no max_length required"""
-
-    _type = str
-
-    def __new__(cls, **kwargs: Any) -> BaseField:  # type: ignore
-        kwargs = {
-            **kwargs,
-            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
-        }
         return super().__new__(cls, **kwargs)
 
 
 class Number(FieldFactory):
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:
+    def validate_field(cls, **kwargs: Any) -> None:
         minimum = kwargs.get("minimum", None)
         maximum = kwargs.get("maximum", None)
 
@@ -145,7 +157,7 @@ class Number(FieldFactory):
             raise FieldDefinitionError(detail="'minimum' cannot be bigger than 'maximum'")
 
 
-class IntegerField(Number, int):
+class Integer(Number, int):
     """
     Integer field factory that construct Field classes and populated their values.
     """
@@ -171,7 +183,7 @@ class IntegerField(Number, int):
         return super().__new__(cls, **kwargs)
 
 
-class FloatField(Number, float):
+class Double(Number, float):
     """Representation of a int32 and int64"""
 
     _type = float
@@ -191,7 +203,7 @@ class FloatField(Number, float):
         return super().__new__(cls, **kwargs)
 
 
-class DecimalField(Number, decimal.Decimal):
+class Decimal(Number, decimal.Decimal):
     _type = decimal.Decimal
 
     def __new__(  # type: ignore
@@ -211,8 +223,8 @@ class DecimalField(Number, decimal.Decimal):
         return super().__new__(cls, **kwargs)
 
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:
-        super().validate(**kwargs)
+    def validate_field(cls, **kwargs: Any) -> None:
+        super().validate_field(**kwargs)
 
         max_digits = kwargs.get("max_digits")
         decimal_places = kwargs.get("decimal_places")
@@ -222,7 +234,7 @@ class DecimalField(Number, decimal.Decimal):
             )
 
 
-class BooleanField(FieldFactory, int):
+class Boolean(FieldFactory, int):
     """Representation of a boolean"""
 
     _type = bool
@@ -261,7 +273,7 @@ class AutoNowMixin(FieldFactory):
         return super().__new__(cls, **kwargs)
 
 
-class DateTimeField(AutoNowMixin, datetime.datetime):
+class DateTime(AutoNowMixin, datetime.datetime):
     """Representation of a datetime field"""
 
     _type = datetime.datetime
@@ -283,7 +295,7 @@ class DateTimeField(AutoNowMixin, datetime.datetime):
         return super().__new__(cls, **kwargs)
 
 
-class DateField(AutoNowMixin, datetime.date):
+class Date(AutoNowMixin, datetime.date):
     """Representation of a date field"""
 
     _type = datetime.date
@@ -305,7 +317,7 @@ class DateField(AutoNowMixin, datetime.date):
         return super().__new__(cls, **kwargs)
 
 
-class TimeField(FieldFactory, datetime.time):
+class Time(FieldFactory, datetime.time):
     """Representation of a time field"""
 
     _type = datetime.time
@@ -318,13 +330,13 @@ class TimeField(FieldFactory, datetime.time):
         return super().__new__(cls, **kwargs)
 
 
-class JSONField(FieldFactory, pydantic.Json):  # type: ignore
+class Object(FieldFactory, pydantic.Json):  # type: ignore
     """Representation of a JSONField"""
 
     _type = Any
 
 
-class BinaryField(FieldFactory, bytes):
+class Binary(FieldFactory, bytes):
     """Representation of a binary"""
 
     _type = bytes
@@ -337,13 +349,13 @@ class BinaryField(FieldFactory, bytes):
         return super().__new__(cls, **kwargs)
 
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:
+    def validate_field(cls, **kwargs: Any) -> None:
         max_length = kwargs.get("max_length", None)
         if max_length <= 0:
             raise FieldDefinitionError(detail="Parameter 'max_length' is required for BinaryField")
 
 
-class UUIDField(FieldFactory, uuid.UUID):
+class UUID(FieldFactory, uuid.UUID):
     """Representation of a uuid"""
 
     _type = uuid.UUID
@@ -357,7 +369,7 @@ class UUIDField(FieldFactory, uuid.UUID):
         return super().__new__(cls, **kwargs)
 
 
-class ChoiceField(FieldFactory):
+class Choice(FieldFactory):
     """Representation of an Enum"""
 
     _type = enum.Enum
@@ -374,11 +386,68 @@ class ChoiceField(FieldFactory):
         return super().__new__(cls, **kwargs)
 
     @classmethod
-    def validate(cls, **kwargs: Any) -> None:
+    def validate_field(cls, **kwargs: Any) -> None:
         choice_class = kwargs.get("choices")
         if choice_class is None or not isinstance(choice_class, EnumMeta):
             raise FieldDefinitionError("ChoiceField choices must be an Enum")
 
 
-class EmailField(CharField):
+class EmailField(String):
     _type = EmailStr
+
+
+class Array(FieldFactory, list):
+    _type = list
+
+    def __new__(  # type: ignore
+        cls,
+        type_of: type,
+        **kwargs: Any,
+    ) -> BaseField:
+        kwargs = {
+            **kwargs,
+            **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
+        }
+        kwargs["list_type"] = type_of
+        return super().__new__(cls, **kwargs)
+
+
+class ArrayList(FieldFactory, list):
+    _type = list
+
+    def __new__(  # type: ignore
+        cls,
+        **kwargs: Any,
+    ) -> BaseField:
+        kwargs = {
+            **kwargs,
+            **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
+        }
+        kwargs["list_type"] = Any
+        return super().__new__(cls, **kwargs)
+
+
+class Embed(FieldFactory):
+    _type = None
+
+    def __new__(  # type: ignore
+        cls,
+        document: Type["EmbeddedDocument"],
+        **kwargs: Any,
+    ) -> BaseField:
+        kwargs = {
+            **kwargs,
+            **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
+        }
+        cls._type = document
+        return super().__new__(cls, **kwargs)
+
+    @classmethod
+    def validate_field(cls, **kwargs: Any) -> None:
+        from mongoz.core.db.documents.document import EmbeddedDocument
+
+        document = kwargs.get("document")
+        if not issubclass(document, EmbeddedDocument):
+            raise FieldDefinitionError(
+                "'document' must be of type mongoz.Document or mongoz.EmbeddedDocument"
+            )

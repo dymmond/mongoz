@@ -6,7 +6,7 @@ from typing_extensions import TypedDict
 
 class ModelConfig(TypedDict, total=False):
     """
-    A TypedDict for configuring Model behaviour.
+    A TypedDict for configuring Document behaviour.
     """
 
     strict: bool

@@ -19,11 +19,11 @@ class MongozException(Exception):
         return "".join(self.args).strip()
 
 
-class ObjectNotFound(MongozException):
+class DocumentNotFound(MongozException):
     ...
 
 
-class MultipleObjectsReturned(MongozException):
+class MultipleDumentsReturned(MongozException):
     ...
 
 

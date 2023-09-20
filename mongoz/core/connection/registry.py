@@ -1,7 +1,7 @@
 import asyncio
-from typing import Any, Callable, Dict, List, Mapping, Sequence, Tuple, Union
+from typing import Callable, Sequence, Tuple, Union
 
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorDatabase
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from mongoz.core.connection.database import Database
 
@@ -14,23 +14,15 @@ class Registry:
     def __init__(
         self,
         url: str,
-        database: Database,
         event_loop: Union[Callable[[], asyncio.AbstractEventLoop], None] = None,
     ) -> None:
         self.event_loop = event_loop or asyncio.get_event_loop
-        self._client: AsyncIOMotorClient = AsyncIOMotorClient(url)
+        self.url = url
+        self._client: AsyncIOMotorClient = AsyncIOMotorClient(self.url)
         self._client.get_io_loop = self.event_loop
-
-        assert isinstance(
-            database, Database
-        ), "`database` must be an instance of mongoz.core.connection.database.Database"
-        self._database = database
 
     @property
     def address(self) -> Tuple[str, int]:
-        """
-        Returns the address of the client
-        """
         return self._client.address
 
     @property
@@ -40,6 +32,10 @@ class Registry:
     @property
     def port(self) -> str:
         return self._client.PORT
+
+    @property
+    def driver(self) -> AsyncIOMotorDatabase:
+        return self._client.driver
 
     async def drop_database(self, database: Union[str, Database]) -> None:
         """

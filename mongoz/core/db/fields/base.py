@@ -1,12 +1,28 @@
 import decimal
-from typing import Any, Callable, ClassVar, Dict, Optional, Pattern, Sequence, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    Optional,
+    Pattern,
+    Sequence,
+    Type,
+    Union,
+)
 
 from pydantic._internal import _repr
 from pydantic.fields import FieldInfo
 
 from mongoz.core.connection.database import Database
 from mongoz.core.connection.registry import Registry
+from mongoz.core.db.querysets.expressions import Expression
+from mongoz.exceptions import InvalidKeyError
 from mongoz.types import Undefined
+
+if TYPE_CHECKING:
+    from mongoz import Document, EmbeddedDocument
 
 mongoz_setattr = object.__setattr__
 
@@ -24,6 +40,8 @@ class BaseField(FieldInfo, _repr.Representation):
         default: Any = Undefined,
         title: Optional[str] = None,
         description: Optional[str] = None,
+        parent: Union[Type["FieldInfo"], None] = None,
+        model_class: Union["Document", "EmbeddedDocument", None] = None,
         **kwargs: Any,
     ) -> None:
         self.max_digits: str = kwargs.pop("max_digits", None)
@@ -39,6 +57,8 @@ class BaseField(FieldInfo, _repr.Representation):
         if default is not None:
             self.null = True
 
+        self.parent = parent
+        self.model_class = model_class
         self.defaulf_factory: Optional[Callable[..., Any]] = kwargs.pop(
             "defaulf_factory", Undefined
         )
@@ -54,9 +74,7 @@ class BaseField(FieldInfo, _repr.Representation):
         self.choices: Sequence = kwargs.pop("choices", None)
         self.owner: Any = kwargs.pop("owner", None)
         self.name: str = kwargs.pop("name", None)
-        self.alias: str = kwargs.pop("name", None)
-        self.regex: str = kwargs.pop("regex", None)
-        self.format: str = kwargs.pop("format", None)
+        self.alias: str = kwargs.pop("alias", None)
         self.min_length: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop(
             "min_length", None
         )
@@ -71,6 +89,13 @@ class BaseField(FieldInfo, _repr.Representation):
         self.registry: Registry = kwargs.pop("registry", None)
         self.database: Database = kwargs.pop("database", None)
         self.comment = kwargs.pop("comment", None)
+        self.parent = kwargs.pop("parent", None)
+
+        if self.name and not self.alias:
+            self.alias = self.name
+
+        if self.alias and not self.name:
+            self.name = self.alias
 
         for name, value in kwargs.items():
             mongoz_setattr(self, name, value)
@@ -91,13 +116,13 @@ class BaseField(FieldInfo, _repr.Representation):
             `True` if the argument is required, `False` otherwise.
         """
         required = False if self.null else True
-        return bool(required and not self.primary_key)
+        return bool(required)
 
     def get_alias(self) -> str:
         """
         Used to translate the model column names into database column tables.
         """
-        return self.name
+        return self.alias
 
     def has_default(self) -> bool:
         """Checks if the field has a default value set"""
@@ -108,3 +133,55 @@ class BaseField(FieldInfo, _repr.Representation):
         if callable(default):
             return default()
         return default
+
+
+class MongozField:
+    def __init__(
+        self,
+        pydantic_field: "BaseField",
+        parent: Optional["MongozField"] = None,
+        model_class: Union["Document", "EmbeddedDocument", None] = None,
+    ) -> None:
+        self.model_class = model_class
+        self.parent = parent
+        self.pydantic_field = pydantic_field
+
+    @property
+    def _name(self) -> str:
+        if self.parent:
+            return self.parent._name + "." + self.pydantic_field.alias
+        return self.pydantic_field.alias
+
+    def __lt__(self, other: Any) -> Expression:
+        return Expression(self._name, "$lt", other)
+
+    def __le__(self, other: Any) -> Expression:
+        return Expression(self._name, "$lte", other)
+
+    def __eq__(self, other: Any) -> Expression:  # type: ignore[override]
+        return Expression(self._name, "$eq", other)
+
+    def __ne__(self, other: Any) -> Expression:  # type: ignore[override]
+        return Expression(self._name, "$ne", other)
+
+    def __gt__(self, other: Any) -> Expression:
+        return Expression(self._name, "$gt", other)
+
+    def __ge__(self, other: Any) -> Expression:
+        return Expression(self._name, "$gte", other)
+
+    def __hash__(self) -> int:
+        return super().__hash__()
+
+    def __getattr__(self, name: str) -> Any:
+        assert self.model_class is not None
+
+        if name not in self.model_class.__mongoz_fields__:
+            raise InvalidKeyError(f"Model '{self.model_class.__name__}' has no attribute '{name}'")
+
+        child_field: MongozField = self.model_class.__mongoz_fields__[name]
+        return MongozField(
+            pydantic_field=child_field.pydantic_field,
+            model_class=child_field.model_class,
+            parent=self,
+        )

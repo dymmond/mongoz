@@ -8,7 +8,7 @@ class DescriptiveMeta:
 
     .. code-block:: python3
 
-        class User(Model):
+        class User(Document):
             ...
 
             class Meta:
@@ -17,4 +17,4 @@ class DescriptiveMeta:
 
     """
 
-    ...  # pragama: no cover
+    ...  # pragma: no cover

@@ -1,21 +1,25 @@
-from typing import Any, Dict, List, Optional, Sequence, Set, Type, Union
+from typing import ClassVar, List, Mapping, Sequence, Type, TypeVar, Union
 
 import bson
 from bson.errors import InvalidId
+from pydantic import BaseModel
 
-from mongoz.core.db.models.row import ModelRow
-from mongoz.core.utils.functional import mongoz_setattr
-from mongoz.exceptions import InvalidKeyError, InvalidObjectIdError
+from mongoz.core.db.documents.base import MongozBaseModel
+from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
+from mongoz.core.db.fields.base import BaseField
+from mongoz.exceptions import InvalidKeyError
+
+T = TypeVar("T", bound="Document")
 
 
-class Model(ModelRow):
+class Document(MongozBaseModel):
     """
-    Representation of an Mongoz Model.
-    This also means it can generate declarative SQLAlchemy models
-    from anywhere.
+    Representation of an Mongoz Document.
     """
 
-    async def insert(self: Type["Model"]) -> Type["Model"]:
+    __embedded__: ClassVar[bool] = False
+
+    async def create(self: Type["Document"]) -> Type["Document"]:
         """
         Inserts a document.
         """
@@ -25,18 +29,18 @@ class Model(ModelRow):
         return self
 
     @classmethod
-    async def insert_many(
-        cls: Type["Model"], models: Sequence[Type["Model"]]
-    ) -> List[Type["Model"]]:
+    async def create_many(
+        cls: Type["Document"], models: Sequence[Type["Document"]]
+    ) -> List[Type["Document"]]:
         """
         Insert many documents
         """
         if not all(isinstance(model, cls) for model in models):
             raise TypeError(f"All models must be of type {cls.__name__}")
 
-        data = {model.model_dump(exclude={"id"}) for model in models}
+        data = (model.model_dump(exclude={"id"}) for model in models)
         results = await cls.meta.collection._collection.insert_many(data)
-        for model, inserted_id in zip(models, results.inserted_ids):
+        for model, inserted_id in zip(models, results.inserted_ids, strict=True):
             model.id = inserted_id
         return models
 
@@ -49,7 +53,7 @@ class Model(ModelRow):
             if index.name == name:
                 await cls.meta.collection._collection.create_indexes([index])
                 return index.name
-        raise IndentationError(f"Unable to find index: {name}")
+        raise InvalidKeyError(f"Unable to find index: {name}")
 
     @classmethod
     async def create_indexes(cls) -> List[str]:
@@ -85,13 +89,7 @@ class Model(ModelRow):
         index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
         return index_names
 
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}: {self}>"
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}({self.pkname}={self.pk})"
-
-    async def save(self: Type["Model"]) -> Type["Model"]:
+    async def save(self: Type["Document"]) -> Type["Document"]:
         """Save the document.
 
         This is equivalent of a single instance update.
@@ -103,3 +101,28 @@ class Model(ModelRow):
         for k, v in self.model_dump(exclude={"id"}).items():
             setattr(self, k, v)
         return self
+
+    @classmethod
+    async def get_document_by_id(cls: Type[T], id: Union[str, bson.ObjectId]) -> T:
+        if isinstance(id, str):
+            try:
+                id = bson.ObjectId(id)
+            except InvalidId as e:
+                raise InvalidKeyError(f'"{id}" is not a valid ObjectId') from e
+
+        return await cls.query({"_id": id}).get()
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}(id={self.id})"
+
+
+class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
+    """
+    Graphical representation of an Embedded document.
+    """
+
+    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
+    __embedded__: ClassVar[bool] = True
