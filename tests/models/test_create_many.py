@@ -1,4 +1,5 @@
 import random
+import sys
 from typing import AsyncGenerator, List, Optional
 
 import bson
@@ -41,6 +42,7 @@ async def prepare_database() -> AsyncGenerator:
     await Movie.create_indexes()
 
 
+@pytest.mark.skipif(sys.version_info < (3, 10), reason="zip() implementation refactored in 3.10+")
 async def test_model_create_many() -> None:
     movies = []
     movie_names = ("The Dark Knight", "The Dark Knight Rises", "The Godfather")
