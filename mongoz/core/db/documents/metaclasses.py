@@ -23,6 +23,7 @@ from mongoz.core.connection.registry import Registry
 from mongoz.core.db.datastructures import Index
 from mongoz.core.db.documents.managers import Manager
 from mongoz.core.db.fields.base import BaseField, MongozField
+from mongoz.core.signals import Broadcaster, Signal
 from mongoz.core.utils.functional import extract_field_annotations_and_defaults, mongoz_setattr
 from mongoz.exceptions import ImproperlyConfigured
 
@@ -61,7 +62,7 @@ class MetaInfo:
         self.indexes: List[Index] = getattr(meta, "indexes", None)
         self.managers: List[Manager] = getattr(meta, "managers", [])
         self.database: Union["str", Database] = getattr(meta, "database", None)
-        # self.signals: Optional[Broadcaster] = {}  # type: ignore
+        self.signals: Optional[Broadcaster] = {}  # type: ignore
 
     def model_dump(self) -> Dict[Any, Any]:
         return {k: getattr(self, k, None) for k in self.__slots__}
@@ -150,6 +151,20 @@ def _check_manager_for_bases(
             for key, value in inspect.getmembers(base):
                 if isinstance(value, Manager) and key not in attrs:
                     attrs[key] = value.__class__()
+
+
+def _register_document_signals(model_class: Type["Document"]) -> None:
+    """
+    Registers the signals in the model's Broadcaster and sets the defaults.
+    """
+    signals = Broadcaster()
+    signals.pre_save = Signal()
+    signals.pre_update = Signal()
+    signals.pre_delete = Signal()
+    signals.post_save = Signal()
+    signals.post_update = Signal()
+    signals.post_delete = Signal()
+    model_class.meta.signals = signals
 
 
 class BaseModelMeta(ModelMetaclass):
@@ -310,9 +325,19 @@ class BaseModelMeta(ModelMetaclass):
             new_field = MongozField(pydantic_field=field, model_class=field.annotation)
             mongoz_fields[field_name] = new_field
 
+        # Register the signals
+        _register_document_signals(new_class)
+
         new_class.Meta = meta
         new_class.__mongoz_fields__ = mongoz_fields
         return new_class
+
+    @property
+    def signals(cls) -> "Broadcaster":
+        """
+        Returns the signals of a class
+        """
+        return cast("Broadcaster", cls.meta.signals)
 
     def __getattr__(self, name: str) -> Any:
         if name in self.__mongoz_fields__:

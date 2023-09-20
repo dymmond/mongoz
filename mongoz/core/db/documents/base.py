@@ -1,4 +1,4 @@
-from typing import ClassVar, Dict, List, Mapping, Type, TypeVar, Union
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Mapping, Type, TypeVar, Union
 
 import bson
 import pydantic
@@ -12,12 +12,15 @@ from mongoz.core.db.fields.base import BaseField
 from mongoz.core.db.fields.core import ObjectId
 from mongoz.core.db.querysets.base import QuerySet
 from mongoz.core.db.querysets.expressions import Expression
-from mongoz.core.utils.models import DateParser, ModelParser
+from mongoz.core.signals.signal import Signal
 
 T = TypeVar("T", bound="MongozBaseModel")
 
+if TYPE_CHECKING:
+    from mongoz.core.signals import Broadcaster
 
-class BaseMongoz(BaseModel, DateParser, ModelParser, metaclass=BaseModelMeta):
+
+class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     """
     Base of all Mongoz models with the core setup.
     """
@@ -27,7 +30,7 @@ class BaseMongoz(BaseModel, DateParser, ModelParser, metaclass=BaseModelMeta):
     model_config = ConfigDict(
         extra="allow",
         arbitrary_types_allowed=True,
-        json_encoders={bson.ObjectId: str},
+        json_encoders={bson.ObjectId: str, Signal: str},
         validate_assignment=True,
     )
 
@@ -57,6 +60,10 @@ class BaseMongoz(BaseModel, DateParser, ModelParser, metaclass=BaseModelMeta):
                 filter_by.append(arg)
 
         return QuerySet(model_class=cls, filter_by=filter_by)
+
+    @property
+    def signals(self) -> "Broadcaster":
+        return self.__class__.signals  # type: ignore
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"

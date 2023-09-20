@@ -23,9 +23,13 @@ class Document(MongozBaseModel):
         """
         Inserts a document.
         """
+        await self.signals.pre_save.send(sender=self.__class__, instance=self)
+
         data = self.model_dump(exclude={"id"})
         result = await self.meta.collection._collection.insert_one(data)
         self.id = result.inserted_id
+
+        await self.signals.post_save.send(sender=self.__class__, instance=self)
         return self
 
     @classmethod
@@ -62,7 +66,11 @@ class Document(MongozBaseModel):
 
     async def delete(self) -> int:
         """Delete the document."""
+        await self.signals.pre_delete.send(sender=self.__class__, instance=self)
+
         result = await self.meta.collection._collection.delete_one({"_id": self.id})
+
+        await self.signals.post_delete.send(sender=self.__class__, instance=self)
         return result.deleted_count
 
     @classmethod
@@ -94,12 +102,15 @@ class Document(MongozBaseModel):
 
         This is equivalent of a single instance update.
         """
+        await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         await self.meta.collection._collection.update_one(
             {"_id": self.id}, {"$set": self.model_dump(exclude={"id", "_id"})}
         )
         for k, v in self.model_dump(exclude={"id"}).items():
             setattr(self, k, v)
+
+        await self.signals.post_save.send(sender=self.__class__, instance=self)
         return self
 
     @classmethod
