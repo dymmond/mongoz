@@ -25,7 +25,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     Base of all Mongoz models with the core setup.
     """
 
-    __db_model__: ClassVar[bool] = False
+    __db_document__: ClassVar[bool] = False
 
     model_config = ConfigDict(
         extra="allow",

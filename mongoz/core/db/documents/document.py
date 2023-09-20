@@ -17,8 +17,6 @@ class Document(MongozBaseModel):
     Representation of an Mongoz Document.
     """
 
-    __embedded__: ClassVar[bool] = False
-
     async def create(self: Type["Document"]) -> Type["Document"]:
         """
         Inserts a document.
@@ -136,4 +134,3 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
     """
 
     __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
-    __embedded__: ClassVar[bool] = True

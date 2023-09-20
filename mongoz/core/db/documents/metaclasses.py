@@ -1,3 +1,4 @@
+import copy
 import inspect
 from typing import (
     TYPE_CHECKING,
@@ -7,7 +8,6 @@ from typing import (
     List,
     Mapping,
     Optional,
-    Set,
     Tuple,
     Type,
     Union,
@@ -37,7 +37,6 @@ class MetaInfo:
         "pk_attribute",
         "abstract",
         "fields",
-        "fields_mapping",
         "registry",
         "collection",
         "indexes",
@@ -53,8 +52,7 @@ class MetaInfo:
         self.pk: Optional[BaseField] = None
         self.pk_attribute: Union[BaseField, str] = getattr(meta, "pk_attribute", "")
         self.abstract: bool = getattr(meta, "abstract", False)
-        self.fields: Set[Any] = set()
-        self.fields_mapping: Dict[str, BaseField] = {}
+        self.fields: Dict[str, BaseField] = {}
         self.registry: Optional[Type[Registry]] = getattr(meta, "registry", None)
         self.collection: Optional[Collection] = getattr(meta, "collection", None)
         self.parents: Any = getattr(meta, "parents", None) or []
@@ -83,7 +81,6 @@ def _check_document_inherited_registry(bases: Tuple[Type, ...]) -> Type[Registry
     If not found, then a ImproperlyConfigured exception is raised.
     """
     found_registry: Optional[Type[Registry]] = None
-
     for base in bases:
         meta: MetaInfo = getattr(base, "meta", None)  # type: ignore
         if not meta:
@@ -98,6 +95,23 @@ def _check_document_inherited_registry(bases: Tuple[Type, ...]) -> Type[Registry
             "Registry for the table not found in the Meta class or any of the superclasses. You must set the registry in the Meta."
         )
     return found_registry
+
+
+def _check_document_inherited_indexes(bases: Tuple[Type, ...]) -> List[Any]:
+    """
+    Checks if there are any indexes from the inherited document.
+    """
+    found_indexes: List[Any] = []
+    for base in bases:
+        meta: MetaInfo = getattr(base, "meta", None)  # type: ignore
+        if not meta:
+            continue
+
+        if getattr(meta, "indexes", None) is not None:
+            found_indexes.extend(meta.indexes)
+            break
+
+    return found_indexes
 
 
 def _check_document_inherited_database(
@@ -203,7 +217,7 @@ class BaseModelMeta(ModelMetaclass):
                 _check_manager_for_bases(base, attrs)  # type: ignore
             else:
                 # abstract classes
-                for key, value in meta.fields_mapping.items():
+                for key, value in meta.fields.items():
                     attrs[key] = value
 
                 # For managers coming from the top that are not abstract classes
@@ -220,18 +234,17 @@ class BaseModelMeta(ModelMetaclass):
 
         for key, value in attrs.items():
             if isinstance(value, BaseField):
-                if (
-                    getattr(meta_class, "abstract", None) is None
-                    or getattr(meta_class, "abstract", False) is False
-                ):
-                    fields[key] = value
+                if getattr(meta_class, "abstract", None) is None:
+                    value = copy.copy(value)
+
+                fields[key] = value
 
         for slot in fields:
             attrs.pop(slot, None)
 
         attrs["meta"] = meta = MetaInfo(meta_class)
 
-        meta.fields_mapping = fields
+        meta.fields = fields
         meta.pk_attribute = pk_attribute
         meta.pk = fields.get(pk_attribute)
 
@@ -265,12 +278,7 @@ class BaseModelMeta(ModelMetaclass):
 
         # Handle the registry of models
         if getattr(meta, "registry", None) is None:
-            if (
-                hasattr(new_class, "__db_model__")
-                and new_class.__db_model__
-                and hasattr(new_class, "__embedded__")
-                and new_class.__embedded__
-            ):
+            if hasattr(new_class, "__db_document__") and new_class.__db_document__:
                 meta.registry = _check_document_inherited_registry(bases)
             else:
                 return new_class
@@ -305,10 +313,13 @@ class BaseModelMeta(ModelMetaclass):
                 if not all(isinstance(value, Index) for value in indexes):
                     raise ValueError("Meta.indexes must be a list of Index types.")
 
-        for _, field in meta.fields_mapping.items():
+                # Extend existing indexes.
+                indexes.extend(_check_document_inherited_indexes(bases))
+
+        for _, field in meta.fields.items():
             field.registry = registry
 
-        new_class.__db_model__ = True
+        new_class.__db_document__ = True
         meta.collection = meta.database.get_collection(collection_name)
         meta.manager.model_class = new_class
 
