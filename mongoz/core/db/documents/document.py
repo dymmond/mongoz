@@ -1,6 +1,7 @@
-from typing import ClassVar, List, Mapping, Sequence, Type, TypeVar, Union
+from typing import Any, ClassVar, List, Mapping, Sequence, Type, TypeVar, Union
 
 import bson
+import pydantic
 from bson.errors import InvalidId
 from pydantic import BaseModel
 
@@ -31,6 +32,37 @@ class Document(MongozBaseModel):
         self.id = result.inserted_id
 
         await self.signals.post_save.send(sender=self.__class__, instance=self)
+        return self
+
+    async def update(self, **kwargs: Any) -> None:
+        """
+        Updates a record on an instance level.
+        """
+        field_definitions = {
+            name: (annotations, ...)
+            for name, annotations in self.__annotations__.items()
+            if name in kwargs
+        }
+
+        if field_definitions:
+            pydantic_model: Type[BaseModel] = pydantic.create_model(
+                __model_name=self.__class__.__name__,
+                __config__=self.model_config,
+                **field_definitions,
+            )
+            model = pydantic_model.model_validate(kwargs)
+            values = model.model_dump()
+
+            # Model data
+            data = self.model_dump(exclude={"id": "_id"})
+            data.update(values)
+
+            await self.signals.pre_update.send(sender=self.__class__, instance=self)
+            await self.meta.collection._collection.update_one({"_id": self.id}, {"$set": data})
+            await self.signals.post_update.send(sender=self.__class__, instance=self)
+
+            for k, v in data.items():
+                setattr(self, k, v)
         return self
 
     @classmethod
