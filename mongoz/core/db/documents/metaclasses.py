@@ -21,7 +21,6 @@ from mongoz.core.connection.collections import Collection
 from mongoz.core.connection.database import Database
 from mongoz.core.connection.registry import Registry
 from mongoz.core.db.datastructures import Index
-from mongoz.core.db.documents.managers import Manager
 from mongoz.core.db.fields.base import BaseField, MongozField
 from mongoz.core.signals import Broadcaster, Signal
 from mongoz.core.utils.functional import extract_field_annotations_and_defaults, mongoz_setattr
@@ -41,8 +40,6 @@ class MetaInfo:
         "collection",
         "indexes",
         "parents",
-        "manager",
-        "managers",
         "signals",
         "database",
     )
@@ -56,9 +53,7 @@ class MetaInfo:
         self.registry: Optional[Type[Registry]] = getattr(meta, "registry", None)
         self.collection: Optional[Collection] = getattr(meta, "collection", None)
         self.parents: Any = getattr(meta, "parents", None) or []
-        self.manager: "Manager" = getattr(meta, "manager", Manager())
         self.indexes: List[Index] = getattr(meta, "indexes", None)
-        self.managers: List[Manager] = getattr(meta, "managers", [])
         self.database: Union["str", Database] = getattr(meta, "database", None)
         self.signals: Optional[Broadcaster] = {}  # type: ignore
 
@@ -148,25 +143,6 @@ def _check_document_inherited_database(
     return found_database
 
 
-def _check_manager_for_bases(
-    base: Tuple[Type, ...],
-    attrs: Any,
-    meta: Optional[MetaInfo] = None,
-) -> None:
-    """
-    When an abstract class is declared, we must treat the manager's value coming from the top.
-    """
-    if not meta:
-        for key, value in inspect.getmembers(base):
-            if isinstance(value, Manager) and key not in attrs:
-                attrs[key] = value.__class__()
-    else:
-        if not meta.abstract:
-            for key, value in inspect.getmembers(base):
-                if isinstance(value, Manager) and key not in attrs:
-                    attrs[key] = value.__class__()
-
-
 def _register_document_signals(model_class: Type["Document"]) -> None:
     """
     Registers the signals in the model's Broadcaster and sets the defaults.
@@ -213,14 +189,10 @@ class BaseModelMeta(ModelMetaclass):
                 for key, value in inspect.getmembers(base):
                     if isinstance(value, BaseField) and key not in attrs:
                         attrs[key] = value
-                _check_manager_for_bases(base, attrs)  # type: ignore
             else:
                 # abstract classes
                 for key, value in meta.fields.items():
                     attrs[key] = value
-
-                # For managers coming from the top that are not abstract classes
-                _check_manager_for_bases(base, attrs, meta)  # type: ignore
 
         # Search in the base classes
         inherited_fields: Any = {}
@@ -260,18 +232,6 @@ class BaseModelMeta(ModelMetaclass):
 
         if "id" in new_class.model_fields:
             new_class.model_fields["id"].default = None
-
-        # Abstract classes do not allow multiple managers. This make sure it is enforced.
-        if meta.abstract:
-            managers = [k for k, v in attrs.items() if isinstance(v, Manager)]
-            if len(managers) > 1:
-                raise ImproperlyConfigured(
-                    "Multiple managers are not allowed in abstract classes."
-                )
-            if getattr(meta, "indexes", None) is not None:
-                raise ImproperlyConfigured("indexes cannot be in abstract classes.")
-        else:
-            meta.managers = [k for k, v in attrs.items() if isinstance(v, Manager)]
 
         # Handle the registry of models
         if getattr(meta, "registry", None) is None:
@@ -318,12 +278,6 @@ class BaseModelMeta(ModelMetaclass):
 
         new_class.__db_document__ = True
         meta.collection = meta.database.get_collection(collection_name)
-        meta.manager.model_class = new_class
-
-        # Set the manager
-        for _, value in attrs.items():
-            if isinstance(value, Manager):
-                value.model_class = new_class
 
         mongoz_fields: Dict[str, MongozField] = {}
         for field_name, field in new_class.model_fields.items():

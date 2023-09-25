@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, Generic, List, Type
 import pydantic
 
 from mongoz.core.db.datastructures import Order
-from mongoz.core.db.fields.base import MongozField
+from mongoz.core.db.fields import base
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.exceptions import DocumentNotFound, MultipleDumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
@@ -63,12 +63,9 @@ class QuerySet(QuerySetProtocol, Generic[T]):
 
     async def delete(self) -> int:
         """Delete documents matching the criteria."""
-        # await self.model_class.signals.pre_delete.send(sender=self.model_class, instance=self)
-
         filter_query = Expression.compile_many(self._filter)
         result = await self._collection.delete_many(filter_query)
 
-        # await self.model_class.signals.post_delete.send(sender=self.model_class, instance=self)
         return result.deleted_count
 
     async def first(self) -> Union[T, None]:
@@ -138,7 +135,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
             for key_dir in key:
                 sort_expression = SortExpression(*key_dir)
                 self._sort.append(sort_expression)
-        elif isinstance(key, (str, MongozField)):
+        elif isinstance(key, (str, base.MongozField)):
             sort_expression = SortExpression(key, direction)
             self._sort.append(sort_expression)
         else:
@@ -172,9 +169,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
             values = model.model_dump()
 
             filter_query = Expression.compile_many(self._filter)
-            # await self.model_class.signals.pre_update.send(sender=self.model_class, instance=self)
             await self._collection.update_many(filter_query, {"$set": values})
-            # await self.model_class.signals.post_update.send(sender=self.model_class, instance=self)
 
             _filter = [expression for expression in self._filter if expression.key not in values]
             _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
