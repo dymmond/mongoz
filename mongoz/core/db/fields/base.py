@@ -122,6 +122,9 @@ class BaseField(FieldInfo, _repr.Representation):
         required = False if self.null else True
         return bool(required)
 
+    def has_default(self) -> bool:
+        return bool(self.default is not None and self.default is not Undefined)
+
     def get_default_value(self) -> Any:
         default = getattr(self, "default", None)
         if callable(default):

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Mapping, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Mapping, Type, TypeVar, Union
 
 import bson
 import pydantic
@@ -35,6 +35,21 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     )
     meta: ClassVar[MetaInfo] = MetaInfo(None)
     Meta: ClassVar[DescriptiveMeta] = DescriptiveMeta()
+
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        self.extract_default_values_from_field()
+
+    def extract_default_values_from_field(self) -> None:
+        """
+        Populate the defaults of each Mongoz field if any is passed.
+
+        E.g.: DateTime(auto_now=True) will generate the default for automatic
+        dates.
+        """
+        for field_name, field in self.model_fields.items():
+            if hasattr(field, "has_default") and field.has_default():
+                setattr(self, field_name, field.get_default_value())
 
     def get_instance_name(self) -> str:
         """
