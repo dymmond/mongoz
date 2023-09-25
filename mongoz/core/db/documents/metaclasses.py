@@ -337,7 +337,7 @@ class BaseModelMeta(ModelMetaclass):
         # and not the MongozField itself
         for name, field in new_class.model_fields.items():
             if isinstance(field.default, MongozField):
-                new_class.model_fields[name].default = field.default.pydantic_field.default
+                new_class.model_fields[name] = field.default.pydantic_field
 
         # Register the signals
         _register_document_signals(new_class)
