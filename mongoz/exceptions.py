@@ -41,3 +41,11 @@ class InvalidObjectIdError(MongozException):
 
 class InvalidKeyError(MongozException):
     ...
+
+
+class SignalError(MongozException):
+    ...
+
+
+class AbstractDocumentError(MongozException):
+    ...

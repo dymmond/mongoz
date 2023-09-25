@@ -1,37 +1,38 @@
-from typing import ClassVar, Dict, List, Mapping, Type, TypeVar, Union
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Mapping, Type, TypeVar, Union
 
 import bson
 import pydantic
 from pydantic import BaseModel, ConfigDict
 from pydantic_core._pydantic_core import SchemaValidator as SchemaValidator
-from typing_extensions import Self
 
 from mongoz.core.db.documents._internal import DescriptiveMeta
 from mongoz.core.db.documents.metaclasses import BaseModelMeta, MetaInfo
-from mongoz.core.db.fields.base import BaseField
+from mongoz.core.db.fields.base import MongozField
 from mongoz.core.db.fields.core import ObjectId
 from mongoz.core.db.querysets.base import QuerySet
 from mongoz.core.db.querysets.expressions import Expression
-from mongoz.core.utils.models import DateParser, ModelParser
+from mongoz.core.signals.signal import Signal
+from mongoz.utils.mixins import is_operation_allowed
 
 T = TypeVar("T", bound="MongozBaseModel")
 
+if TYPE_CHECKING:
+    from mongoz.core.signals import Broadcaster
 
-class BaseMongoz(BaseModel, DateParser, ModelParser, metaclass=BaseModelMeta):
+
+class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     """
     Base of all Mongoz models with the core setup.
     """
 
-    __db_model__: ClassVar[bool] = False
+    __db_document__: ClassVar[bool] = False
 
     model_config = ConfigDict(
         extra="allow",
         arbitrary_types_allowed=True,
-        json_encoders={bson.ObjectId: str},
+        json_encoders={bson.ObjectId: str, Signal: str},
         validate_assignment=True,
     )
-
-    parent: ClassVar[Union[Type[Self], None]]
     meta: ClassVar[MetaInfo] = MetaInfo(None)
     Meta: ClassVar[DescriptiveMeta] = DescriptiveMeta()
 
@@ -43,7 +44,9 @@ class BaseMongoz(BaseModel, DateParser, ModelParser, metaclass=BaseModelMeta):
 
     @classmethod
     def query(cls: Type[T], *values: Union[bool, Dict, Expression]) -> QuerySet[T]:
-        """Filter query criteria."""
+        """Filter query criteria nad blocks abstract class operations"""
+        is_operation_allowed(cls)
+
         filter_by: List[Expression] = []
         if not values:
             return QuerySet(model_class=cls)
@@ -58,6 +61,10 @@ class BaseMongoz(BaseModel, DateParser, ModelParser, metaclass=BaseModelMeta):
 
         return QuerySet(model_class=cls, filter_by=filter_by)
 
+    @property
+    def signals(self) -> "Broadcaster":
+        return self.__class__.signals  # type: ignore
+
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"
 
@@ -66,5 +73,5 @@ class BaseMongoz(BaseModel, DateParser, ModelParser, metaclass=BaseModelMeta):
 
 
 class MongozBaseModel(BaseMongoz):
-    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
+    __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]
     id: Union[ObjectId, None] = pydantic.Field(alias="_id")

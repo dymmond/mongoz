@@ -1,13 +1,15 @@
-from typing import ClassVar, List, Mapping, Sequence, Type, TypeVar, Union
+from typing import Any, ClassVar, List, Mapping, Sequence, Type, TypeVar, Union
 
 import bson
+import pydantic
 from bson.errors import InvalidId
 from pydantic import BaseModel
 
 from mongoz.core.db.documents.base import MongozBaseModel
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
-from mongoz.core.db.fields.base import BaseField
+from mongoz.core.db.fields.base import MongozField
 from mongoz.exceptions import InvalidKeyError
+from mongoz.utils.mixins import is_operation_allowed
 
 T = TypeVar("T", bound="Document")
 
@@ -17,15 +19,50 @@ class Document(MongozBaseModel):
     Representation of an Mongoz Document.
     """
 
-    __embedded__: ClassVar[bool] = False
-
     async def create(self: Type["Document"]) -> Type["Document"]:
         """
         Inserts a document.
         """
+        is_operation_allowed(self)
+
+        await self.signals.pre_save.send(sender=self.__class__, instance=self)
+
         data = self.model_dump(exclude={"id"})
         result = await self.meta.collection._collection.insert_one(data)
         self.id = result.inserted_id
+
+        await self.signals.post_save.send(sender=self.__class__, instance=self)
+        return self
+
+    async def update(self, **kwargs: Any) -> None:
+        """
+        Updates a record on an instance level.
+        """
+        field_definitions = {
+            name: (annotations, ...)
+            for name, annotations in self.__annotations__.items()
+            if name in kwargs
+        }
+
+        if field_definitions:
+            pydantic_model: Type[BaseModel] = pydantic.create_model(
+                __model_name=self.__class__.__name__,
+                __config__=self.model_config,
+                **field_definitions,
+            )
+            model = pydantic_model.model_validate(kwargs)
+            values = model.model_dump()
+
+            # Model data
+            data = self.model_dump(exclude={"id": "_id"})
+            data.update(values)
+
+            await self.signals.pre_update.send(sender=self.__class__, instance=self)
+            await self.meta.collection._collection.update_one({"_id": self.id}, {"$set": data})
+            await self.signals.post_update.send(sender=self.__class__, instance=self)
+
+            for k, v in data.items():
+                setattr(self, k, v)
         return self
 
     @classmethod
@@ -35,6 +72,8 @@ class Document(MongozBaseModel):
         """
         Insert many documents
         """
+        is_operation_allowed(cls)
+
         if not all(isinstance(model, cls) for model in models):
             raise TypeError(f"All models must be of type {cls.__name__}")
 
@@ -49,6 +88,8 @@ class Document(MongozBaseModel):
         """
         Creates an index from the list of indexes of the Meta object.
         """
+        is_operation_allowed(cls)
+
         for index in cls.meta.indexes:
             if index.name == name:
                 await cls.meta.collection._collection.create_indexes([index])
@@ -58,11 +99,19 @@ class Document(MongozBaseModel):
     @classmethod
     async def create_indexes(cls) -> List[str]:
         """Create indexes defined for the collection."""
+        is_operation_allowed(cls)
+
         return await cls.meta.collection._collection.create_indexes(cls.meta.indexes)
 
     async def delete(self) -> int:
         """Delete the document."""
+        is_operation_allowed(self)
+
+        await self.signals.pre_delete.send(sender=self.__class__, instance=self)
+
         result = await self.meta.collection._collection.delete_one({"_id": self.id})
+
+        await self.signals.post_delete.send(sender=self.__class__, instance=self)
         return result.deleted_count
 
     @classmethod
@@ -71,6 +120,7 @@ class Document(MongozBaseModel):
 
         Can raise `pymongo.errors.OperationFailure`.
         """
+        is_operation_allowed(cls)
 
         for index in cls.meta.indexes:
             if index.name == name:
@@ -84,6 +134,8 @@ class Document(MongozBaseModel):
 
         With `force=True`, even indexes not defined on the collection will be removed.
         """
+        is_operation_allowed(cls)
+
         if force:
             return await cls.meta.collection._collection.drop_indexes()
         index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
@@ -94,16 +146,23 @@ class Document(MongozBaseModel):
 
         This is equivalent of a single instance update.
         """
+        is_operation_allowed(self)
+
+        await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         await self.meta.collection._collection.update_one(
             {"_id": self.id}, {"$set": self.model_dump(exclude={"id", "_id"})}
         )
         for k, v in self.model_dump(exclude={"id"}).items():
             setattr(self, k, v)
+
+        await self.signals.post_save.send(sender=self.__class__, instance=self)
         return self
 
     @classmethod
     async def get_document_by_id(cls: Type[T], id: Union[str, bson.ObjectId]) -> T:
+        is_operation_allowed(cls)
+
         if isinstance(id, str):
             try:
                 id = bson.ObjectId(id)
@@ -124,5 +183,4 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
     Graphical representation of an Embedded document.
     """
 
-    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
-    __embedded__: ClassVar[bool] = True
+    __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]

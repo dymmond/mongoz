@@ -172,10 +172,6 @@ class Integer(Number, int):
         multiple_of: Optional[int] = None,
         **kwargs: Any,
     ) -> BaseField:
-        autoincrement = kwargs.pop("autoincrement", None)
-        autoincrement = (
-            autoincrement if autoincrement is not None else kwargs.get("primary_key", False)
-        )
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in ["cls", "__class__", "kwargs"]},

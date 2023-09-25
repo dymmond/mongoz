@@ -27,6 +27,8 @@ from .core.db.fields import (
 from .core.db.querysets.base import QuerySet
 from .core.db.querysets.expressions import Expression, SortExpression
 from .core.db.querysets.operators import Q
+from .core.signals import Signal
+from .exceptions import DocumentNotFound, MultipleDumentsReturned
 
 __all__ = [
     "Array",
@@ -39,6 +41,7 @@ __all__ = [
     "DateTime",
     "Decimal",
     "Document",
+    "DocumentNotFound",
     "Double",
     "Embed",
     "EmailField",
@@ -48,12 +51,14 @@ __all__ = [
     "IndexType",
     "Integer",
     "Manager",
+    "MultipleDumentsReturned",
     "Object",
     "ObjectId",
     "Order",
     "Q",
     "QuerySet",
     "Registry",
+    "Signal",
     "SortExpression",
     "String",
     "Time",
