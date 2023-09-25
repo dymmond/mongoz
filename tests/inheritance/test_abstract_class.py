@@ -1,11 +1,12 @@
-from typing import AsyncGenerator, List, Optional
+from typing import List, Optional
 
 import pydantic
 import pytest
+from tests.conftest import client
 
 import mongoz
 from mongoz import Document, Index, ObjectId
-from tests.conftest import client
+from mongoz.exceptions import AbstractDocumentError
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]
@@ -34,22 +35,9 @@ class Movie(BaseDocument):
         indexes = indexes
 
 
-@pytest.fixture(scope="function", autouse=True)
-async def prepare_database() -> AsyncGenerator:
-    await Movie.drop_indexes(force=True)
-    await Movie.query().delete()
-    await Movie.create_indexes()
-    yield
-    await Movie.drop_indexes(force=True)
-    await Movie.query().delete()
-    await Movie.create_indexes()
+async def test_abstract_error() -> None:
+    with pytest.raises(AbstractDocumentError):
+        await BaseDocument.query().all()
 
-
-async def test_model_all() -> None:
-    movies = await BaseDocument.query().all()
-    assert len(movies) == 0
-
-    await BaseDocument(name="Barbie", year=2003).create()
-
-    movies = await BaseDocument.query().all()
-    assert len(movies) == 1
+    with pytest.raises(AbstractDocumentError):
+        await BaseDocument(name="Barbie", year=2003).create()

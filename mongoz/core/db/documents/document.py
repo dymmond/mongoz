@@ -8,6 +8,7 @@ from mongoz.core.db.documents.base import MongozBaseModel
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.core.db.fields.base import MongozField
 from mongoz.exceptions import InvalidKeyError
+from mongoz.utils.mixins import is_operation_allowed
 
 T = TypeVar("T", bound="Document")
 
@@ -21,6 +22,8 @@ class Document(MongozBaseModel):
         """
         Inserts a document.
         """
+        is_operation_allowed(self)
+
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         data = self.model_dump(exclude={"id"})
@@ -37,6 +40,8 @@ class Document(MongozBaseModel):
         """
         Insert many documents
         """
+        is_operation_allowed(cls)
+
         if not all(isinstance(model, cls) for model in models):
             raise TypeError(f"All models must be of type {cls.__name__}")
 
@@ -51,6 +56,8 @@ class Document(MongozBaseModel):
         """
         Creates an index from the list of indexes of the Meta object.
         """
+        is_operation_allowed(cls)
+
         for index in cls.meta.indexes:
             if index.name == name:
                 await cls.meta.collection._collection.create_indexes([index])
@@ -60,10 +67,14 @@ class Document(MongozBaseModel):
     @classmethod
     async def create_indexes(cls) -> List[str]:
         """Create indexes defined for the collection."""
+        is_operation_allowed(cls)
+
         return await cls.meta.collection._collection.create_indexes(cls.meta.indexes)
 
     async def delete(self) -> int:
         """Delete the document."""
+        is_operation_allowed(self)
+
         await self.signals.pre_delete.send(sender=self.__class__, instance=self)
 
         result = await self.meta.collection._collection.delete_one({"_id": self.id})
@@ -77,6 +88,7 @@ class Document(MongozBaseModel):
 
         Can raise `pymongo.errors.OperationFailure`.
         """
+        is_operation_allowed(cls)
 
         for index in cls.meta.indexes:
             if index.name == name:
@@ -90,6 +102,8 @@ class Document(MongozBaseModel):
 
         With `force=True`, even indexes not defined on the collection will be removed.
         """
+        is_operation_allowed(cls)
+
         if force:
             return await cls.meta.collection._collection.drop_indexes()
         index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
@@ -100,6 +114,8 @@ class Document(MongozBaseModel):
 
         This is equivalent of a single instance update.
         """
+        is_operation_allowed(self)
+
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         await self.meta.collection._collection.update_one(
@@ -113,6 +129,8 @@ class Document(MongozBaseModel):
 
     @classmethod
     async def get_document_by_id(cls: Type[T], id: Union[str, bson.ObjectId]) -> T:
+        is_operation_allowed(cls)
+
         if isinstance(id, str):
             try:
                 id = bson.ObjectId(id)

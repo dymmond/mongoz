@@ -45,3 +45,7 @@ class InvalidKeyError(MongozException):
 
 class SignalError(MongozException):
     ...
+
+
+class AbstractDocumentError(MongozException):
+    ...

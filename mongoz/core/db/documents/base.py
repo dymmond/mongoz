@@ -12,6 +12,7 @@ from mongoz.core.db.fields.core import ObjectId
 from mongoz.core.db.querysets.base import QuerySet
 from mongoz.core.db.querysets.expressions import Expression
 from mongoz.core.signals.signal import Signal
+from mongoz.utils.mixins import is_operation_allowed
 
 T = TypeVar("T", bound="MongozBaseModel")
 
@@ -43,7 +44,9 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
 
     @classmethod
     def query(cls: Type[T], *values: Union[bool, Dict, Expression]) -> QuerySet[T]:
-        """Filter query criteria."""
+        """Filter query criteria nad blocks abstract class operations"""
+        is_operation_allowed(cls)
+
         filter_by: List[Expression] = []
         if not values:
             return QuerySet(model_class=cls)
