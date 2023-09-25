@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from mongoz.core.db.documents.base import MongozBaseModel
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
-from mongoz.core.db.fields.base import BaseField
+from mongoz.core.db.fields.base import MongozField
 from mongoz.exceptions import InvalidKeyError
 
 T = TypeVar("T", bound="Document")
@@ -133,4 +133,4 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
     Graphical representation of an Embedded document.
     """
 
-    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
+    __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]

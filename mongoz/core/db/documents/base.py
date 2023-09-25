@@ -4,11 +4,10 @@ import bson
 import pydantic
 from pydantic import BaseModel, ConfigDict
 from pydantic_core._pydantic_core import SchemaValidator as SchemaValidator
-from typing_extensions import Self
 
 from mongoz.core.db.documents._internal import DescriptiveMeta
 from mongoz.core.db.documents.metaclasses import BaseModelMeta, MetaInfo
-from mongoz.core.db.fields.base import BaseField
+from mongoz.core.db.fields.base import MongozField
 from mongoz.core.db.fields.core import ObjectId
 from mongoz.core.db.querysets.base import QuerySet
 from mongoz.core.db.querysets.expressions import Expression
@@ -33,8 +32,6 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         json_encoders={bson.ObjectId: str, Signal: str},
         validate_assignment=True,
     )
-
-    parent: ClassVar[Union[Type[Self], None]]
     meta: ClassVar[MetaInfo] = MetaInfo(None)
     Meta: ClassVar[DescriptiveMeta] = DescriptiveMeta()
 
@@ -73,5 +70,5 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
 
 
 class MongozBaseModel(BaseMongoz):
-    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
+    __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]
     id: Union[ObjectId, None] = pydantic.Field(alias="_id")

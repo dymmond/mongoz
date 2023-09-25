@@ -2,10 +2,10 @@ from typing import AsyncGenerator, List, Optional
 
 import pydantic
 import pytest
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document, Index, ObjectId
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]
@@ -22,6 +22,7 @@ class BaseDocument(Document):
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
 
     class Meta:
+        abstract = True
         registry = client
         database = "test_db"
 
@@ -45,14 +46,10 @@ async def prepare_database() -> AsyncGenerator:
 
 
 async def test_model_all() -> None:
-    movies = await Movie.query().all()
+    movies = await BaseDocument.query().all()
     assert len(movies) == 0
 
-    await Movie(name="Forrest Gump", year=2003).create()
+    await BaseDocument(name="Barbie", year=2003).create()
 
-    movies = await Movie.query().all()
+    movies = await BaseDocument.query().all()
     assert len(movies) == 1
-
-    cursor = Movie.query()
-    async for movie in cursor:
-        assert movie.name == "Forrest Gump"

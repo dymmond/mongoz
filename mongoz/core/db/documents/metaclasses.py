@@ -182,10 +182,10 @@ def _register_document_signals(model_class: Type["Document"]) -> None:
 
 
 class BaseModelMeta(ModelMetaclass):
-    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
+    __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]] = {}
 
     @no_type_check
-    def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any, **kwargs: Any) -> Any:
+    def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
         fields: Dict[str, BaseField] = {}
         meta_class: "object" = attrs.get("Meta", type("Meta", (), {}))
         pk_attribute: str = "id"
@@ -213,7 +213,6 @@ class BaseModelMeta(ModelMetaclass):
                 for key, value in inspect.getmembers(base):
                     if isinstance(value, BaseField) and key not in attrs:
                         attrs[key] = value
-
                 _check_manager_for_bases(base, attrs)  # type: ignore
             else:
                 # abstract classes
@@ -236,14 +235,12 @@ class BaseModelMeta(ModelMetaclass):
             if isinstance(value, BaseField):
                 if getattr(meta_class, "abstract", None) is None:
                     value = copy.copy(value)
-
                 fields[key] = value
 
         for slot in fields:
             attrs.pop(slot, None)
 
         attrs["meta"] = meta = MetaInfo(meta_class)
-
         meta.fields = fields
         meta.pk_attribute = pk_attribute
         meta.pk = fields.get(pk_attribute)
@@ -332,15 +329,22 @@ class BaseModelMeta(ModelMetaclass):
         for field_name, field in new_class.model_fields.items():
             if not field.alias:
                 field.alias = field_name
-
             new_field = MongozField(pydantic_field=field, model_class=field.annotation)
             mongoz_fields[field_name] = new_field
+
+        # For inherited fields
+        # We need to make sure the default is the pydantic_field
+        # and not the MongozField itself
+        for name, field in new_class.model_fields.items():
+            if isinstance(field.default, MongozField):
+                new_class.model_fields[name].default = field.default.pydantic_field.default
 
         # Register the signals
         _register_document_signals(new_class)
 
         new_class.Meta = meta
         new_class.__mongoz_fields__ = mongoz_fields
+        new_class.model_rebuild(force=True)
         return new_class
 
     @property
@@ -357,7 +361,7 @@ class BaseModelMeta(ModelMetaclass):
 
 
 class EmbeddedModelMetaClass(ModelMetaclass):
-    __mongoz_fields__: ClassVar[Mapping[str, Type["BaseField"]]]
+    __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]
 
     @no_type_check
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:

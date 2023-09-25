@@ -13,6 +13,9 @@ from typing import (
 )
 
 from pydantic._internal import _repr
+from pydantic._internal._schema_generation_shared import (
+    GetJsonSchemaHandler as GetJsonSchemaHandler,
+)
 from pydantic.fields import FieldInfo
 
 from mongoz.core.connection.database import Database
@@ -102,6 +105,7 @@ class BaseField(FieldInfo, _repr.Representation):
 
         if isinstance(self.default, bool):
             self.null = True
+
         self.__namespace__ = {k: v for k, v in self.__dict__.items() if k != "__namespace__"}
 
     @property
@@ -117,16 +121,6 @@ class BaseField(FieldInfo, _repr.Representation):
         """
         required = False if self.null else True
         return bool(required)
-
-    def get_alias(self) -> str:
-        """
-        Used to translate the model column names into database column tables.
-        """
-        return self.alias
-
-    def has_default(self) -> bool:
-        """Checks if the field has a default value set"""
-        return bool(self.default is not None and self.default is not Undefined)
 
     def get_default_value(self) -> Any:
         default = getattr(self, "default", None)
@@ -185,3 +179,10 @@ class MongozField:
             model_class=child_field.model_class,
             parent=self,
         )
+
+    def __deepcopy__(self, memo: str) -> Any:
+        obj = self.__class__(
+            model_class=self.model_class, pydantic_field=self.pydantic_field, parent=self.parent
+        )
+        obj.__dict__ = self.__dict__
+        return obj
