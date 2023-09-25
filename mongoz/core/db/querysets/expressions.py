@@ -1,6 +1,6 @@
 import collections
 import typing
-from typing import TYPE_CHECKING, Any, Dict, List, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Union, cast
 
 from mongoz.core.db.datastructures import Order
 
@@ -46,7 +46,7 @@ class Expression:
                 else:
                     compiled_dicts[key].update(value)
 
-        return {**compiled_dicts, **compiled_lists}
+        return cast(Dict[str, Dict[str, Any]], {**compiled_dicts, **compiled_lists})
 
     @classmethod
     def unpack(cls, d: Dict[str, Any]) -> "List[Expression]":

@@ -27,17 +27,17 @@ class Q:
 
     @classmethod
     def and_(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)
+        assert not isinstance(args, bool)  # type: ignore
         return Expression(key="$and", operator="$and", value=args)
 
     @classmethod
     def or_(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)
+        assert not isinstance(args, bool)  # type: ignore
         return Expression(key="$or", operator="$or", value=args)
 
     @classmethod
     def eq(cls, key: Any, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)
+        assert not isinstance(args, bool)  # type: ignore
         return Expression(key=key, operator="$eq", value=args)
 
     @classmethod

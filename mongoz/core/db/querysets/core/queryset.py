@@ -5,10 +5,10 @@ from typing import (
     Dict,
     Generic,
     List,
-    Mapping,
     Type,
     TypeVar,
     Union,
+    cast,
 )
 
 import pydantic
@@ -33,7 +33,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         filter_by: List[Expression] = None,
     ) -> None:
         self.model_class = model_class
-        self._collection = model_class.meta.collection._collection
+        self._collection = model_class.meta.collection._collection  # type: ignore
         self._filter: List[Expression] = filter_by or []
         self._limit_count = 0
         self._skip_count = 0
@@ -71,14 +71,14 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         """
 
         filter_query = Expression.compile_many(self._filter)
-        return await self._collection.count_documents(filter_query)
+        return cast(int, await self._collection.count_documents(filter_query))
 
     async def delete(self) -> int:
         """Delete documents matching the criteria."""
         filter_query = Expression.compile_many(self._filter)
         result = await self._collection.delete_many(filter_query)
 
-        return result.deleted_count
+        return cast(int, result.deleted_count)
 
     async def first(self) -> Union[T, None]:
         """
@@ -136,7 +136,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         """
         filter_query = Expression.compile_many(self._filter)
         values = await self._collection.find(filter_query).distinct(key=key)
-        return values
+        return cast(List[Any], values)
 
     async def where(self, condition: Union[str, Code]) -> Any:
         """

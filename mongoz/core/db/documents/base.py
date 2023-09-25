@@ -58,7 +58,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         return self.__class__.__name__.lower()
 
     @classmethod
-    def query(cls: Type[T], *values: Union[bool, Dict, Expression]) -> QuerySet[T]:
+    def query(cls: Type["BaseMongoz"], *values: Union[bool, Dict, Expression]) -> QuerySet[T]:
         """Filter query criteria nad blocks abstract class operations"""
         is_operation_allowed(cls)
 

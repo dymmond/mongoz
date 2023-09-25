@@ -34,7 +34,7 @@ class Document(MongozBaseModel):
         await self.signals.post_save.send(sender=self.__class__, instance=self)
         return self
 
-    async def update(self, **kwargs: Any) -> None:
+    async def update(self, **kwargs: Any) -> Type["Document"]:
         """
         Updates a record on an instance level.
         """

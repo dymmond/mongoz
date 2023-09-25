@@ -53,8 +53,10 @@ class MetaInfo:
         self.registry: Optional[Type[Registry]] = getattr(meta, "registry", None)
         self.collection: Optional[Collection] = getattr(meta, "collection", None)
         self.parents: Any = getattr(meta, "parents", None) or []
-        self.indexes: List[Index] = getattr(meta, "indexes", None)
-        self.database: Union["str", Database] = getattr(meta, "database", None)
+        self.indexes: List[Index] = cast(List[Index], getattr(meta, "indexes", None))
+        self.database: Union["str", Database] = cast(
+            Union["str", Database], getattr(meta, "database", None)
+        )
         self.signals: Optional[Broadcaster] = {}  # type: ignore
 
     def model_dump(self) -> Dict[Any, Any]:
@@ -111,14 +113,14 @@ def _check_document_inherited_indexes(bases: Tuple[Type, ...]) -> List[Any]:
 
 def _check_document_inherited_database(
     bases: Tuple[Type, ...], registry: Registry
-) -> Type[Registry]:
+) -> Union[str, Database]:
     """
     When a database is missing from the Meta class, it should look up for the bases
     and obtain the first found database.
 
     If not found, then a ImproperlyConfigured exception is raised.
     """
-    found_database: Optional[str] = None
+    found_database: Union[str, Database, None] = None
 
     for base in bases:
         meta: MetaInfo = getattr(base, "meta", None)  # type: ignore

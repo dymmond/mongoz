@@ -4,10 +4,10 @@ from typing import AsyncGenerator, List, Optional
 import pydantic
 import pytest
 from bson import Code
+from tests.conftest import client
 
 import mongoz
-from mongoz import Document, Index, IndexType, ObjectId, Order
-from tests.conftest import client
+from mongoz import Document, ObjectId
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]
