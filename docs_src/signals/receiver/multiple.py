@@ -7,9 +7,9 @@ registry = mongoz.Registry(database_uri, event_loop=asyncio.get_running_loop)
 
 
 class User(mongoz.Document):
-    name = mongoz.String(max_length=255)
-    email = mongoz.Email(max_length=255)
-    is_verified = mongoz.Boolean(default=False)
+    name: str = mongoz.String(max_length=255)
+    email: str = mongoz.Email(max_length=255)
+    is_verified: bool = mongoz.Boolean(default=False)
 
     class Meta:
         registry = registry
@@ -17,7 +17,7 @@ class User(mongoz.Document):
 
 
 class Profile(mongoz.Document):
-    profile_type = mongoz.String(max_length=255)
+    profile_type: str = mongoz.String(max_length=255)
 
     class Meta:
         registry = registry
