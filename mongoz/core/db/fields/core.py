@@ -20,7 +20,6 @@ from typing import (
 
 import bson
 import pydantic
-from bson.objectid import ObjectId
 from pydantic import EmailStr
 from pydantic._internal._schema_generation_shared import (
     GetJsonSchemaHandler as GetJsonSchemaHandler,
@@ -28,7 +27,7 @@ from pydantic._internal._schema_generation_shared import (
 from pydantic.json_schema import JsonSchemaValue as JsonSchemaValue
 from pydantic_core.core_schema import CoreSchema
 from pydantic_core.core_schema import (
-    general_plain_validator_function as general_plain_validator_function,
+    with_info_plain_validator_function as general_plain_validator_function,
 )
 
 from mongoz.core.db.fields.base import BaseField
@@ -61,7 +60,7 @@ class FieldFactory:
         comment: str = kwargs.pop("comment", None)
         owner = kwargs.pop("owner", None)
         read_only: bool = kwargs.pop("read_only", False)
-        list_type: type = kwargs.pop("list_type", None)
+        list_type: Any = kwargs.pop("list_type", None)
 
         if list_type is None:
             field_type = cls._type
@@ -91,7 +90,9 @@ class FieldFactory:
 
 
 class ObjectId(bson.ObjectId):
-    def __init__(self, oid: Union[str, ObjectId, bytes, None] = None, null: bool = False) -> None:
+    def __init__(
+        self, oid: Union[str, bson.ObjectId, bytes, None] = None, null: bool = False
+    ) -> None:
         super().__init__(oid)
         self.null = null
         self.name: Union[str, None] = None

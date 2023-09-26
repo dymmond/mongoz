@@ -27,17 +27,17 @@ class Q:
 
     @classmethod
     def and_(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)
+        assert not isinstance(args, bool)  # type: ignore
         return Expression(key="$and", operator="$and", value=args)
 
     @classmethod
     def or_(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)
+        assert not isinstance(args, bool)  # type: ignore
         return Expression(key="$or", operator="$or", value=args)
 
     @classmethod
     def eq(cls, key: Any, *args: Union[bool, Expression]) -> Expression:
-        assert isinstance(args, bool)
+        assert not isinstance(args, bool)  # type: ignore
         return Expression(key=key, operator="$eq", value=args)
 
     @classmethod
@@ -45,6 +45,11 @@ class Q:
         if key.pydantic_field.annotation is str:
             return Expression(key=key, operator="$regex", value=value)
         return Expression(key=key, operator="$eq", value=value)
+
+    @classmethod
+    def where(cls, key: Any, value: str) -> Expression:
+        assert isinstance(value, str)
+        return Expression(key=key, operator="$where", value=value)
 
     @classmethod
     def pattern(cls, key: Any, value: Union[str, re.Pattern]) -> Expression:

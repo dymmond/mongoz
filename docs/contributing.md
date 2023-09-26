@@ -1,19 +1,19 @@
 # Contributing
 
-Thank you for showing interes in contributing to Mongoz | MongoDB engine with Pydantic. There are many ways you can help and contribute to the
+Thank you for showing interes in contributing to MongoZ. There are many ways you can help and contribute to the
 project.
 
-* Try Mongoz | MongoDB engine with Pydantic and [report bugs and issues](https://github.com/tarsil/mongoz/issues/new) you find.
+* Try MongoZ and [report bugs and issues](https://github.com/tarsil/mongoz/issues/new) you find.
 * [Implement new features](https://github.com/tarsil/mongoz/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 * Help othes by [reviewing pull requests](https://github.com/tarsil/mongoz/pulls)
 * Help writting documentation
 * Use the discussions and actively participate on them.
-* Become an contributor by helping Mongoz | MongoDB engine with Pydantic growing and spread the words across small, medium, large or any company
+* Become an contributor by helping MongoZ growing and spread the words across small, medium, large or any company
 size.
 
 ## Reporting possible bugs and issues
 
-It is natural that you might find something that Mongoz | MongoDB engine with Pydantic should support or even experience some sorte of unexpected
+It is natural that you might find something that MongoZ should support or even experience some sorte of unexpected
 behaviour that needs addressing.
 
 The way we love doing things is very simple, contributions should start out with a
@@ -37,7 +37,7 @@ it clear to understand and get the required help.
 
 ## Development
 
-To develop for Mongoz | MongoDB engine with Pydantic, create a fork of the [Mongoz | MongoDB engine with Pydantic repository](https://github.com/tarsil/mongoz) on GitHub.
+To develop for MongoZ, create a fork of the [MongoZ repository](https://github.com/tarsil/mongoz) on GitHub.
 
 After, clone your fork with the follow command replacing `YOUR-USERNAME` wih your GitHub username:
 
@@ -68,7 +68,7 @@ To run the tests, use:
 $ scripts/test
 ```
 
-Because Mongoz | MongoDB engine with Pydantic uses pytest, any additional arguments will be passed. More info within the
+Because MongoZ uses pytest, any additional arguments will be passed. More info within the
 [pytest documentation](https://docs.pytest.org/en/latest/how-to/usage.html)
 
 For example, to run a single test_script:
@@ -93,7 +93,7 @@ To start the docs, run:
 $ scripts/docs
 ```
 
-## Building Mongoz | MongoDB engine with Pydantic
+## Building MongoZ
 
 To build a package locally, run:
 
@@ -111,9 +111,9 @@ It will install the requirements and create a local build in your virtual enviro
 
 ## Releasing
 
-*This section is for the maintainers of `Mongoz | MongoDB engine with Pydantic`*.
+*This section is for the maintainers of `MongoZ`*.
 
-### Building the Mongoz | MongoDB engine with Pydantic for release
+### Building the MongoZ for release
 
 Before releasing a new package into production some considerations need to be taken into account.
 

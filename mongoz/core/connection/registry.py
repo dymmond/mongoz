@@ -1,5 +1,5 @@
 import asyncio
-from typing import Callable, Sequence, Tuple, Union
+from typing import Callable, Sequence, Tuple, Union, cast
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
@@ -19,23 +19,23 @@ class Registry:
         self.event_loop = event_loop or asyncio.get_event_loop
         self.url = url
         self._client: AsyncIOMotorClient = AsyncIOMotorClient(self.url)
-        self._client.get_io_loop = self.event_loop
+        self._client.get_io_loop = self.event_loop  # type: ignore
 
     @property
     def address(self) -> Tuple[str, int]:
-        return self._client.address
+        return cast(Tuple[str, int], self._client.address)
 
     @property
     def host(self) -> str:
-        return self._client.HOST
+        return cast(str, self._client.HOST)
 
     @property
     def port(self) -> str:
-        return self._client.PORT
+        return cast(str, self._client.PORT)
 
     @property
     def driver(self) -> AsyncIOMotorDatabase:
-        return self._client.driver
+        return cast(AsyncIOMotorDatabase, self._client.driver)
 
     async def drop_database(self, database: Union[str, Database]) -> None:
         """

@@ -53,5 +53,5 @@ class QuerySetProtocol(Protocol):
     def sort(self, key: Any, direction: Union["Order", None] = None) -> "QuerySet[T]":
         ...
 
-    async def update(self, **kwargs: Any) -> List[T]:
+    async def update_many(self, **kwargs: Any) -> List[T]:
         ...

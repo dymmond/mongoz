@@ -122,6 +122,9 @@ class BaseField(FieldInfo, _repr.Representation):
         required = False if self.null else True
         return bool(required)
 
+    def has_default(self) -> bool:
+        return bool(self.default is not None and self.default is not Undefined)
+
     def get_default_value(self) -> Any:
         default = getattr(self, "default", None)
         if callable(default):
@@ -171,9 +174,11 @@ class MongozField:
         assert self.model_class is not None
 
         if name not in self.model_class.__mongoz_fields__:
-            raise InvalidKeyError(f"Model '{self.model_class.__name__}' has no attribute '{name}'")
+            raise InvalidKeyError(
+                f"Model '{self.model_class.__class__.__name__}' has no attribute '{name}'"
+            )
 
-        child_field: MongozField = self.model_class.__mongoz_fields__[name]
+        child_field: Type[MongozField] = self.model_class.__mongoz_fields__[name]
         return MongozField(
             pydantic_field=child_field.pydantic_field,
             model_class=child_field.model_class,
