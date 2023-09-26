@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Mapping, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Mapping, Type, Union
 
 import bson
 import pydantic
@@ -14,9 +14,8 @@ from mongoz.core.db.querysets.expressions import Expression
 from mongoz.core.signals.signal import Signal
 from mongoz.utils.mixins import is_operation_allowed
 
-T = TypeVar("T", bound="MongozBaseModel")
-
 if TYPE_CHECKING:
+    from mongoz import Document
     from mongoz.core.signals import Broadcaster
 
 
@@ -58,7 +57,9 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         return self.__class__.__name__.lower()
 
     @classmethod
-    def query(cls: Type["BaseMongoz"], *values: Union[bool, Dict, Expression]) -> QuerySet[T]:
+    def query(
+        cls: Type["BaseMongoz"], *values: Union[bool, Dict, Expression]
+    ) -> QuerySet["Document"]:
         """Filter query criteria nad blocks abstract class operations"""
         is_operation_allowed(cls)
 

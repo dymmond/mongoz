@@ -1,4 +1,4 @@
-from typing import Any, ClassVar, List, Mapping, Sequence, Type, TypeVar, Union
+from typing import Any, ClassVar, List, Mapping, Type, TypeVar, Union, cast
 
 import bson
 import pydantic
@@ -19,7 +19,7 @@ class Document(MongozBaseModel):
     Representation of an Mongoz Document.
     """
 
-    async def create(self: Type["Document"]) -> Type["Document"]:
+    async def create(self: "Document") -> "Document":
         """
         Inserts a document.
         """
@@ -28,13 +28,13 @@ class Document(MongozBaseModel):
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         data = self.model_dump(exclude={"id"})
-        result = await self.meta.collection._collection.insert_one(data)
+        result = await self.meta.collection._collection.insert_one(data)  # type: ignore
         self.id = result.inserted_id
 
         await self.signals.post_save.send(sender=self.__class__, instance=self)
         return self
 
-    async def update(self, **kwargs: Any) -> Type["Document"]:
+    async def update(self, **kwargs: Any) -> "Document":
         """
         Updates a record on an instance level.
         """
@@ -58,7 +58,7 @@ class Document(MongozBaseModel):
             data.update(values)
 
             await self.signals.pre_update.send(sender=self.__class__, instance=self)
-            await self.meta.collection._collection.update_one({"_id": self.id}, {"$set": data})
+            await self.meta.collection._collection.update_one({"_id": self.id}, {"$set": data})  # type: ignore
             await self.signals.post_update.send(sender=self.__class__, instance=self)
 
             for k, v in data.items():
@@ -66,9 +66,7 @@ class Document(MongozBaseModel):
         return self
 
     @classmethod
-    async def create_many(
-        cls: Type["Document"], models: Sequence[Type["Document"]]
-    ) -> List[Type["Document"]]:
+    async def create_many(cls: Type["Document"], models: List["Document"]) -> List["Document"]:
         """
         Insert many documents
         """
@@ -78,7 +76,7 @@ class Document(MongozBaseModel):
             raise TypeError(f"All models must be of type {cls.__name__}")
 
         data = (model.model_dump(exclude={"id"}) for model in models)
-        results = await cls.meta.collection._collection.insert_many(data)
+        results = await cls.meta.collection._collection.insert_many(data)  # type: ignore
         for model, inserted_id in zip(models, results.inserted_ids, strict=True):
             model.id = inserted_id
         return models
@@ -92,7 +90,7 @@ class Document(MongozBaseModel):
 
         for index in cls.meta.indexes:
             if index.name == name:
-                await cls.meta.collection._collection.create_indexes([index])
+                await cls.meta.collection._collection.create_indexes([index])  # type: ignore
                 return index.name
         raise InvalidKeyError(f"Unable to find index: {name}")
 
@@ -101,7 +99,7 @@ class Document(MongozBaseModel):
         """Create indexes defined for the collection."""
         is_operation_allowed(cls)
 
-        return await cls.meta.collection._collection.create_indexes(cls.meta.indexes)
+        return await cls.meta.collection._collection.create_indexes(cls.meta.indexes)  # type: ignore
 
     async def delete(self) -> int:
         """Delete the document."""
@@ -109,10 +107,10 @@ class Document(MongozBaseModel):
 
         await self.signals.pre_delete.send(sender=self.__class__, instance=self)
 
-        result = await self.meta.collection._collection.delete_one({"_id": self.id})
+        result = await self.meta.collection._collection.delete_one({"_id": self.id})  # type: ignore
 
         await self.signals.post_delete.send(sender=self.__class__, instance=self)
-        return result.deleted_count
+        return cast(int, result.deleted_count)
 
     @classmethod
     async def drop_index(cls, name: str) -> str:
@@ -124,7 +122,7 @@ class Document(MongozBaseModel):
 
         for index in cls.meta.indexes:
             if index.name == name:
-                await cls.meta.collection._collection.drop_index(name)
+                await cls.meta.collection._collection.drop_index(name)  # type: ignore
                 return name
         raise InvalidKeyError(f"Unable to find index: {name}")
 
@@ -137,11 +135,11 @@ class Document(MongozBaseModel):
         is_operation_allowed(cls)
 
         if force:
-            return await cls.meta.collection._collection.drop_indexes()
+            return await cls.meta.collection._collection.drop_indexes()  # type: ignore
         index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
         return index_names
 
-    async def save(self: Type["Document"]) -> Type["Document"]:
+    async def save(self: "Document") -> "Document":
         """Save the document.
 
         This is equivalent of a single instance update.
@@ -150,7 +148,7 @@ class Document(MongozBaseModel):
 
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
-        await self.meta.collection._collection.update_one(
+        await self.meta.collection._collection.update_one(  # type: ignore
             {"_id": self.id}, {"$set": self.model_dump(exclude={"id", "_id"})}
         )
         for k, v in self.model_dump(exclude={"id"}).items():
@@ -160,7 +158,7 @@ class Document(MongozBaseModel):
         return self
 
     @classmethod
-    async def get_document_by_id(cls: Type[T], id: Union[str, bson.ObjectId]) -> T:
+    async def get_document_by_id(cls: Type[T], id: Union[str, bson.ObjectId]) -> "Document":
         is_operation_allowed(cls)
 
         if isinstance(id, str):
