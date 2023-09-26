@@ -1,13 +1,10 @@
-# Help Mongoz | MongoDB engine with Pydantic
+# Help MongoZ
 
-Do you like **Mongoz | MongoDB engine with Pydantic** and would like to help Mongoz | MongoDB engine with Pydantic, other user and the author?
+Do you like **MongoZ** and would like to help MongoZ, other user and the author?
 
-## 🐦 Follow Mongoz | MongoDB engine with Pydantic on Twitter
+## ⭐ Star **MongoZ** on GitHub
 
-
-## ⭐ Star **Mongoz | MongoDB engine with Pydantic** on GitHub
-
-Giving a star to Mongoz | MongoDB engine with Pydantic is very simple and helps promoting the work across the developers around the world.
+Giving a star to MongoZ is very simple and helps promoting the work across the developers around the world.
 
 The button is located at the top right.
 
@@ -17,12 +14,17 @@ This will help spreading the word about the tool and how helpful has been.
 
 ## 👀 Follow the GitHub repo
 
-Following the GitHub repo will allow you to "watch" for any new release of Mongoz | MongoDB engine with Pydantic and be always up to date.
+Following the GitHub repo will allow you to "watch" for any new release of MongoZ and be always up to date.
 
 You can click on "***watch***" and select "***custom***" -> "***Releases***"or any other you may find particular
 interesting to you.
 
-## 💬 Join the official Mongoz | MongoDB engine with Pydantic discord channel
+## 💬 Join the official MongoZ discord channel
+
+Our official chat is on discord, we find it very useful and free for people to discuss issues, helping and contributing
+in a more organised manner.
+
+<a href="https://discord.gg/eMrM9sWWvu" target="_blank">MongoZ discord channel</a>. Join us!
 
 ## 🔥 Sponsor the author
 
