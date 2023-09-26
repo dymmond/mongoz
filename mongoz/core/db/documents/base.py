@@ -46,9 +46,24 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         E.g.: DateTime(auto_now=True) will generate the default for automatic
         dates.
         """
-        for field_name, field in self.model_fields.items():
+        kwargs = {k: v for k, v in self.model_dump().items() if k in self.meta.fields}
+        for key, value in kwargs.items():
+            if key not in self.meta.fields:
+                if not hasattr(self, key):
+                    raise ValueError(f"Invalid keyword {key} for class {self.__class__.__name__}")
+
+            # For non values. Example: bool
+            if value is not None:
+                # Checks if the default is a callable and executes it.
+                if callable(value):
+                    setattr(self, key, value())
+                continue
+
+            # Validate the default fields
+            field = self.model_fields[key]
             if hasattr(field, "has_default") and field.has_default():
-                setattr(self, field_name, field.get_default_value())
+                setattr(self, key, field.get_default_value())
+                continue
 
     def get_instance_name(self) -> str:
         """

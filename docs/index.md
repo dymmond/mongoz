@@ -87,10 +87,14 @@ The following is an example how to start with Mongoz and more details and exampl
 
 Use `ipython` to run the following from the console, since it supports `await`.
 
+```python
+{!> ../docs_src/quickstart/quickstart.py !}
+```
+
 ## Note
 
 Mongoz document declaration with typing is merely visual. The validations of the fields are not done by the typing of
-the attribute of the models but from the mongoz fields.
+the attribute of the documents but from the mongoz fields.
 
 Which means you don't need to worry about the wrong typing as long as you declare the correct field type.
 
