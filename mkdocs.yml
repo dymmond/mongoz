@@ -38,6 +38,10 @@ plugins:
 
 nav:
       - Introduction: "index.md"
+      - Documents: "documents.md"
+      - Queries: "queries.md"
+      - Fields: "fields.md"
+      - Signals: "signals.md"
       - Contributing: "contributing.md"
       - Sponsorship: "sponsorship.md"
       - Release Notes: "release-notes.md"

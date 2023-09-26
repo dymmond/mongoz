@@ -389,7 +389,7 @@ class Choice(FieldFactory):
             raise FieldDefinitionError("ChoiceField choices must be an Enum")
 
 
-class EmailField(String):
+class Email(String):
     _type = EmailStr
 
 
