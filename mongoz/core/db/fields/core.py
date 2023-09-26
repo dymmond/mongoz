@@ -27,7 +27,7 @@ from pydantic._internal._schema_generation_shared import (
 from pydantic.json_schema import JsonSchemaValue as JsonSchemaValue
 from pydantic_core.core_schema import CoreSchema
 from pydantic_core.core_schema import (
-    general_plain_validator_function as general_plain_validator_function,
+    with_info_plain_validator_function as general_plain_validator_function,
 )
 
 from mongoz.core.db.fields.base import BaseField
