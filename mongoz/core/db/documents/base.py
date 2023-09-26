@@ -9,7 +9,7 @@ from mongoz.core.db.documents._internal import DescriptiveMeta
 from mongoz.core.db.documents.metaclasses import BaseModelMeta, MetaInfo
 from mongoz.core.db.fields.base import MongozField
 from mongoz.core.db.fields.core import ObjectId
-from mongoz.core.db.querysets.base import QuerySet
+from mongoz.core.db.querysets.base import Manager, QuerySet
 from mongoz.core.db.querysets.expressions import Expression
 from mongoz.core.signals.signal import Signal
 from mongoz.utils.mixins import is_operation_allowed
@@ -34,6 +34,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     )
     meta: ClassVar[MetaInfo] = MetaInfo(None)
     Meta: ClassVar[DescriptiveMeta] = DescriptiveMeta()
+    objects: ClassVar[Manager] = Manager()
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)

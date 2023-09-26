@@ -36,9 +36,34 @@ class Q:
         return Expression(key="$or", operator="$or", value=args)
 
     @classmethod
-    def eq(cls, key: Any, *args: Union[bool, Expression]) -> Expression:
+    def gte(cls, *args: Union[bool, Expression]) -> Expression:
         assert not isinstance(args, bool)  # type: ignore
-        return Expression(key=key, operator="$eq", value=args)
+        return Expression(key="$gte", operator="$gte", value=args)
+
+    @classmethod
+    def gt(cls, *args: Union[bool, Expression]) -> Expression:
+        assert not isinstance(args, bool)  # type: ignore
+        return Expression(key="$gt", operator="$gt", value=args)
+
+    @classmethod
+    def lt(cls, *args: Union[bool, Expression]) -> Expression:
+        assert not isinstance(args, bool)  # type: ignore
+        return Expression(key="$lt", operator="$lt", value=args)
+
+    @classmethod
+    def lte(cls, *args: Union[bool, Expression]) -> Expression:
+        assert not isinstance(args, bool)  # type: ignore
+        return Expression(key="$lte", operator="$lte", value=args)
+
+    @classmethod
+    def eq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+        assert not isinstance(value, bool)  # type: ignore
+        return Expression(key=key, operator="$eq", value=value)
+
+    @classmethod
+    def neq(cls, key: Any, *args: Union[bool, Expression]) -> Expression:
+        assert not isinstance(args, bool)  # type: ignore
+        return Expression(key=key, operator="$neq", value=args)
 
     @classmethod
     def contains(cls, key: Any, value: Any) -> Expression:
