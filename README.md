@@ -42,7 +42,7 @@ So why a MongoZ if there is a MongoX? Well, MongoZ is from the same author of [E
 [Saffier][saffier], [Mongoz][mongoz] and many other tools out there and they all follow a specific need
 and pattern of development.
 
-Mongox implements really well some operations with MongoDB but for use cases where [Signals][./sinals.md],
+Mongox implements really well some operations with MongoDB but for use cases where [Signals](https://mongoz.tarsild.io/sinals.md),
 for example, are needed, Mongox was not aiming at it and also since the creator of Mongoz is the
 same as [Mongoz][mongoz] and [Saffier][saffier], the friendly interface to interact is also a must.
 
