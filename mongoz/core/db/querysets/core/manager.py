@@ -1,4 +1,3 @@
-import copy
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -20,6 +19,12 @@ from bson import Code
 from mongoz import settings
 from mongoz.core.db.datastructures import Order
 from mongoz.core.db.fields import base
+from mongoz.core.db.querysets.core.constants import (
+    GREATNESS_EQUALITY,
+    LIST_EQUALITY,
+    ORDER_EQUALITY,
+    VALUE_EQUALITY,
+)
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.exceptions import DocumentNotFound, MultipleDumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
@@ -34,7 +39,8 @@ class Manager(QuerySetProtocol, Generic[T]):
     def __init__(
         self,
         model_class: Union[Type["Document"], None] = None,
-        filter_by: List[Expression] = None,
+        filter_by: Union[List[Expression], None] = None,
+        sort_by: Union[List[SortExpression], None] = None,
     ) -> None:
         self.model_class = model_class
 
@@ -46,12 +52,15 @@ class Manager(QuerySetProtocol, Generic[T]):
         self._filter: List[Expression] = [] if filter_by is None else filter_by
         self._limit_count = 0
         self._skip_count = 0
-        self._sort: List[SortExpression] = []
+        self._sort: List[SortExpression] = [] if sort_by is None else sort_by
+
+    def __get__(self, instance: Any, owner: Any) -> Any:
+        return self.__class__(model_class=owner)
 
     def clone(self) -> Any:
         manager = self.__class__.__new__(self.__class__)
         manager.model_class = self.model_class
-        manager._filter = copy.copy(self._filter)
+        manager._filter = self._filter
         manager._limit_count = self._limit_count
         manager._skip_count = self._skip_count
         manager._sort = self._sort
@@ -117,25 +126,71 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         clauses = []
         filter_clauses = self._filter
+        sort_clauses = self._sort
 
         for key, value in kwargs.items():
             key = self._find_and_replace_id(key)
 
             if "__" in key:
                 parts = key.split("__")
+                lookup_operator = parts[-1]
+                field_name = parts[-2]
 
-                # Determine if we should treat the final part as a
-                # filter operator or as a related field.
-                if parts[-1] in settings.filter_operators:
-                    operator = self.get_operator(parts[-1])
-                    field_name = parts[-2]
-                    expression = operator(field_name)
+                if lookup_operator in settings.filter_operators:
+                    # For "eq", "neq", "contains", "where", "pattern"
+                    if lookup_operator in VALUE_EQUALITY:
+                        operator = self.get_operator(lookup_operator)
+                        expression = operator(field_name)
+
+                    # For "in" and "not_in"
+                    elif lookup_operator in LIST_EQUALITY:
+                        assert isinstance(
+                            value, (tuple, list)
+                        ), f"Using the operator `{lookup_operator}` it requires the value to be a list or a tuple, got {type(value)}"
+
+                        # For tuples, convert to a list
+                        if isinstance(value, tuple):
+                            value = [*value]
+
+                        operator = self.get_operator(lookup_operator)
+                        expression = operator(field_name, value)
+
+                    # For "asc" and "desc"
+                    elif lookup_operator in ORDER_EQUALITY:
+                        asc_or_desc: Union[str, None] = None
+
+                        if (
+                            lookup_operator == "asc"
+                            and value
+                            or lookup_operator == "desc"
+                            and value
+                        ):
+                            asc_or_desc = lookup_operator
+                        elif lookup_operator == "asc" and value is False:
+                            asc_or_desc = "desc"
+                        elif lookup_operator == "desc" and value is False:
+                            asc_or_desc = "asc"
+                        else:
+                            asc_or_desc = "asc"
+
+                        operator = self.get_operator(asc_or_desc)
+                        expression = operator(field_name)
+                        sort_clauses.append(expression)
+                        continue
+
+                    # For "lt", "lte", "gt", "gte"
+                    elif lookup_operator in GREATNESS_EQUALITY:
+                        operator = self.get_operator(lookup_operator)
+                        expression = operator(value)
+                        clauses.append(expression)
+
+                    # Add expression to the clauses
                     clauses.append(expression)
                 else:
                     operator = self.get_operator("exact")
-                    field_name = parts[-1]
                     expression = operator(field_name)
                     clauses.append(expression)
+
             else:
                 operator = self.get_operator("exact")
                 expression = operator(key, value)
@@ -144,7 +199,10 @@ class Manager(QuerySetProtocol, Generic[T]):
             filter_clauses += clauses
 
         return cast(
-            "Manager", self.__class__(model_class=self.model_class, filter_by=filter_clauses)
+            "Manager",
+            self.__class__(
+                model_class=self.model_class, filter_by=filter_clauses, sort_by=sort_clauses
+            ),
         )
 
     def filter(self, clause: Union[str, List[Expression], None] = None, **kwargs) -> "Manager":
@@ -248,7 +306,8 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         Returns a list of distinct values filtered by the key.
         """
-        filter_query = Expression.compile_many(self._filter)
+        manager: "Manager" = self.clone()
+        filter_query = Expression.compile_many(manager._filter)
         values = await self._collection.find(filter_query).distinct(key=key)
         return cast(List[Any], values)
 
@@ -278,9 +337,17 @@ class Manager(QuerySetProtocol, Generic[T]):
         manager._skip_count = count
         return manager
 
-    def sort(self, key: Any, direction: Union[Order, None] = None) -> "Manager[T]":
+    def sort(
+        self, key: Union[Any, None] = None, direction: Union[Order, None] = None, **kwargs: Any
+    ) -> "Manager[T]":
         """Sort by (key, direction) or [(key, direction)]."""
         manager: "Manager" = self.clone()
+
+        if kwargs:
+            assert (
+                len(kwargs) == 1
+            ), "`sort` only allows one field per sort. Use `sort(field).sort(field) for multiple fields instead"
+            return manager.filter_query(**kwargs)
 
         direction = direction or Order.ASCENDING
 
@@ -348,7 +415,8 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         Gets a document by the id
         """
-        return await self.model_class.get_document_by_id(id)
+        manager: "Manager" = self.clone()
+        return await manager.model_class.get_document_by_id(id)
 
     def __await__(
         self,
