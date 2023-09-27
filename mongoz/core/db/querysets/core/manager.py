@@ -25,10 +25,10 @@ from mongoz.core.db.querysets.core.constants import (
     ORDER_EQUALITY,
     VALUE_EQUALITY,
 )
-from mongoz.core.db.querysets.core.enums import OrderEnum
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.exceptions import DocumentNotFound, MultipleDumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
+from mongoz.utils.enums import OrderEnum
 
 if TYPE_CHECKING:
     from mongoz.core.db.documents import Document
