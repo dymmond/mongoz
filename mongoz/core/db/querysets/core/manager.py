@@ -13,6 +13,7 @@ from typing import (
     cast,
 )
 
+import pydantic
 from bson import Code
 
 from mongoz import settings
@@ -280,30 +281,30 @@ class Manager(QuerySetProtocol, Generic[T]):
     #             self._filter.append(arg)
     #     return self
 
-    # async def update_many(self, **kwargs: Any) -> List[T]:
-    #     field_definitions = {
-    #         name: (annotations, ...)
-    #         for name, annotations in self.model_class.__annotations__.items()
-    #         if name in kwargs
-    #     }
+    async def update_many(self, **kwargs: Any) -> List[T]:
+        field_definitions = {
+            name: (annotations, ...)
+            for name, annotations in self.model_class.__annotations__.items()
+            if name in kwargs
+        }
 
-    #     if field_definitions:
-    #         pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
-    #             __model_name=self.model_class.__name__,
-    #             __config__=self.model_class.model_config,
-    #             **field_definitions,
-    #         )
-    #         model = pydantic_model.model_validate(kwargs)
-    #         values = model.model_dump()
+        if field_definitions:
+            pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
+                __model_name=self.model_class.__name__,
+                __config__=self.model_class.model_config,
+                **field_definitions,
+            )
+            model = pydantic_model.model_validate(kwargs)
+            values = model.model_dump()
 
-    #         filter_query = Expression.compile_many(self._filter)
-    #         await self._collection.update_many(filter_query, {"$set": values})
+            filter_query = Expression.compile_many(self._filter)
+            await self._collection.update_many(filter_query, {"$set": values})
 
-    #         _filter = [expression for expression in self._filter if expression.key not in values]
-    #         _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
+            _filter = [expression for expression in self._filter if expression.key not in values]
+            _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
 
-    #         self._filter = _filter
-    #     return await self.all()
+            self._filter = _filter
+        return await self.all()
 
     def __await__(
         self,
