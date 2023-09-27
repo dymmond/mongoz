@@ -49,3 +49,7 @@ class SignalError(MongozException):
 
 class AbstractDocumentError(MongozException):
     ...
+
+
+class OperatorInvalid(MongozException):
+    ...

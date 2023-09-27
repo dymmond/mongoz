@@ -1,7 +1,12 @@
 from functools import cached_property
-from typing import Dict, List, Set
+from typing import TYPE_CHECKING, Dict, List, cast
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from mongoz.exceptions import OperatorInvalid
+
+if TYPE_CHECKING:
+    from mongoz import Expression
 
 
 class MongozSettings(BaseSettings):
@@ -9,36 +14,44 @@ class MongozSettings(BaseSettings):
     ipython_args: List[str] = ["--no-banner"]
     ptpython_config_file: str = "~/.config/ptpython/config.py"
 
-    # Dialects
-    postgres_dialects: Set[str] = {"postgres", "postgresql"}
-    mysql_dialects: Set[str] = {"mysql"}
-    sqlite_dialects: Set[str] = {"sqlite"}
-    mssql_dialects: Set[str] = {"mssql"}
+    parsed_ids: List[str] = ["id", "pk"]
 
-    # Drivers
-    postgres_drivers: Set[str] = {"aiopg", "asyncpg"}
-    mysql_drivers: Set[str] = {"aiomysql", "asyncmy"}
-    sqlite_drivers: Set[str] = {"aiosqlite"}
-
-    @property
-    def mssql_drivers(self) -> Set[str]:
-        """
-        Do not override this one as SQLAlchemy doesn't support async for MSSQL.
-        """
-        return {"aioodbc"}
-
-    # General settings
-    default_related_lookup_field: str = "id"
     filter_operators: Dict[str, str] = {
-        "exact": "__eq__",
-        "iexact": "ilike",
-        "contains": "like",
-        "icontains": "ilike",
+        "exact": "eq",
+        "neq": "neq",
+        "contains": "contains",
         "in": "in_",
-        "gt": "__gt__",
-        "gte": "__ge__",
-        "lt": "__lt__",
-        "lte": "__le__",
+        "not_in": "not_in",
+        "pattern": "pattern",
+        "where": "where",
+        "gte": "gte",
+        "gt": "gt",
+        "lt": "lt",
+        "lte": "lte",
+        "asc": "asc",
+        "desc": "desc",
     }
-    many_to_many_relation: str = "relation_{key}"
-    dialects: Dict[str, str] = {"postgres": "postgres", "postgresql": "postgresql"}
+
+    def get_operator(self, name: str) -> "Expression":
+        """
+        Returns the operator associated to the given expression passed.
+        """
+        from mongoz.core.db.querysets.operators import Q
+
+        if name not in self.filter_operators:
+            raise OperatorInvalid(f"`{name}` is not a valid operator.")
+        return cast("Expression", getattr(Q, self.filter_operators[name]))
+
+    @cached_property
+    def operators(self) -> List[str]:
+        """
+        Returns a list of valid operators.
+        """
+        return list(self.filter_operators.keys())
+
+    @cached_property
+    def stringified_operators(self) -> str:
+        """
+        Returns a list of valid operators.
+        """
+        return ", ".join(self.operators)

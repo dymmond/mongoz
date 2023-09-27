@@ -21,7 +21,7 @@ class MongozLazySettings(LazyObject):
         )
         settings: Any = import_string(settings_module)
 
-        for setting, _ in settings().model_dump().items():
+        for setting, _ in settings().model_dump(exclude={"filter_operators"}).items():
             assert setting.islower(), "%s should be in lowercase." % setting
 
         self._wrapped = settings()

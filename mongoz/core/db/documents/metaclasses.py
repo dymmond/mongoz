@@ -22,6 +22,7 @@ from mongoz.core.connection.database import Database
 from mongoz.core.connection.registry import Registry
 from mongoz.core.db.datastructures import Index
 from mongoz.core.db.fields.base import BaseField, MongozField
+from mongoz.core.db.querysets.core.manager import Manager
 from mongoz.core.signals import Broadcaster, Signal
 from mongoz.core.utils.functional import extract_field_annotations_and_defaults, mongoz_setattr
 from mongoz.exceptions import ImproperlyConfigured
@@ -42,6 +43,7 @@ class MetaInfo:
         "parents",
         "signals",
         "database",
+        "manager",
     )
 
     def __init__(self, meta: Any = None, **kwargs: Any) -> None:
@@ -58,6 +60,7 @@ class MetaInfo:
             Union["str", Database], getattr(meta, "database", None)
         )
         self.signals: Optional[Broadcaster] = {}  # type: ignore
+        self.manager: "Manager" = getattr(meta, "manager", Manager())
 
     def model_dump(self) -> Dict[Any, Any]:
         return {k: getattr(self, k, None) for k in self.__slots__}
@@ -68,6 +71,25 @@ class MetaInfo:
         """
         for key, value in values.items():
             mongoz_setattr(self, key, value)
+
+
+def _check_manager_for_bases(
+    base: Tuple[Type, ...],
+    attrs: Any,
+    meta: Optional[MetaInfo] = None,
+) -> None:
+    """
+    When an abstract class is declared, we must treat the manager's value coming from the top.
+    """
+    if not meta:
+        for key, value in inspect.getmembers(base):
+            if isinstance(value, Manager) and key not in attrs:
+                attrs[key] = value.__class__()
+    else:
+        if not meta.abstract:
+            for key, value in inspect.getmembers(base):
+                if isinstance(value, Manager) and key not in attrs:
+                    attrs[key] = value.__class__()
 
 
 def _check_document_inherited_registry(bases: Tuple[Type, ...]) -> Type[Registry]:
@@ -191,10 +213,12 @@ class BaseModelMeta(ModelMetaclass):
                 for key, value in inspect.getmembers(base):
                     if isinstance(value, BaseField) and key not in attrs:
                         attrs[key] = value
+                _check_manager_for_bases(base, attrs)
             else:
                 # abstract classes
                 for key, value in meta.fields.items():
                     attrs[key] = value
+                _check_manager_for_bases(base, attrs)
 
         # Search in the base classes
         inherited_fields: Any = {}
@@ -231,6 +255,11 @@ class BaseModelMeta(ModelMetaclass):
 
         meta.parents = parents
         new_class = cast("Type[Document]", model_class(cls, name, bases, attrs))
+
+        # Abstract classes do not allow multiple managers. This make sure it is enforced.
+        managers = [k for k, v in attrs.items() if isinstance(v, Manager)]
+        if len(managers) > 1:
+            raise ImproperlyConfigured("Multiple managers are not allowed.")
 
         if "id" in new_class.model_fields:
             new_class.model_fields["id"].default = None
@@ -294,6 +323,12 @@ class BaseModelMeta(ModelMetaclass):
         for name, field in new_class.model_fields.items():
             if isinstance(field.default, MongozField):
                 new_class.model_fields[name] = field.default.pydantic_field
+
+        # Set the manager
+        for _, value in attrs.items():
+            if isinstance(value, Manager):
+                value.model_class = new_class
+                value._collection = new_class.meta.collection._collection
 
         # Register the signals
         _register_document_signals(new_class)

@@ -1,5 +1,6 @@
 __version__ = "0.1.0"
 
+from .conf import settings
 from .core.connection.database import Database
 from .core.connection.registry import Registry
 from .core.db.datastructures import Index, IndexType, Order
@@ -61,4 +62,5 @@ __all__ = [
     "String",
     "Time",
     "UUID",
+    "settings",
 ]
