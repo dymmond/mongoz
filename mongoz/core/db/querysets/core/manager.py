@@ -102,16 +102,6 @@ class Manager(QuerySetProtocol, Generic[T]):
 
         return [manager.model_class(**document) async for document in cursor]
 
-    # def query(self, *args: Union[bool, Dict, Expression]) -> "QuerySet[T]":
-    #     for arg in args:
-    #         assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
-    #         if isinstance(arg, dict):
-    #             query_expressions = Expression.unpack(arg)
-    #             self._filter.extend(query_expressions)
-    #         else:
-    #             self._filter.append(arg)
-    #     return self
-
     def _find_and_replace_id(self, key: str) -> str:
         """
         Making sure the ID is always parsed as `_id`.
@@ -214,6 +204,20 @@ class Manager(QuerySetProtocol, Generic[T]):
         if clause is None:
             return manager.filter_query(**kwargs)
         manager._filter.append(clause)
+        return manager
+
+    def raw(self, *values: Union[bool, Dict, Expression]) -> "Manager":
+        """
+        Runs a raw query against the database.
+        """
+        manager: "Manager" = self.clone()
+        for value in values:
+            assert isinstance(value, (dict, Expression)), "Invalid argument to Raw"
+            if isinstance(value, dict):
+                query_expressions = Expression.unpack(value)
+                manager._filter.extend(query_expressions)
+            else:
+                manager._filter.append(value)
         return manager
 
     async def count(self) -> int:
