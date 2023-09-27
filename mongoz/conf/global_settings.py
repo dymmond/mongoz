@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, cast
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -40,7 +40,7 @@ class MongozSettings(BaseSettings):
 
         if name not in self.filter_operators:
             raise OperatorInvalid(f"`{name}` is not a valid operator.")
-        return getattr(Q, self.filter_operators[name])
+        return cast("Expression", getattr(Q, self.filter_operators[name]))
 
     @cached_property
     def operators(self) -> List[str]:
@@ -50,7 +50,7 @@ class MongozSettings(BaseSettings):
         return list(self.filter_operators.keys())
 
     @cached_property
-    def stringified_operators(self) -> List[str]:
+    def stringified_operators(self) -> str:
         """
         Returns a list of valid operators.
         """

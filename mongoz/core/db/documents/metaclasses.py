@@ -213,12 +213,12 @@ class BaseModelMeta(ModelMetaclass):
                 for key, value in inspect.getmembers(base):
                     if isinstance(value, BaseField) and key not in attrs:
                         attrs[key] = value
-                _check_manager_for_bases(base, attrs)  # type: ignore
+                _check_manager_for_bases(base, attrs)
             else:
                 # abstract classes
                 for key, value in meta.fields.items():
                     attrs[key] = value
-                _check_manager_for_bases(base, attrs)  # type: ignore
+                _check_manager_for_bases(base, attrs)
 
         # Search in the base classes
         inherited_fields: Any = {}

@@ -79,22 +79,22 @@ class Comparison:
 
     @classmethod
     def gte(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)  # type: ignore
+        assert not isinstance(value, bool)
         return Expression(key=key, operator=ExpressionOperator.GREATER_THAN_EQUAL, value=value)
 
     @classmethod
     def gt(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)  # type: ignore
+        assert not isinstance(value, bool)
         return Expression(key=key, operator=ExpressionOperator.GREATER_THAN, value=value)
 
     @classmethod
     def lt(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)  # type: ignore
+        assert not isinstance(value, bool)
         return Expression(key=key, operator=ExpressionOperator.LESS_THAN, value=value)
 
     @classmethod
     def lte(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)  # type: ignore
+        assert not isinstance(value, bool)
         return Expression(key=key, operator=ExpressionOperator.LESS_THAN_EQUAL, value=value)
 
 

@@ -72,7 +72,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         Returns the operator for the given filter.
         """
-        return settings.get_operator(name)
+        return cast(Expression, settings.get_operator(name))
 
     async def __aiter__(self) -> AsyncGenerator[T, None]:
         filter_query = Expression.compile_many(self._filter)
@@ -108,7 +108,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
 
         if key in settings.parsed_ids:
-            return self.model_class.id.pydantic_field.alias
+            return cast(str, self.model_class.id.pydantic_field.alias)  # type: ignore
         return key
 
     def filter_query(self, **kwargs: Any) -> "Manager":
@@ -134,7 +134,7 @@ class Manager(QuerySetProtocol, Generic[T]):
                 # For "eq", "neq", "contains", "where", "pattern"
                 if lookup_operator in VALUE_EQUALITY:
                     operator = self.get_operator(lookup_operator)
-                    expression = operator(field_name, value)
+                    expression = operator(field_name, value)  # type: ignore
 
                 # For "in" and "not_in"
                 elif lookup_operator in LIST_EQUALITY:
@@ -147,7 +147,7 @@ class Manager(QuerySetProtocol, Generic[T]):
                         value = [*value]
 
                     operator = self.get_operator(lookup_operator)
-                    expression = operator(field_name, value)
+                    expression = operator(field_name, value)  # type: ignore
 
                 # For "asc" and "desc"
                 elif lookup_operator in ORDER_EQUALITY:
@@ -168,14 +168,14 @@ class Manager(QuerySetProtocol, Generic[T]):
                         asc_or_desc = OrderEnum.ASCENDING
 
                     operator = self.get_operator(asc_or_desc)
-                    expression = operator(field_name)
+                    expression = operator(field_name)  # type: ignore
                     sort_clauses.append(expression)
                     continue
 
                 # For "lt", "lte", "gt", "gte"
                 elif lookup_operator in GREATNESS_EQUALITY:
                     operator = self.get_operator(lookup_operator)
-                    expression = operator(field_name, value)
+                    expression = operator(field_name, value)  # type: ignore
                     clauses.append(expression)
 
                 # Add expression to the clauses
@@ -183,7 +183,7 @@ class Manager(QuerySetProtocol, Generic[T]):
 
             else:
                 operator = self.get_operator("exact")
-                expression = operator(key, value)
+                expression = operator(key, value)  # type: ignore
                 clauses.append(expression)
 
             filter_clauses += clauses
@@ -195,7 +195,9 @@ class Manager(QuerySetProtocol, Generic[T]):
             ),
         )
 
-    def filter(self, clause: Union[str, List[Expression], None] = None, **kwargs) -> "Manager":
+    def filter(
+        self, clause: Union[str, List[Expression], None] = None, **kwargs: Any
+    ) -> "Manager":
         """
         Filters the queryset based on the given clauses.
         """
@@ -254,7 +256,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         objects = await manager.limit(1).all()
         if not objects:
             return None
-        return objects[0]
+        return cast(T, objects[0])
 
     async def last(self) -> Union[T, None]:
         """
@@ -264,9 +266,9 @@ class Manager(QuerySetProtocol, Generic[T]):
         objects = await manager.all()
         if not objects:
             return None
-        return objects[-1]
+        return cast(T, objects[-1])
 
-    async def get(self, **kwargs: Any) -> "Document":
+    async def get(self, **kwargs: Any) -> Union["T", "Document"]:
         """
         Gets a document.
         """
@@ -280,7 +282,7 @@ class Manager(QuerySetProtocol, Generic[T]):
             raise DocumentNotFound()
         elif len(objects) == 2:
             raise MultipleDumentsReturned()
-        return objects[0]
+        return cast(T, objects[0])
 
     async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
         manager: "Manager" = self.clone()
@@ -304,7 +306,7 @@ class Manager(QuerySetProtocol, Generic[T]):
             upsert=True,
             return_document=True,
         )
-        return manager.model_class(**model)
+        return cast(T, manager.model_class(**model))
 
     async def distinct_values(self, key: str) -> List[Any]:
         """
@@ -380,8 +382,8 @@ class Manager(QuerySetProtocol, Generic[T]):
 
         if field_definitions:
             pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
-                __model_name=manager.model_class.__name__,
-                __config__=manager.model_class.model_config,
+                __model_name=manager.model_class.__name__,  # type: ignore
+                __config__=manager.model_class.model_config,  # type: ignore
                 **field_definitions,
             )
             model = pydantic_model.model_validate(kwargs)
@@ -403,16 +405,16 @@ class Manager(QuerySetProtocol, Generic[T]):
         Creates many documents (bulk create).
         """
         manager: "Manager" = self.clone()
-        return await manager.model_class.create_many(models=models)
+        return await manager.model_class.create_many(models=models)  # type: ignore
 
     async def get_document_by_id(self, id: Union[str, bson.ObjectId]) -> "Document":
         """
         Gets a document by the id
         """
         manager: "Manager" = self.clone()
-        return await manager.model_class.get_document_by_id(id)
+        return await manager.model_class.get_document_by_id(id)  # type: ignore
 
     def __await__(
         self,
     ) -> Generator[Any, None, List["Document"]]:
-        return self.all().__await__()
+        return self.all().__await__()  # type: ignore
