@@ -31,7 +31,7 @@ T = TypeVar("T", bound="Document")
 class Manager(QuerySetProtocol, Generic[T]):
     def __init__(
         self,
-        model_class: Union[Type[T], None] = None,
+        model_class: Union[Type["Document"], None] = None,
         filter_by: List[Expression] = None,
     ) -> None:
         self.model_class = model_class
@@ -257,19 +257,20 @@ class Manager(QuerySetProtocol, Generic[T]):
 
     def sort(self, key: Any, direction: Union[Order, None] = None) -> "Manager[T]":
         """Sort by (key, direction) or [(key, direction)]."""
+        manager: "Manager" = self.clone()
 
         direction = direction or Order.ASCENDING
 
         if isinstance(key, list):
             for key_dir in key:
                 sort_expression = SortExpression(*key_dir)
-                self._sort.append(sort_expression)
+                manager._sort.append(sort_expression)
         elif isinstance(key, (str, base.MongozField)):
             sort_expression = SortExpression(key, direction)
-            self._sort.append(sort_expression)
+            manager._sort.append(sort_expression)
         else:
-            self._sort.append(key)
-        return self
+            manager._sort.append(key)
+        return manager
 
     # def query(self, *args: Union[bool, Dict, Expression]) -> "QuerySet[T]":
     #     for arg in args:
@@ -282,29 +283,43 @@ class Manager(QuerySetProtocol, Generic[T]):
     #     return self
 
     async def update_many(self, **kwargs: Any) -> List[T]:
+        """
+        Updates many documents (bulk update)
+        """
+        manager: "Manager" = self.clone()
+
         field_definitions = {
             name: (annotations, ...)
-            for name, annotations in self.model_class.__annotations__.items()
+            for name, annotations in manager.model_class.__annotations__.items()
             if name in kwargs
         }
 
         if field_definitions:
             pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
-                __model_name=self.model_class.__name__,
-                __config__=self.model_class.model_config,
+                __model_name=manager.model_class.__name__,
+                __config__=manager.model_class.model_config,
                 **field_definitions,
             )
             model = pydantic_model.model_validate(kwargs)
             values = model.model_dump()
 
-            filter_query = Expression.compile_many(self._filter)
-            await self._collection.update_many(filter_query, {"$set": values})
+            filter_query = Expression.compile_many(manager._filter)
+            await manager._collection.update_many(filter_query, {"$set": values})
 
-            _filter = [expression for expression in self._filter if expression.key not in values]
+            _filter = [
+                expression for expression in manager._filter if expression.key not in values
+            ]
             _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
 
-            self._filter = _filter
-        return await self.all()
+            manager._filter = _filter
+        return await manager.all()
+
+    async def create_many(self, models: List["Document"]) -> List["Document"]:
+        """
+        Creates many documents (bulk create).
+        """
+        manager: "Manager" = self.clone()
+        return await manager.model_class.create_many(models=models)
 
     def __await__(
         self,
