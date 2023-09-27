@@ -60,6 +60,16 @@ out there such as [Esmerald][esmerald], FastAPI, Sanic, Starlette and many other
 While adopting a familiar interface, it offers some cool and powerful features using Pydantic and
 Motor.
 
+### Syntax
+
+**Mongoz allows two different types of syntax to be used**.
+
+* With a familiar interface inspired by Django.
+* With a familiar interface inspired by Mongox.
+
+**The documentation follows a more familiar interface inspired by [Edgy][edgy] but will also show**
+**how you could also use the other allowed syntax as well**
+
 ### Key features
 
 * **Document inheritance** - For those cases where you don't want to repeat yourself while maintaining integrity of the documents.
@@ -127,7 +137,7 @@ user = await User.query({"name": "Mongoz"}).get()
 Or you can use the `User` fields instead of dictionaries.
 
 ```python
-user = awaut User.query({User.name: "Mongoz"}).get()
+user = await User.query({User.name: "Mongoz"}).get()
 ```
 
 Or a more pythonic approach.
@@ -158,4 +168,5 @@ Nothing to worry about!
 [pydantic]: https://pydantic.dev/
 [mongoz]: https://mongoz.tarsild.io
 [saffier]: https://saffier.tarsild.io
+[edgy]: https://edgy.tarsild.io
 [esmerald]: https://esmerald.dev

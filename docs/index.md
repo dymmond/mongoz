@@ -60,6 +60,16 @@ out there such as [Esmerald][esmerald], FastAPI, Sanic, Starlette and many other
 While adopting a familiar interface, it offers some cool and powerful features using Pydantic and
 Motor.
 
+### Syntax
+
+**Mongoz allows two different types of syntax to be used**.
+
+* With a familiar interface inspired by [Edgy][edgy].
+* With a familiar interface inspired by Mongox.
+
+**The documentation follows a more familiar interface inspired by [Edgy][edgy] but will also show**
+**how you could also use the other allowed syntax as well**
+
 ### Key features
 
 * **Document inheritance** - For those cases where you don't want to repeat yourself while maintaining integrity of the documents.
@@ -93,9 +103,17 @@ Use `ipython` to run the following from the console, since it supports `await`.
 
 Now you can generate some documents and insert them into the database.
 
-```python
-user = await User(name="Mongoz", email="mongoz@mongoz.com").create()
-```
+=== "Mongoz"
+
+    ```python
+    user = await User.objects.create(name="Mongoz", email="mongoz@mongoz.com")
+    ```
+
+=== "Alternative"
+
+    ```python
+    user = await User(name="Mongoz", email="mongoz@mongoz.com").create()
+    ```
 
 This will return an instance of a `User` in a Pydantic model and `mypy` will understand this is a
 `User` instance automatically which meand the type hints and validations will work everywhere.
@@ -105,21 +123,45 @@ This will return an instance of a `User` in a Pydantic model and `mypy` will und
 Since Mongoz was built on the top of Motor, means you can also use the same pattern to query as used
 in PyMongo/Motor.
 
-```python
-user = await User.query({"name": "Mongoz"}).get()
-```
+=== "Mongoz"
+
+    ```python
+    user = await User.objects.get(name="Mongoz")
+    ```
+
+=== "Alternative"
+
+    ```python
+    user = await User.query({"name": "Mongoz"}).get()
+    ```
 
 Or you can use the `User` fields instead of dictionaries.
 
-```python
-user = awaut User.query({User.name: "Mongoz"}).get()
-```
+=== "Mongoz"
+
+    ```python
+    user = await User.objects.filter(name="Mongoz").get()
+    ```
+
+=== "Alternative"
+
+    ```python
+    user = await User.query({User.name: "Mongoz"}).get()
+    ```
 
 Or a more pythonic approach.
 
-```python
-user = await User.query(User.name == "Mongoz").get()
-```
+=== "Mongoz"
+
+    ```python
+    user = await User.objects.get(name="Mongoz")
+    ```
+
+=== "Alternative"
+
+    ```python
+    user = await User.query(User.name == "Mongoz").get()
+    ```
 
 There are plenty of operations you can do with Mongoz and you can see them all throughout the
 documentation or in the [Queries](./queries.md) section.
@@ -143,4 +185,5 @@ Nothing to worry about!
 [pydantic]: https://pydantic.dev/
 [mongoz]: https://mongoz.tarsild.io
 [saffier]: https://saffier.tarsild.io
+[edgy]: https://edgy.tarsild.io
 [esmerald]: https://esmerald.dev
