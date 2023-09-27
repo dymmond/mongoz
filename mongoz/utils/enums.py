@@ -19,3 +19,6 @@ class ExpressionOperator(str, Enum):
     LESS_THAN = "$lt"
     AND = "$and"
     OR = "$or"
+    NOR = "$nor"
+    NOT = "$not"
+    EXISTS = "$exists"

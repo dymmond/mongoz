@@ -309,7 +309,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         manager: "Manager" = self.clone()
         filter_query = Expression.compile_many(manager._filter)
-        values = await self._collection.find(filter_query).distinct(key=key)
+        values = await manager._collection.find(filter_query).distinct(key=key)
         return cast(List[Any], values)
 
     async def where(self, condition: Union[str, Code]) -> Any:

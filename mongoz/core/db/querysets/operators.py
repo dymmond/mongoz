@@ -98,6 +98,16 @@ class Comparison:
         return Expression(key=key, operator=ExpressionOperator.LESS_THAN_EQUAL, value=value)
 
 
+class Element:
+    """
+    All element query operators.
+    """
+
+    @classmethod
+    def exists(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+        return Expression(key=key, operator=ExpressionOperator.EXISTS, value=value)
+
+
 class Q(Ordering, Iterable, Equality, Comparison):
     """
     Shortcut for the creation of an Expression.
@@ -112,3 +122,13 @@ class Q(Ordering, Iterable, Equality, Comparison):
     def or_(cls, *args: Union[bool, Expression]) -> Expression:
         assert not isinstance(args, bool)  # type: ignore
         return Expression(key=ExpressionOperator.OR, operator=ExpressionOperator.OR, value=args)
+
+    @classmethod
+    def nor(cls, *args: Union[bool, Expression]) -> Expression:
+        assert not isinstance(args, bool)  # type: ignore
+        return Expression(key=ExpressionOperator.NOR, operator=ExpressionOperator.NOR, value=args)
+
+    @classmethod
+    def not_(cls, *args: Union[bool, Expression]) -> Expression:
+        assert not isinstance(args, bool)  # type: ignore
+        return Expression(key=ExpressionOperator.NOT, operator=ExpressionOperator.NOT, value=args)
