@@ -65,3 +65,30 @@ async def test_model_get() -> None:
 
     with pytest.raises(MultipleDumentsReturned):
         await Movie.objects.get()
+
+
+async def test_model_get_by_kwargs() -> None:
+    await Movie.objects.create(name="Barbie", year=2023)
+
+    movie = await Movie.objects.get()
+    assert movie.name == "Barbie"
+
+    await Movie.objects.create(name="Batman", year=2013)
+
+    movie = await Movie.objects.get(name="Barbie")
+    assert movie.name == "Barbie"
+
+    movie = await Movie.objects.get(_id=movie.id)
+    assert movie.name == "Barbie"
+
+    movie = await Movie.objects.get(id=movie.id)
+    assert movie.name == "Barbie"
+
+    movie = await Movie.objects.get(pk=movie.id)
+    assert movie.name == "Barbie"
+
+    with pytest.raises(DocumentNotFound):
+        await Movie.objects.get(name="Interstellar")
+
+    with pytest.raises(MultipleDumentsReturned):
+        await Movie.objects.get()

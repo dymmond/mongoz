@@ -21,15 +21,15 @@ class MongozSettings(BaseSettings):
         "nexact": "neq",
         "contains": "contains",
         "in": "in_",
-        "nin": "not_in",
-        "or": "or_",
+        "not_in": "not_in",
         "pattern": "pattern",
         "where": "where",
-        "and": "and_",
         "gte": "gte",
         "gt": "gt",
         "lt": "lt",
         "lte": "lte",
+        "asc": "asc",
+        "desc": "desc",
     }
 
     def get_operator(self, name: str) -> "Expression":

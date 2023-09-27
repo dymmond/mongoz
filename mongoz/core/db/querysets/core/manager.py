@@ -128,12 +128,14 @@ class Manager(QuerySetProtocol, Generic[T]):
                 # filter operator or as a related field.
                 if parts[-1] in settings.filter_operators:
                     operator = self.get_operator(parts[-1])
-                    parts[-2]
-                    parts[:-2]
+                    field_name = parts[-2]
+                    expression = operator(field_name)
+                    clauses.append(expression)
                 else:
                     operator = self.get_operator("exact")
-                    parts[-1]
-                    parts[:-1]
+                    field_name = parts[-1]
+                    expression = operator(field_name)
+                    clauses.append(expression)
             else:
                 operator = self.get_operator("exact")
                 expression = operator(key, value)
@@ -202,11 +204,14 @@ class Manager(QuerySetProtocol, Generic[T]):
             return None
         return objects[-1]
 
-    async def get(self) -> "Document":
+    async def get(self, **kwargs: Any) -> "Document":
         """
         Gets a document.
         """
         manager: "Manager" = self.clone()
+
+        if kwargs:
+            return await manager.filter(**kwargs).get()
 
         objects = await manager.limit(2).all()
         if len(objects) == 0:

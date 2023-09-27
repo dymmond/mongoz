@@ -61,9 +61,9 @@ class Q:
         return Expression(key=key, operator="$eq", value=value)
 
     @classmethod
-    def neq(cls, key: Any, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
-        return Expression(key=key, operator="$neq", value=args)
+    def neq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+        assert not isinstance(value, bool)  # type: ignore
+        return Expression(key=key, operator="$neq", value=value)
 
     @classmethod
     def contains(cls, key: Any, value: Any) -> Expression:
