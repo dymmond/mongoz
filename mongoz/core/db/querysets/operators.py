@@ -6,9 +6,7 @@ from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.exceptions import FieldDefinitionError
 
 
-class Q:
-    """Shortcut for creating Expression type instances."""
-
+class Ordering:
     @classmethod
     def asc(cls, key: Any) -> SortExpression:
         return SortExpression(key, Order.ASCENDING)
@@ -17,6 +15,8 @@ class Q:
     def desc(cls, key: Any) -> SortExpression:
         return SortExpression(key, Order.DESCENDING)
 
+
+class Iterable:
     @classmethod
     def in_(cls, key: Any, values: List) -> Expression:
         return Expression(key=key, operator="$in", value=values)
@@ -25,36 +25,8 @@ class Q:
     def not_in(cls, key: Any, values: List) -> Expression:
         return Expression(key=key, operator="$nin", value=values)
 
-    @classmethod
-    def and_(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
-        return Expression(key="$and", operator="$and", value=args)
 
-    @classmethod
-    def or_(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
-        return Expression(key="$or", operator="$or", value=args)
-
-    @classmethod
-    def gte(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
-        return Expression(key="$gte", operator="$gte", value=args)
-
-    @classmethod
-    def gt(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
-        return Expression(key="$gt", operator="$gt", value=args)
-
-    @classmethod
-    def lt(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
-        return Expression(key="$lt", operator="$lt", value=args)
-
-    @classmethod
-    def lte(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
-        return Expression(key="$lte", operator="$lte", value=args)
-
+class Equality:
     @classmethod
     def eq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
         assert not isinstance(value, bool)
@@ -63,7 +35,7 @@ class Q:
     @classmethod
     def neq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
         assert not isinstance(value, bool)
-        return Expression(key=key, operator="$neq", value=value)
+        return Expression(key=key, operator="$ne", value=value)
 
     @classmethod
     def contains(cls, key: Any, value: Any) -> Expression:
@@ -83,3 +55,39 @@ class Q:
             return Expression(key=key, operator="$regex", value=expression)
         name = key if isinstance(key, str) else key._name
         raise FieldDefinitionError(f"The {name} field is not of type str")
+
+
+class Comparison:
+    @classmethod
+    def gte(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+        assert not isinstance(value, bool)  # type: ignore
+        return Expression(key=key, operator="$gte", value=value)
+
+    @classmethod
+    def gt(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+        assert not isinstance(value, bool)  # type: ignore
+        return Expression(key=key, operator="$gt", value=value)
+
+    @classmethod
+    def lt(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+        assert not isinstance(value, bool)  # type: ignore
+        return Expression(key=key, operator="$lt", value=value)
+
+    @classmethod
+    def lte(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+        assert not isinstance(value, bool)  # type: ignore
+        return Expression(key=key, operator="$lte", value=value)
+
+
+class Q(Ordering, Iterable, Equality, Comparison):
+    """Shortcut for creating Expression type instances."""
+
+    @classmethod
+    def and_(cls, *args: Union[bool, Expression]) -> Expression:
+        assert not isinstance(args, bool)  # type: ignore
+        return Expression(key="$and", operator="$and", value=args)
+
+    @classmethod
+    def or_(cls, *args: Union[bool, Expression]) -> Expression:
+        assert not isinstance(args, bool)  # type: ignore
+        return Expression(key="$or", operator="$or", value=args)

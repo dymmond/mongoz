@@ -18,7 +18,7 @@ class MongozSettings(BaseSettings):
 
     filter_operators: Dict[str, str] = {
         "exact": "eq",
-        "nexact": "neq",
+        "neq": "neq",
         "contains": "contains",
         "in": "in_",
         "not_in": "not_in",

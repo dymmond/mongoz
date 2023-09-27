@@ -140,7 +140,7 @@ class Manager(QuerySetProtocol, Generic[T]):
                     # For "eq", "neq", "contains", "where", "pattern"
                     if lookup_operator in VALUE_EQUALITY:
                         operator = self.get_operator(lookup_operator)
-                        expression = operator(field_name)
+                        expression = operator(field_name, value)
 
                     # For "in" and "not_in"
                     elif lookup_operator in LIST_EQUALITY:
@@ -181,7 +181,7 @@ class Manager(QuerySetProtocol, Generic[T]):
                     # For "lt", "lte", "gt", "gte"
                     elif lookup_operator in GREATNESS_EQUALITY:
                         operator = self.get_operator(lookup_operator)
-                        expression = operator(value)
+                        expression = operator(field_name, value)
                         clauses.append(expression)
 
                     # Add expression to the clauses
