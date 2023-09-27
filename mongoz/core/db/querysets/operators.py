@@ -53,7 +53,7 @@ class Equality:
 
     @classmethod
     def contains(cls, key: Any, value: Any) -> Expression:
-        if key.pydantic_field.annotation is str:
+        if isinstance(key, str) or key.pydantic_field.annotation is str:
             return Expression(key=key, operator=ExpressionOperator.PATTERN, value=value)
         return Expression(key=key, operator=ExpressionOperator.EQUAL, value=value)
 
@@ -64,7 +64,7 @@ class Equality:
 
     @classmethod
     def pattern(cls, key: Any, value: Union[str, re.Pattern]) -> Expression:
-        if key.pydantic_field.annotation is str:
+        if isinstance(key, str) or key.pydantic_field.annotation is str:
             expression = value.pattern if isinstance(value, re.Pattern) else value
             return Expression(key=key, operator=ExpressionOperator.PATTERN, value=expression)
         name = key if isinstance(key, str) else key._name

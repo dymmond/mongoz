@@ -41,3 +41,17 @@ class MongozSettings(BaseSettings):
         if name not in self.filter_operators:
             raise OperatorInvalid(f"`{name}` is not a valid operator.")
         return getattr(Q, self.filter_operators[name])
+
+    @cached_property
+    def operators(self) -> List[str]:
+        """
+        Returns a list of valid operators.
+        """
+        return list(self.filter_operators.keys())
+
+    @cached_property
+    def stringified_operators(self) -> List[str]:
+        """
+        Returns a list of valid operators.
+        """
+        return ", ".join(self.operators)

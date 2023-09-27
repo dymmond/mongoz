@@ -137,60 +137,59 @@ class Manager(QuerySetProtocol, Generic[T]):
                 lookup_operator = parts[-1]
                 field_name = parts[-2]
 
-                if lookup_operator in settings.filter_operators:
-                    # For "eq", "neq", "contains", "where", "pattern"
-                    if lookup_operator in VALUE_EQUALITY:
-                        operator = self.get_operator(lookup_operator)
-                        expression = operator(field_name, value)
+                assert (
+                    lookup_operator in settings.filter_operators
+                ), f"`{lookup_operator}` is not a valid lookup operator. Valid operators: {settings.stringified_operators}"
 
-                    # For "in" and "not_in"
-                    elif lookup_operator in LIST_EQUALITY:
-                        assert isinstance(
-                            value, (tuple, list)
-                        ), f"Using the operator `{lookup_operator}` it requires the value to be a list or a tuple, got {type(value)}"
+                # For "eq", "neq", "contains", "where", "pattern"
+                if lookup_operator in VALUE_EQUALITY:
+                    operator = self.get_operator(lookup_operator)
+                    expression = operator(field_name, value)
 
-                        # For tuples, convert to a list
-                        if isinstance(value, tuple):
-                            value = [*value]
+                # For "in" and "not_in"
+                elif lookup_operator in LIST_EQUALITY:
+                    assert isinstance(
+                        value, (tuple, list)
+                    ), f"Using the operator `{lookup_operator}` it requires the value to be a list or a tuple, got {type(value)}"
 
-                        operator = self.get_operator(lookup_operator)
-                        expression = operator(field_name, value)
+                    # For tuples, convert to a list
+                    if isinstance(value, tuple):
+                        value = [*value]
 
-                    # For "asc" and "desc"
-                    elif lookup_operator in ORDER_EQUALITY:
-                        asc_or_desc: Union[str, None] = None
+                    operator = self.get_operator(lookup_operator)
+                    expression = operator(field_name, value)
 
-                        if (
-                            lookup_operator == OrderEnum.ASCENDING
-                            and value
-                            or lookup_operator == OrderEnum.DESCENDING
-                            and value
-                        ):
-                            asc_or_desc = lookup_operator
-                        elif lookup_operator == OrderEnum.ASCENDING and value is False:
-                            asc_or_desc = OrderEnum.DESCENDING
-                        elif lookup_operator == OrderEnum.DESCENDING and value is False:
-                            asc_or_desc = OrderEnum.ASCENDING
-                        else:
-                            asc_or_desc = OrderEnum.ASCENDING
+                # For "asc" and "desc"
+                elif lookup_operator in ORDER_EQUALITY:
+                    asc_or_desc: Union[str, None] = None
 
-                        operator = self.get_operator(asc_or_desc)
-                        expression = operator(field_name)
-                        sort_clauses.append(expression)
-                        continue
+                    if (
+                        lookup_operator == OrderEnum.ASCENDING
+                        and value
+                        or lookup_operator == OrderEnum.DESCENDING
+                        and value
+                    ):
+                        asc_or_desc = lookup_operator
+                    elif lookup_operator == OrderEnum.ASCENDING and value is False:
+                        asc_or_desc = OrderEnum.DESCENDING
+                    elif lookup_operator == OrderEnum.DESCENDING and value is False:
+                        asc_or_desc = OrderEnum.ASCENDING
+                    else:
+                        asc_or_desc = OrderEnum.ASCENDING
 
-                    # For "lt", "lte", "gt", "gte"
-                    elif lookup_operator in GREATNESS_EQUALITY:
-                        operator = self.get_operator(lookup_operator)
-                        expression = operator(field_name, value)
-                        clauses.append(expression)
-
-                    # Add expression to the clauses
-                    clauses.append(expression)
-                else:
-                    operator = self.get_operator("exact")
+                    operator = self.get_operator(asc_or_desc)
                     expression = operator(field_name)
+                    sort_clauses.append(expression)
+                    continue
+
+                # For "lt", "lte", "gt", "gte"
+                elif lookup_operator in GREATNESS_EQUALITY:
+                    operator = self.get_operator(lookup_operator)
+                    expression = operator(field_name, value)
                     clauses.append(expression)
+
+                # Add expression to the clauses
+                clauses.append(expression)
 
             else:
                 operator = self.get_operator("exact")
