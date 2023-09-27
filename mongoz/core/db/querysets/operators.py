@@ -7,6 +7,10 @@ from mongoz.exceptions import FieldDefinitionError
 
 
 class Ordering:
+    """
+    All the operators responsible for checking by order.
+    """
+
     @classmethod
     def asc(cls, key: Any) -> SortExpression:
         return SortExpression(key, Order.ASCENDING)
@@ -17,6 +21,11 @@ class Ordering:
 
 
 class Iterable:
+    """
+    All the operators responsible for checking comparison
+    within a an iterable.
+    """
+
     @classmethod
     def in_(cls, key: Any, values: List) -> Expression:
         return Expression(key=key, operator="$in", value=values)
@@ -27,6 +36,10 @@ class Iterable:
 
 
 class Equality:
+    """
+    All the operators responsible for checking equality comparison.
+    """
+
     @classmethod
     def eq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
         assert not isinstance(value, bool)
@@ -58,6 +71,11 @@ class Equality:
 
 
 class Comparison:
+    """
+    All the operators responsible for checking comparison
+    by greatness.
+    """
+
     @classmethod
     def gte(cls, key: Any, value: Union[bool, Expression]) -> Expression:
         assert not isinstance(value, bool)  # type: ignore
@@ -80,7 +98,9 @@ class Comparison:
 
 
 class Q(Ordering, Iterable, Equality, Comparison):
-    """Shortcut for creating Expression type instances."""
+    """
+    Shortcut for the creation of an Expression.
+    """
 
     @classmethod
     def and_(cls, *args: Union[bool, Expression]) -> Expression:

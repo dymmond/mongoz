@@ -25,6 +25,7 @@ from mongoz.core.db.querysets.core.constants import (
     ORDER_EQUALITY,
     VALUE_EQUALITY,
 )
+from mongoz.core.db.querysets.core.enums import OrderEnum
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.exceptions import DocumentNotFound, MultipleDumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
@@ -160,18 +161,18 @@ class Manager(QuerySetProtocol, Generic[T]):
                         asc_or_desc: Union[str, None] = None
 
                         if (
-                            lookup_operator == "asc"
+                            lookup_operator == OrderEnum.ASCENDING
                             and value
-                            or lookup_operator == "desc"
+                            or lookup_operator == OrderEnum.DESCENDING
                             and value
                         ):
                             asc_or_desc = lookup_operator
-                        elif lookup_operator == "asc" and value is False:
-                            asc_or_desc = "desc"
-                        elif lookup_operator == "desc" and value is False:
-                            asc_or_desc = "asc"
+                        elif lookup_operator == OrderEnum.ASCENDING and value is False:
+                            asc_or_desc = OrderEnum.DESCENDING
+                        elif lookup_operator == OrderEnum.DESCENDING and value is False:
+                            asc_or_desc = OrderEnum.ASCENDING
                         else:
-                            asc_or_desc = "asc"
+                            asc_or_desc = OrderEnum.ASCENDING
 
                         operator = self.get_operator(asc_or_desc)
                         expression = operator(field_name)
@@ -361,16 +362,6 @@ class Manager(QuerySetProtocol, Generic[T]):
         else:
             manager._sort.append(key)
         return manager
-
-    # def query(self, *args: Union[bool, Dict, Expression]) -> "QuerySet[T]":
-    #     for arg in args:
-    #         assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
-    #         if isinstance(arg, dict):
-    #             query_expressions = Expression.unpack(arg)
-    #             self._filter.extend(query_expressions)
-    #         else:
-    #             self._filter.append(arg)
-    #     return self
 
     async def update_many(self, **kwargs: Any) -> List[T]:
         """

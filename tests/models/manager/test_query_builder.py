@@ -97,3 +97,25 @@ async def test_model_query_builder() -> None:
         await Movie.objects.filter(name="Casablanca").filter(year=1942).get()
         == await Movie.objects.filter(name="Casablanca", year=1942).get()
     )
+
+
+async def test_query_builder_in_list():
+    await Movie.objects.create(name="Downfall", year=2004)
+    await Movie.objects.create(name="The Two Towers", year=2002)
+    await Movie.objects.create(name="Casablanca", year=1942)
+    await Movie.objects.create(name="Gone with the wind", year=1939)
+
+    movies = await Movie.objects.filter(year__in=[2004, 2002, 1939])
+    assert len(movies) == 3
+
+    movies = await Movie.objects.filter(year__not_in=[2004, 2002])
+    assert len(movies) == 2
+
+
+@pytest.mark.parametrize("values", [{2002, 2004}, {"year": 2002}], ids=["as-set", "as-dict"])
+async def test_query_builder_in_list_raise_assertation_error(values):
+    await Movie.objects.create(name="Downfall", year=2004)
+    await Movie.objects.create(name="The Two Towers", year=2002)
+
+    with pytest.raises(AssertionError):
+        await Movie.objects.filter(year__not_in=values)
