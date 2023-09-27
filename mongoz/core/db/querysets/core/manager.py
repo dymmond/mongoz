@@ -16,6 +16,8 @@ from typing import (
 from bson import Code
 
 from mongoz import settings
+from mongoz.core.db.datastructures import Order
+from mongoz.core.db.fields import base
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.protocols.queryset import QuerySetProtocol
 
@@ -218,13 +220,13 @@ class Manager(QuerySetProtocol, Generic[T]):
         )
         return manager.model_class(**model)
 
-    # async def distinct_values(self, key: str) -> List[Any]:
-    #     """
-    #     Returns a list of distinct values filtered by the key.
-    #     """
-    #     filter_query = Expression.compile_many(self._filter)
-    #     values = await self._collection.find(filter_query).distinct(key=key)
-    #     return cast(List[Any], values)
+    async def distinct_values(self, key: str) -> List[Any]:
+        """
+        Returns a list of distinct values filtered by the key.
+        """
+        filter_query = Expression.compile_many(self._filter)
+        values = await self._collection.find(filter_query).distinct(key=key)
+        return cast(List[Any], values)
 
     async def where(self, condition: Union[str, Code]) -> Any:
         """
@@ -252,21 +254,21 @@ class Manager(QuerySetProtocol, Generic[T]):
         manager._skip_count = count
         return manager
 
-    # def sort(self, key: Any, direction: Union[Order, None] = None) -> "QuerySet[T]":
-    #     """Sort by (key, direction) or [(key, direction)]."""
+    def sort(self, key: Any, direction: Union[Order, None] = None) -> "Manager[T]":
+        """Sort by (key, direction) or [(key, direction)]."""
 
-    #     direction = direction or Order.ASCENDING
+        direction = direction or Order.ASCENDING
 
-    #     if isinstance(key, list):
-    #         for key_dir in key:
-    #             sort_expression = SortExpression(*key_dir)
-    #             self._sort.append(sort_expression)
-    #     elif isinstance(key, (str, base.MongozField)):
-    #         sort_expression = SortExpression(key, direction)
-    #         self._sort.append(sort_expression)
-    #     else:
-    #         self._sort.append(key)
-    #     return self
+        if isinstance(key, list):
+            for key_dir in key:
+                sort_expression = SortExpression(*key_dir)
+                self._sort.append(sort_expression)
+        elif isinstance(key, (str, base.MongozField)):
+            sort_expression = SortExpression(key, direction)
+            self._sort.append(sort_expression)
+        else:
+            self._sort.append(key)
+        return self
 
     # def query(self, *args: Union[bool, Dict, Expression]) -> "QuerySet[T]":
     #     for arg in args:
