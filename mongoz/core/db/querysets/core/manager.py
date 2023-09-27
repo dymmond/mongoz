@@ -54,7 +54,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         self._skip_count = 0
         self._sort: List[SortExpression] = [] if sort_by is None else sort_by
 
-    def __get__(self, instance: Any, owner: Any) -> Any:
+    def __get__(self, instance: Any, owner: Any) -> "Manager":
         return self.__class__(model_class=owner)
 
     def clone(self) -> Any:

@@ -57,12 +57,12 @@ class Q:
 
     @classmethod
     def eq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)  # type: ignore
+        assert not isinstance(value, bool)
         return Expression(key=key, operator="$eq", value=value)
 
     @classmethod
     def neq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)  # type: ignore
+        assert not isinstance(value, bool)
         return Expression(key=key, operator="$neq", value=value)
 
     @classmethod
