@@ -13,6 +13,7 @@ from typing import (
     cast,
 )
 
+import bson
 import pydantic
 from bson import Code
 
@@ -20,6 +21,7 @@ from mongoz import settings
 from mongoz.core.db.datastructures import Order
 from mongoz.core.db.fields import base
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
+from mongoz.exceptions import DocumentNotFound, MultipleDumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
 
 if TYPE_CHECKING:
@@ -100,6 +102,15 @@ class Manager(QuerySetProtocol, Generic[T]):
     #             self._filter.append(arg)
     #     return self
 
+    def _find_and_replace_id(self, key: str) -> str:
+        """
+        Making sure the ID is always parsed as `_id`.
+        """
+
+        if key in settings.parsed_ids:
+            return self.model_class.id.pydantic_field.alias
+        return key
+
     def filter_query(self, **kwargs: Any) -> "Manager":
         """
         Builds the filter query for the given manager.
@@ -108,6 +119,8 @@ class Manager(QuerySetProtocol, Generic[T]):
         filter_clauses = self._filter
 
         for key, value in kwargs.items():
+            key = self._find_and_replace_id(key)
+
             if "__" in key:
                 parts = key.split("__")
 
@@ -189,13 +202,18 @@ class Manager(QuerySetProtocol, Generic[T]):
             return None
         return objects[-1]
 
-    # async def get(self) -> T:
-    #     objects = await self.limit(2).all()
-    #     if len(objects) == 0:
-    #         raise DocumentNotFound()
-    #     elif len(objects) == 2:
-    #         raise MultipleDumentsReturned()
-    #     return objects[0]
+    async def get(self) -> "Document":
+        """
+        Gets a document.
+        """
+        manager: "Manager" = self.clone()
+
+        objects = await manager.limit(2).all()
+        if len(objects) == 0:
+            raise DocumentNotFound()
+        elif len(objects) == 2:
+            raise MultipleDumentsReturned()
+        return objects[0]
 
     async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
         manager: "Manager" = self.clone()
@@ -320,6 +338,12 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         manager: "Manager" = self.clone()
         return await manager.model_class.create_many(models=models)
+
+    async def get_document_by_id(self, id: Union[str, bson.ObjectId]) -> "Document":
+        """
+        Gets a document by the id
+        """
+        return await self.model_class.get_document_by_id(id)
 
     def __await__(
         self,

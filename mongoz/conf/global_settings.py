@@ -14,6 +14,8 @@ class MongozSettings(BaseSettings):
     ipython_args: List[str] = ["--no-banner"]
     ptpython_config_file: str = "~/.config/ptpython/config.py"
 
+    parsed_ids: List[str] = ["id", "pk"]
+
     filter_operators: Dict[str, str] = {
         "exact": "eq",
         "nexact": "neq",
