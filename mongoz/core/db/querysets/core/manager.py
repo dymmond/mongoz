@@ -284,6 +284,22 @@ class Manager(QuerySetProtocol, Generic[T]):
             raise MultipleDumentsReturned()
         return cast(T, objects[0])
 
+    async def get_or_none(self, **kwargs: Any) -> Union["T", "Document", None]:
+        """
+        Gets a document or returns None.
+        """
+        manager: "Manager" = self.clone()
+
+        if kwargs:
+            return await manager.filter(**kwargs).get_or_none()
+
+        objects = await manager.limit(2).all()
+        if len(objects) == 0:
+            return None
+        elif len(objects) > 1:
+            raise MultipleDumentsReturned()
+        return cast(T, objects[0])
+
     async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
         manager: "Manager" = self.clone()
         if not defaults:

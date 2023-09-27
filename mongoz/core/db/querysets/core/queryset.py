@@ -107,6 +107,17 @@ class QuerySet(QuerySetProtocol, Generic[T]):
             raise MultipleDumentsReturned()
         return objects[0]
 
+    async def get_or_none(self) -> Union["T", "Document", None]:
+        """
+        Gets a document or returns None.
+        """
+        objects = await self.limit(2).all()
+        if len(objects) == 0:
+            return None
+        elif len(objects) > 1:
+            raise MultipleDumentsReturned()
+        return objects[0]
+
     async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
         if not defaults:
             defaults = {}
