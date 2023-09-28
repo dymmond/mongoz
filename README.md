@@ -118,7 +118,7 @@ class User(mongoz.Document):
 
 Now you can generate some documents and insert them into the database.
 
-=== "Mongoz"
+=== "Simple"
 
     ```python
     user = await User.objects.create(name="Mongoz", email="mongoz@mongoz.com")
@@ -138,7 +138,7 @@ This will return an instance of a `User` in a Pydantic model and `mypy` will und
 Since Mongoz was built on the top of Motor, means you can also use the same pattern to query as used
 in PyMongo/Motor.
 
-=== "Mongoz"
+=== "Simple"
 
     ```python
     user = await User.objects.get(name="Mongoz")
@@ -150,12 +150,12 @@ in PyMongo/Motor.
     user = await User.query({"name": "Mongoz"}).get()
     ```
 
-Or you can use the `User` fields instead of dictionaries.
+Or you can use the `User` fields instead of dictionaries (check the "Alternative" for this option).
 
-=== "Mongoz"
+=== "Simple"
 
     ```python
-    user = await User.objects.filter(name="Mongoz").get()
+    user = await User.objects.get(name="Mongoz")
     ```
 
 === "Alternative"
@@ -164,9 +164,9 @@ Or you can use the `User` fields instead of dictionaries.
     user = await User.query({User.name: "Mongoz"}).get()
     ```
 
-Or a more pythonic approach.
+Or a more python similar approach (check the "Alternative" for this option).
 
-=== "Mongoz"
+=== "Simple"
 
     ```python
     user = await User.objects.get(name="Mongoz")
@@ -180,6 +180,12 @@ Or a more pythonic approach.
 
 There are plenty of operations you can do with Mongoz and you can see them all throughout the
 documentation or in the [Queries](./queries.md) section.
+
+**Mongoz** praises simplicity and there is no preference in the syntax used within the queries.
+You can use what we called "Mongoz" option and the "Alternative" at the same time as both work
+really well combined.
+
+**Both are Mongoz syntaxes but for the sake of the documentation, we classify them with different names for representation purposes only**.
 
 ## Note
 
