@@ -43,6 +43,8 @@ nav:
       - Queries: "queries.md"
       - Fields: "fields.md"
       - Signals: "signals.md"
+      - Settings: "settings.md"
+      - Registry: "registry.md"
       - Contributing: "contributing.md"
       - Sponsorship: "sponsorship.md"
       - Release Notes: "release-notes.md"
