@@ -6,8 +6,7 @@ database_uri = "mongodb://localhost:27017"
 registry = mongoz.Registry(database_uri)
 
 
-class BaseModel(mongoz.Model):
-    id: uuid.UUID = mongoz.UUID(primary_key=True, default=uuid.uuid4)
+class BaseDocument(mongoz.Document):
     name: str = mongoz.String(max_length=255)
 
     class Meta:
@@ -21,7 +20,7 @@ class BaseModel(mongoz.Model):
         return getattr(self, "description", None)
 
 
-class User(BaseModel):
+class User(BaseDocument):
     """
     Inheriting the fields from the abstract class
     as well as the Meta data.
@@ -35,7 +34,7 @@ class User(BaseModel):
         ...
 
 
-class Product(BaseModel):
+class Product(BaseDocument):
     """
     Inheriting the fields from the abstract class
     as well as the Meta data.
