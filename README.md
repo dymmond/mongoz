@@ -118,9 +118,17 @@ class User(mongoz.Document):
 
 Now you can generate some documents and insert them into the database.
 
-```python
-user = await User(name="Mongoz", email="mongoz@mongoz.com").create()
-```
+=== "Mongoz"
+
+    ```python
+    user = await User.objects.create(name="Mongoz", email="mongoz@mongoz.com")
+    ```
+
+=== "Alternative"
+
+    ```python
+    user = await User(name="Mongoz", email="mongoz@mongoz.com").create()
+    ```
 
 This will return an instance of a `User` in a Pydantic model and `mypy` will understand this is a
 `User` instance automatically which meand the type hints and validations will work everywhere.
@@ -130,21 +138,45 @@ This will return an instance of a `User` in a Pydantic model and `mypy` will und
 Since Mongoz was built on the top of Motor, means you can also use the same pattern to query as used
 in PyMongo/Motor.
 
-```python
-user = await User.query({"name": "Mongoz"}).get()
-```
+=== "Mongoz"
+
+    ```python
+    user = await User.objects.get(name="Mongoz")
+    ```
+
+=== "Alternative"
+
+    ```python
+    user = await User.query({"name": "Mongoz"}).get()
+    ```
 
 Or you can use the `User` fields instead of dictionaries.
 
-```python
-user = await User.query({User.name: "Mongoz"}).get()
-```
+=== "Mongoz"
+
+    ```python
+    user = await User.objects.filter(name="Mongoz").get()
+    ```
+
+=== "Alternative"
+
+    ```python
+    user = await User.query({User.name: "Mongoz"}).get()
+    ```
 
 Or a more pythonic approach.
 
-```python
-user = await User.query(User.name == "Mongoz").get()
-```
+=== "Mongoz"
+
+    ```python
+    user = await User.objects.get(name="Mongoz")
+    ```
+
+=== "Alternative"
+
+    ```python
+    user = await User.query(User.name == "Mongoz").get()
+    ```
 
 There are plenty of operations you can do with Mongoz and you can see them all throughout the
 documentation or in the [Queries](./queries.md) section.
