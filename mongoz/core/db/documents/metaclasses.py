@@ -45,6 +45,7 @@ class MetaInfo:
         "signals",
         "database",
         "manager",
+        "autogenerate_index",
     )
 
     def __init__(self, meta: Any = None, **kwargs: Any) -> None:
@@ -62,6 +63,7 @@ class MetaInfo:
         )
         self.signals: Optional[Broadcaster] = {}  # type: ignore
         self.manager: "Manager" = getattr(meta, "manager", Manager())
+        self.autogenerate_index: bool = getattr(meta, "autogenerate_index", True)
 
     def model_dump(self) -> Dict[Any, Any]:
         return {k: getattr(self, k, None) for k in self.__slots__}
@@ -355,7 +357,7 @@ class BaseModelMeta(ModelMetaclass):
         new_class.model_rebuild(force=True)
 
         # Build the indexes
-        if not meta.abstract and meta.indexes:
+        if not meta.abstract and meta.indexes and meta.autogenerate_index:
             execsync(new_class.create_indexes)()
         return new_class
 
