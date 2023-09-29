@@ -189,6 +189,19 @@ Mongoz provides an `Index` object that must be used when declaring documents ind
 ```python
 from mongoz import Index, IndexType, Order
 ```
+
+The `IndexType` has the supported PyMongo index types:
+
+* `GEO2D`
+* `GEOSPHERE`
+* `HASHED`
+* `TEXT`
+
+The `Order` is is the PyMongo order:
+
+* `ASCENDING`
+* `DESCENDING`
+
 #### Parameters
 
 The `Index` parameters are:

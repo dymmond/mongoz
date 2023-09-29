@@ -4,7 +4,7 @@ from typing import Any, Optional, Type
 from mongoz.conf.functional import LazyObject, empty
 from mongoz.conf.module_import import import_string
 
-ENVIRONMENT_VARIABLE = "EDGY_SETTINGS_MODULE"
+ENVIRONMENT_VARIABLE = "MONGOZ_SETTINGS_MODULE"
 
 DBSettings = Type["MongozLazySettings"]
 
