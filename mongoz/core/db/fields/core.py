@@ -1,22 +1,7 @@
 import datetime
 import decimal
-import enum
 import uuid
-from enum import EnumMeta
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generator,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generator, List, Optional, Set, Type, Union, cast
 
 import bson
 import pydantic
@@ -366,29 +351,6 @@ class UUID(FieldFactory, uuid.UUID):
         }
 
         return super().__new__(cls, **kwargs)
-
-
-class Choice(FieldFactory):
-    """Representation of an Enum"""
-
-    _type = enum.Enum
-
-    def __new__(  # type: ignore
-        cls,
-        choices: Optional[Sequence[Union[Tuple[str, str], Tuple[str, int]]]] = None,
-        **kwargs: Any,
-    ) -> BaseField:
-        kwargs = {
-            **kwargs,
-            **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
-        }
-        return super().__new__(cls, **kwargs)
-
-    @classmethod
-    def validate_field(cls, **kwargs: Any) -> None:
-        choice_class = kwargs.get("choices")
-        if choice_class is None or not isinstance(choice_class, EnumMeta):
-            raise FieldDefinitionError("ChoiceField choices must be an Enum")
 
 
 class Email(String):

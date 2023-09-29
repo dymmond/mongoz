@@ -29,6 +29,11 @@ scenes.
 {!> ../docs_src/documents/declaring_models.py !}
 ```
 
+### Embedded Documents
+
+There is a special [section](./embedded-documents.md) dedicated to explain what is this and how
+simple it is to use with the current documents.
+
 ## The Meta class
 
 When declaring a document, it is **crucial** having the `Meta` class declared. There is where you
