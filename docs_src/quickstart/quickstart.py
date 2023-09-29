@@ -1,5 +1,3 @@
-import asyncio
-
 import mongoz
 
 database_uri = "mongodb://localhost:27017"

@@ -58,6 +58,14 @@ class Equality:
         return Expression(key=key, operator=ExpressionOperator.EQUAL, value=value)
 
     @classmethod
+    def icontains(cls, key: Any, value: Any) -> Expression:
+        if isinstance(key, str) or key.pydantic_field.annotation is str:
+            return Expression(
+                key=key, operator=ExpressionOperator.PATTERN, value=value, options="i"
+            )
+        return Expression(key=key, operator=ExpressionOperator.EQUAL, value=value)
+
+    @classmethod
     def where(cls, key: Any, value: str) -> Expression:
         assert isinstance(value, str)
         return Expression(key=key, operator=ExpressionOperator.WHERE, value=value)
@@ -124,11 +132,9 @@ class Q(Ordering, Iterable, Equality, Comparison):
         return Expression(key=ExpressionOperator.OR, operator=ExpressionOperator.OR, value=args)
 
     @classmethod
-    def nor(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
+    def nor_(cls, *args: Union[bool, Expression]) -> Expression:
         return Expression(key=ExpressionOperator.NOR, operator=ExpressionOperator.NOR, value=args)
 
     @classmethod
-    def not_(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
-        return Expression(key=ExpressionOperator.NOT, operator=ExpressionOperator.NOT, value=args)
+    def not_(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+        return Expression(key=key, operator=ExpressionOperator.NOT, value=value)

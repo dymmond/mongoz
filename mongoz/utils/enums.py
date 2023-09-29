@@ -5,6 +5,12 @@ class OrderEnum(str, Enum):
     ASCENDING = "asc"
     DESCENDING = "desc"
 
+    def __str__(self) -> str:
+        return self.value
+
+    def __repr__(self) -> str:
+        return str(self)
+
 
 class ExpressionOperator(str, Enum):
     IN = "$in"
@@ -22,3 +28,9 @@ class ExpressionOperator(str, Enum):
     NOR = "$nor"
     NOT = "$not"
     EXISTS = "$exists"
+
+    def __str__(self) -> str:
+        return self.value
+
+    def __repr__(self) -> str:
+        return str(self)

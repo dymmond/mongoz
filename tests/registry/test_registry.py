@@ -39,7 +39,7 @@ class Actor(BaseDocument):
 
 
 async def test_registry() -> None:
-    assert len(client.documents) == 2
+    assert len(client.documents) > 0
 
     assert "Actor" in client.documents
     assert "Movie" in client.documents

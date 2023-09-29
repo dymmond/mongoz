@@ -20,6 +20,7 @@ class MongozSettings(BaseSettings):
         "exact": "eq",
         "neq": "neq",
         "contains": "contains",
+        "icontains": "icontains",
         "in": "in_",
         "not_in": "not_in",
         "pattern": "pattern",
@@ -30,6 +31,7 @@ class MongozSettings(BaseSettings):
         "lte": "lte",
         "asc": "asc",
         "desc": "desc",
+        "not": "not_",
     }
 
     def get_operator(self, name: str) -> "Expression":

@@ -111,7 +111,7 @@ class Manager(QuerySetProtocol, Generic[T]):
             return cast(str, self.model_class.id.pydantic_field.alias)  # type: ignore
         return key
 
-    def filter_query(self, **kwargs: Any) -> "Manager":
+    def filter_query(self, exclude: bool = False, **kwargs: Any) -> "Manager":
         """
         Builds the filter query for the given manager.
         """
@@ -130,6 +130,12 @@ class Manager(QuerySetProtocol, Generic[T]):
                 assert (
                     lookup_operator in settings.filter_operators
                 ), f"`{lookup_operator}` is not a valid lookup operator. Valid operators: {settings.stringified_operators}"
+
+                if exclude:
+                    operator = self.get_operator("neq")
+                    expression = operator(field_name, value)  # type: ignore
+                    clauses.append(expression)
+                    continue
 
                 # For "eq", "neq", "contains", "where", "pattern"
                 if lookup_operator in VALUE_EQUALITY:
@@ -182,9 +188,14 @@ class Manager(QuerySetProtocol, Generic[T]):
                 clauses.append(expression)
 
             else:
-                operator = self.get_operator("exact")
-                expression = operator(key, value)  # type: ignore
-                clauses.append(expression)
+                if exclude:
+                    operator = self.get_operator("neq")
+                    expression = operator(key, value)  # type: ignore
+                    clauses.append(expression)
+                else:
+                    operator = self.get_operator("exact")
+                    expression = operator(key, value)  # type: ignore
+                    clauses.append(expression)
 
             filter_clauses += clauses
 
@@ -332,6 +343,13 @@ class Manager(QuerySetProtocol, Generic[T]):
         filter_query = Expression.compile_many(manager._filter)
         values = await manager._collection.find(filter_query).distinct(key=key)
         return cast(List[Any], values)
+
+    def exclude(self, **kwargs: Any) -> "Manager":
+        """
+        Filters everything and excludes based on a specific field.
+        """
+        manager: "Manager" = self.clone()
+        return manager.filter_query(exclude=True, **kwargs)
 
     async def where(self, condition: Union[str, Code]) -> Any:
         """
