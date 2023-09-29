@@ -310,6 +310,11 @@ class BaseModelMeta(ModelMetaclass):
         for _, field in meta.fields.items():
             field.registry = registry
 
+        # Making sure it does not generate tables if abstract it set
+        registry = meta.registry
+        if not meta.abstract:
+            registry.documents[name] = new_class
+
         new_class.__db_document__ = True
         meta.collection = meta.database.get_collection(collection_name)
 
