@@ -3,7 +3,7 @@ import asyncio
 import mongoz
 
 database_uri = "mongodb://localhost:27017"
-registry = mongoz.Registry(database_uri, event_loop=asyncio.get_running_loop)
+registry = mongoz.Registry(database_uri)
 
 
 class User(mongoz.Document):
