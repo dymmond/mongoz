@@ -95,6 +95,69 @@ for your use cases.
 The following operators return `managers`/`querysets` which means you can combine different
 operators at the same time.
 
+## Filter
 
+The `filter` is unique to the `manager` and it does not exist in this way in the `queryset`.
+The `queryset` version is the [Query](#query).
+
+#### Django-style
+
+These filters are the same **Django-style** lookups.
+
+```python
+users = await User.query.filter(is_active=True, email__icontains="gmail")
+```
+
+The same special operators are also automatically added on every column.
+
+* **in** - The `IN` operator.
+* **not_in** - The opposide of `in`, meaning, all the records that are not in the condition.
+* **contains** - Filter instances that contains a specific value.
+* **icontains** - Filter instances that contains a specific value but case-insensitive.
+* **lt** - Filter instances having values `Less Than`.
+* **lte** - Filter instances having values `Less Than Equal`.
+* **gt** - Filter instances having values `Greater Than`.
+* **gte** - Filter instances having values `Greater Than Equal`.
+* **asc** - Filter instances by ascending order where `_asc=True`.
+* **desc** - Filter instances by descending order where `_desc=True`.
+
+##### Example
+
+```python
+users = await User.query.filter(email__icontains="foo")
+users = await User.query.filter(id__in=[1, 2, 3])
+users = await User.query.filter(id__not_in=[1, 2, 3])
+users = await User.query.filter(id__gt=1)
+users = await User.query.filter(id__lte=3)
+users = await User.query.filter(id__lt=2)
+users = await User.query.filter(id__gte=4)
+users = await User.query.filter(id__asc=True)
+users = await User.query.filter(id__asc=False) # same as desc True
+users = await User.query.filter(id__desc=True)
+users = await User.query.filter(id__desc=False) # same as asc True
+```
+
+## Query
+
+The `query` is what is used by the `queryset` instead of the `manager`. In other words, the `query`
+is for the queryset what `filter` is for the `manager`.
+
+An example query would be:
+
+```python
+users = await User.query(User.email == "mongoz@mongoz.com").query(User.id > 1).all()
+```
+
+Or alternatively you can use dictionaries.
+
+```python
+user = await User.query({"first_name": "Mongoz"}).all()
+```
+
+Or you can use the `User` fields instead of dictionaries.
+
+```python
+user = await User.query({User.first_name: "Mongoz"}).all()
+```
 
 [document]: ./documents.md

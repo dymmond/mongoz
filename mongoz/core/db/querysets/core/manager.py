@@ -131,12 +131,6 @@ class Manager(QuerySetProtocol, Generic[T]):
                     lookup_operator in settings.filter_operators
                 ), f"`{lookup_operator}` is not a valid lookup operator. Valid operators: {settings.stringified_operators}"
 
-                if exclude:
-                    operator = self.get_operator("neq")
-                    expression = operator(field_name, value)  # type: ignore
-                    clauses.append(expression)
-                    continue
-
                 # For "eq", "neq", "contains", "where", "pattern"
                 if lookup_operator in VALUE_EQUALITY:
                     operator = self.get_operator(lookup_operator)
@@ -182,20 +176,14 @@ class Manager(QuerySetProtocol, Generic[T]):
                 elif lookup_operator in GREATNESS_EQUALITY:
                     operator = self.get_operator(lookup_operator)
                     expression = operator(field_name, value)  # type: ignore
-                    clauses.append(expression)
 
                 # Add expression to the clauses
                 clauses.append(expression)
 
             else:
-                if exclude:
-                    operator = self.get_operator("neq")
-                    expression = operator(key, value)  # type: ignore
-                    clauses.append(expression)
-                else:
-                    operator = self.get_operator("exact")
-                    expression = operator(key, value)  # type: ignore
-                    clauses.append(expression)
+                operator = self.get_operator("exact")
+                expression = operator(key, value)  # type: ignore
+                clauses.append(expression)
 
             filter_clauses += clauses
 
