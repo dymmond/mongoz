@@ -53,3 +53,7 @@ class AbstractDocumentError(MongozException):
 
 class OperatorInvalid(MongozException):
     ...
+
+
+class IndexError(MongozException):
+    ...
