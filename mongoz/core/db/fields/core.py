@@ -61,6 +61,7 @@ class FieldFactory:
         owner = kwargs.pop("owner", None)
         read_only: bool = kwargs.pop("read_only", False)
         list_type: Any = kwargs.pop("list_type", None)
+        sparse: bool = kwargs.pop("sparse", False)
 
         if list_type is None:
             field_type = cls._type
@@ -79,6 +80,7 @@ class FieldFactory:
             comment=comment,
             owner=owner,
             read_only=read_only,
+            sparse=sparse,
             **kwargs,
         )
         Field = type(cls.__name__, cls._bases, {})

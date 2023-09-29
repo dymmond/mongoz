@@ -191,7 +191,17 @@ The `Index` parameters are:
 
 The `Index` in Mongoz is an extension of the [`pymongo.IndexModel`](https://pymongo.readthedocs.io/en/stable/api/pymongo/operations.html#pymongo.operations.IndexModel.document).
 
+
 #### Simple index
+
+The simplest and cleanest way of declaring an index with **Mongoz**. You declare it directly in
+the document field.
+
+```python hl_lines="11"
+{!> ../docs_src/documents/indexes/simple.py !}
+```
+
+#### Index via Meta
 
 ```python hl_lines="17"
 {!> ../docs_src/documents/indexes/simple2.py !}
@@ -199,8 +209,12 @@ The `Index` in Mongoz is an extension of the [`pymongo.IndexModel`](https://pymo
 
 #### Complex indexes
 
-```python hl_lines="17-20"
+```python hl_lines="9 17-20"
 {!> ../docs_src/documents/indexes/complex_together.py !}
 ```
+
+### Dropping indexes
+
+Working with indexes
 
 [edgy]: https://edgy.tarsild.io

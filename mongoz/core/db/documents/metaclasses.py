@@ -24,6 +24,7 @@ from mongoz.core.db.datastructures import Index
 from mongoz.core.db.fields.base import BaseField, MongozField
 from mongoz.core.db.querysets.core.manager import Manager
 from mongoz.core.signals import Broadcaster, Signal
+from mongoz.core.sync import execsync
 from mongoz.core.utils.functional import extract_field_annotations_and_defaults, mongoz_setattr
 from mongoz.exceptions import ImproperlyConfigured, IndexError
 
@@ -327,9 +328,9 @@ class BaseModelMeta(ModelMetaclass):
             # For the indexes
             _index: Union[Index, None] = None
             if hasattr(field, "index") and field.index and field.unique is True:
-                _index = Index(name, unique=True)
+                _index = Index(name, unique=True, sparse=field.sparse)
             elif hasattr(field, "index") and field.index:
-                _index = Index(name)
+                _index = Index(name, sparse=field.sparse)
 
             if _index is not None:
                 index_names = [index.name for index in meta.indexes or []]
@@ -354,7 +355,8 @@ class BaseModelMeta(ModelMetaclass):
         new_class.model_rebuild(force=True)
 
         # Build the indexes
-        new_class.create_indexes()
+        if not meta.abstract and meta.indexes:
+            execsync(new_class.create_indexes)()
         return new_class
 
     @property

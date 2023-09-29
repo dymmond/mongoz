@@ -6,7 +6,7 @@ registry = mongoz.Registry(database_uri)
 
 
 class User(mongoz.Model):
-    name: str = mongoz.String(max_length=255)
+    name: str = mongoz.String(max_length=255, index=True, unique=True)
     age: int = mongoz.Integer()
     email: str = mongoz.Email(max_length=70)
     is_active: bool = mongoz.Boolean(default=True)
@@ -15,6 +15,5 @@ class User(mongoz.Model):
     class Meta:
         registry = registry
         indexes = [
-            Index("name", unique=True),
             Index(keys=[("age", Order.DESCENDING), ("email", IndexType.HASHED)]),
         ]
