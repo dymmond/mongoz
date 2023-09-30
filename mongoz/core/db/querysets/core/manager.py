@@ -111,7 +111,7 @@ class Manager(QuerySetProtocol, Generic[T]):
             return cast(str, self.model_class.id.pydantic_field.alias)  # type: ignore
         return key
 
-    def filter_query(self, exclude: bool = False, **kwargs: Any) -> "Manager":
+    def filter_query(self, **kwargs: Any) -> "Manager":
         """
         Builds the filter query for the given manager.
         """
@@ -331,13 +331,6 @@ class Manager(QuerySetProtocol, Generic[T]):
         filter_query = Expression.compile_many(manager._filter)
         values = await manager._collection.find(filter_query).distinct(key=key)
         return cast(List[Any], values)
-
-    def exclude(self, **kwargs: Any) -> "Manager":
-        """
-        Filters everything and excludes based on a specific field.
-        """
-        manager: "Manager" = self.clone()
-        return manager.filter_query(exclude=True, **kwargs)
 
     async def where(self, condition: Union[str, Code]) -> Any:
         """
