@@ -44,7 +44,7 @@ Currently the available parameters for the meta are:
 * **registry** - The [registry](./registry.md) instance for where the document will be generated. This
 field is **mandatory** and it will raise an `ImproperlyConfigured` error if no registry is found.
 
-* **tablename** - The name of the table in the database, **not the class name**.
+* **collection** - The name of the table (collection) in the database, **not the class name**.
 
     <sup>Default: `name of class pluralised`<sup>
 
