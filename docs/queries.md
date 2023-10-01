@@ -573,7 +573,7 @@ Returns an integer with the total of records.
 
 ### Get or none
 
-When querying a document and do not want to raise a [DocumentNotFound](../exceptions.md#doesnotfound) and
+When querying a document and do not want to raise a [DocumentNotFound](./exceptions.md#documentnotfound) and
 instead returns a `None`.
 
 === "Manager"

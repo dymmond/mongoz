@@ -38,7 +38,7 @@ plugins:
               data: data
 
 nav:
-      - Introduction: "index.md"
+      - Mongoz: "mongoz.md"
       - Documents: "documents.md"
       - Embedded Documents: "embedded-documents.md"
       - Fields: "fields.md"
