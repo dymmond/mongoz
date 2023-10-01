@@ -23,7 +23,7 @@ class DocumentNotFound(MongozException):
     ...
 
 
-class MultipleDumentsReturned(MongozException):
+class MultipleDocumentsReturned(MongozException):
     ...
 
 

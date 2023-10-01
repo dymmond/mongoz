@@ -26,7 +26,7 @@ from mongoz.core.db.querysets.core.constants import (
     VALUE_EQUALITY,
 )
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
-from mongoz.exceptions import DocumentNotFound, MultipleDumentsReturned
+from mongoz.exceptions import DocumentNotFound, MultipleDocumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
 from mongoz.utils.enums import OrderEnum
 
@@ -221,7 +221,7 @@ class Manager(QuerySetProtocol, Generic[T]):
                 manager._filter.append(value)
         return manager
 
-    async def count(self) -> int:
+    async def count(self, **kwargs: Any) -> int:
         """
         Counts all the documents for a given colletion.
         """
@@ -280,7 +280,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         if len(objects) == 0:
             raise DocumentNotFound()
         elif len(objects) == 2:
-            raise MultipleDumentsReturned()
+            raise MultipleDocumentsReturned()
         return cast(T, objects[0])
 
     async def get_or_none(self, **kwargs: Any) -> Union["T", "Document", None]:
@@ -296,7 +296,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         if len(objects) == 0:
             return None
         elif len(objects) > 1:
-            raise MultipleDumentsReturned()
+            raise MultipleDocumentsReturned()
         return cast(T, objects[0])
 
     async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
@@ -383,6 +383,13 @@ class Manager(QuerySetProtocol, Generic[T]):
             manager._sort.append(key)
         return manager
 
+    async def update(self, **kwargs: Any) -> List["Document"]:
+        """
+        Updates a document
+        """
+        manager: "Manager" = self.clone()
+        return await manager.update_many(**kwargs)
+
     async def update_many(self, **kwargs: Any) -> List[T]:
         """
         Updates many documents (bulk update)
@@ -421,6 +428,17 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         manager: "Manager" = self.clone()
         return await manager.model_class.create_many(models=models)  # type: ignore
+
+    async def bulk_create(self, models: List["Document"]) -> List["Document"]:
+        """
+        Bulk creates many documents
+        """
+        manager: "Manager" = self.clone()
+        return await manager.create_many(models=models)
+
+    async def bulk_update(self, **kwargs: Any) -> List[T]:
+        manager: "Manager" = self.clone()
+        return await manager.update_many(**kwargs)
 
     async def get_document_by_id(self, id: Union[str, bson.ObjectId]) -> "Document":
         """

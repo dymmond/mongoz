@@ -46,6 +46,7 @@ nav:
       - Signals: "signals.md"
       - Settings: "settings.md"
       - Registry: "registry.md"
+      - Exceptions: "exceptions.md"
       - Contributing: "contributing.md"
       - Sponsorship: "sponsorship.md"
       - Release Notes: "release-notes.md"

@@ -28,7 +28,7 @@ from .core.db.querysets.base import QuerySet
 from .core.db.querysets.expressions import Expression, SortExpression
 from .core.db.querysets.operators import Q
 from .core.signals import Signal
-from .exceptions import DocumentNotFound, MultipleDumentsReturned
+from .exceptions import DocumentNotFound, ImproperlyConfigured, MultipleDocumentsReturned
 
 __all__ = [
     "Array",
@@ -46,11 +46,12 @@ __all__ = [
     "Email",
     "EmbeddedDocument",
     "Expression",
+    "ImproperlyConfigured",
     "Index",
     "IndexType",
     "Integer",
     "MongozSettings",
-    "MultipleDumentsReturned",
+    "MultipleDocumentsReturned",
     "Object",
     "ObjectId",
     "Order",

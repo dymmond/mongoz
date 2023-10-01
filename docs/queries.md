@@ -20,7 +20,7 @@ the `queryset`.
 Both queryset and manager work really well also when combibed. In the end is up to the developer
 to decide which one it prefers better.
 
-## QuerySet and Manager
+## Manager and QuerySet
 
 When making queries within Mongoz, this return or an object if you want only one result or a
 `queryset`/`manager` which is the internal representation of the results.
@@ -449,6 +449,22 @@ You can update document instances by calling this operator.
     await user.update(email="bar@foo.com")
     ```
 
+There is also the possibility of updating all the records based on a specific search.
+
+=== "Manager"
+
+    ```python
+    user = await User.objects.filter(id__gt=1).update(name="MongoZ")
+    user = await User.objects.filter(id__gt=1).update_many(name="MongoZ")
+    ```
+
+=== "QuerySet"
+
+    ```python
+    user = await User.query(User.id > 1).update(name="MongoZ")
+    user = await User.query(User.id > 1).update_many(name="MongoZ")
+    ```
+
 ### Get
 
 Obtains a single record from the database.
@@ -538,6 +554,186 @@ You can also apply filters when needed.
     ```python
     user = await User.query(User.email == "mongoz").last()
     ```
+
+### Count
+
+Returns an integer with the total of records.
+
+=== "Manager"
+
+    ```python
+    total = await User.objects.count()
+    ```
+
+=== "QuerySet"
+
+    ```python
+    total = await User.query().count()
+    ```
+
+### Get or none
+
+When querying a document and do not want to raise a [DocumentNotFound](../exceptions.md#doesnotfound) and
+instead returns a `None`.
+
+=== "Manager"
+
+    ```python
+    user = await User.objects.get_or_none(id=1)
+    ```
+
+=== "QuerySet"
+
+    ```python
+    user = await User.query(User.id == 1).get_or_none()
+    ```
+
+### Where
+
+Apply raw string queries or the `where` clause.
+
+=== "Manager"
+
+    ```python
+    user = await User.objects.where("this.email == 'foo@bar.com'")
+    ```
+
+=== "QuerySet"
+
+    ```python
+    user = await User.query().where("this.email == 'foo@bar.com'")
+    ```
+
+### Distinct values
+
+Filter by distinct values and return a list of those same values.
+
+=== "Manager"
+
+    ```python
+    user = await User.objects.distinct_values("email")
+    ```
+
+=== "QuerySet"
+
+    ```python
+    user = await User.query().distinct_values("email")
+    ```
+
+### Get document by id
+
+Get a document by the `_id`. This functionality accepts the parameter `id` as string or `bson.ObjectId`.
+
+=== "Manager"
+
+    ```python
+    user = await User.objects.create(
+        first_name="Foo", last_name="Bar", email="foo@bar.com"
+    )
+
+    user = await User.objects.get_document_by_id(user.id)
+    ```
+
+=== "Queryset"
+
+    ```python
+    user = await User(
+        first_name="Foo", last_name="Bar", email="foo@bar.com"
+    ).create()
+
+    user = await User.query().get_document_by_id(user.id)
+    ```
+
+## Useful methods
+
+### Get or create
+
+When you need get an existing document instance from the matching query. If exists, returns or creates
+a new one in case of not existing.
+
+=== "Manager"
+
+    ```python
+    user = await User.objects.get_or_create(email="foo@bar.com", defaults={
+        "is_active": False, "first_name": "Foo"
+    })
+    ```
+
+=== "QuerySet"
+
+    ```python
+    user = await User.query().get_or_create(
+        {User.is_active: False, User.first_name: "Foo", User.email: "foo@bar.com"}
+    )
+    ```
+
+This will query the `User` document with the `email` as the lookup key. If it doesn't exist, then it
+will use that value with the `defaults` provided to create a new instance.
+
+### Bulk create
+
+When you need to create many instances in one go, or `in bulk`.
+
+=== "Manager"
+
+    ```python
+    user_names = ("MongoZ", "MongoDB")
+    models = [
+        User(first_name=name, last_name=name, email=f"{name}@mongoz.com") for name in user_names
+    ]
+
+    users = await User.objects.bulk_create(models)
+    ```
+
+=== "QuerySet"
+
+    ```python
+    user_names = ("MongoZ", "MongoDB")
+    models = [
+        User(first_name=name, last_name=name, email=f"{name}@mongoz.com") for name in user_names
+    ]
+
+    users = await User.query().bulk_create(models)
+    ```
+
+### Bulk update
+
+When you need to update many instances in one go, or `in bulk`.
+
+=== "Manager"
+
+    ```python
+    data = [
+        {"email": "foo@bar.com", "first_name": "Foo", "last_name": "Bar", "is_active": True},
+        {"email": "bar@foo.com", "first_name": "Bar", "last_name": "Foo", "is_active": True}
+    ]
+    users = [User(**user_data.model_dump()) for user_data in data]
+    await User.objects.bulk_create(users)
+
+    users = await User.objects.all()
+
+    await User.objects.filter().bulk_update(is_active=False)
+    ```
+
+=== "QuerySet"
+
+    ```python
+    data = [
+        {"email": "foo@bar.com", "first_name": "Foo", "last_name": "Bar", "is_active": True},
+        {"email": "bar@foo.com", "first_name": "Bar", "last_name": "Foo", "is_active": True}
+    ]
+    users = [User(**user_data.model_dump()) for user_data in data]
+    await User.objects.bulk_create(users)
+
+    users = await User.objects.all()
+
+    await User.query().bulk_update(is_active=False)
+    ```
+
+## Note
+
+When applying the functions that returns values directly and not managers or querysets,
+**you can still apply the operators such as `filter`, `skip`, `sort`...**
 
 ## The Q operator
 
