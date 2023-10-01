@@ -3,7 +3,7 @@
 Making queries is a must when using an ODM and being able to make complex queries is even better
 when allowed.
 
-MongDB is known for its performance when querying a database and it is very fast. T
+MongDB is known for its performance when querying a database and it is very fast.
 
 When making queries in a [document][document], the ODM allow two different possible ways of querying.
 One is using its internal **manager** and the second its internal **queryset**.
