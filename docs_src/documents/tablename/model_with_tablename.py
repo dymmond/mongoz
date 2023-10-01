@@ -11,5 +11,5 @@ class User(mongoz.Document):
 
     class Meta:
         registry = registry
-        tablename = "users"
+        collection = "users"
         database = "my_db"
