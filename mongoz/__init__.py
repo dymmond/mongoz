@@ -1,6 +1,7 @@
 __version__ = "0.1.0"
 
 from .conf import settings
+from .conf.global_settings import MongozSettings
 from .core.connection.database import Database
 from .core.connection.registry import Registry
 from .core.db.datastructures import Index, IndexType, Order
@@ -11,7 +12,6 @@ from .core.db.fields import (
     ArrayList,
     Binary,
     Boolean,
-    Choice,
     Date,
     DateTime,
     Decimal,
@@ -28,14 +28,13 @@ from .core.db.querysets.base import QuerySet
 from .core.db.querysets.expressions import Expression, SortExpression
 from .core.db.querysets.operators import Q
 from .core.signals import Signal
-from .exceptions import DocumentNotFound, MultipleDumentsReturned
+from .exceptions import DocumentNotFound, ImproperlyConfigured, MultipleDocumentsReturned
 
 __all__ = [
     "Array",
     "ArrayList",
     "Binary",
     "Boolean",
-    "Choice",
     "Database",
     "Date",
     "DateTime",
@@ -47,10 +46,12 @@ __all__ = [
     "Email",
     "EmbeddedDocument",
     "Expression",
+    "ImproperlyConfigured",
     "Index",
     "IndexType",
     "Integer",
-    "MultipleDumentsReturned",
+    "MongozSettings",
+    "MultipleDocumentsReturned",
     "Object",
     "ObjectId",
     "Order",

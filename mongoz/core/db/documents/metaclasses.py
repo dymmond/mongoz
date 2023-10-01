@@ -24,8 +24,9 @@ from mongoz.core.db.datastructures import Index
 from mongoz.core.db.fields.base import BaseField, MongozField
 from mongoz.core.db.querysets.core.manager import Manager
 from mongoz.core.signals import Broadcaster, Signal
+from mongoz.core.sync import execsync
 from mongoz.core.utils.functional import extract_field_annotations_and_defaults, mongoz_setattr
-from mongoz.exceptions import ImproperlyConfigured
+from mongoz.exceptions import ImproperlyConfigured, IndexError
 
 if TYPE_CHECKING:
     from mongoz.core.db.documents import Document
@@ -44,6 +45,7 @@ class MetaInfo:
         "signals",
         "database",
         "manager",
+        "autogenerate_index",
     )
 
     def __init__(self, meta: Any = None, **kwargs: Any) -> None:
@@ -61,6 +63,7 @@ class MetaInfo:
         )
         self.signals: Optional[Broadcaster] = {}  # type: ignore
         self.manager: "Manager" = getattr(meta, "manager", Manager())
+        self.autogenerate_index: bool = getattr(meta, "autogenerate_index", True)
 
     def model_dump(self) -> Dict[Any, Any]:
         return {k: getattr(self, k, None) for k in self.__slots__}
@@ -307,6 +310,11 @@ class BaseModelMeta(ModelMetaclass):
         for _, field in meta.fields.items():
             field.registry = registry
 
+        # Making sure it does not generate tables if abstract it set
+        registry = meta.registry
+        if not meta.abstract:
+            registry.documents[name] = new_class
+
         new_class.__db_document__ = True
         meta.collection = meta.database.get_collection(collection_name)
 
@@ -319,10 +327,26 @@ class BaseModelMeta(ModelMetaclass):
 
         # For inherited fields
         # We need to make sure the default is the pydantic_field
-        # and not the MongozField itself
+        # and not the MongozField itself and create any index as well.
         for name, field in new_class.model_fields.items():
             if isinstance(field.default, MongozField):
                 new_class.model_fields[name] = field.default.pydantic_field
+
+            # For the indexes
+            _index: Union[Index, None] = None
+            if hasattr(field, "index") and field.index and field.unique is True:
+                _index = Index(name, unique=True, sparse=field.sparse)
+            elif hasattr(field, "index") and field.index:
+                _index = Index(name, sparse=field.sparse)
+
+            if _index is not None:
+                index_names = [index.name for index in meta.indexes or []]
+                if _index.name in index_names:
+                    raise IndexError(f"There is already an index with the name `{_index.name}`")
+
+                if meta.indexes is None:
+                    meta.indexes = []
+                meta.indexes.insert(0, _index)
 
         # Set the manager
         for _, value in attrs.items():
@@ -336,6 +360,10 @@ class BaseModelMeta(ModelMetaclass):
         new_class.Meta = meta
         new_class.__mongoz_fields__ = mongoz_fields
         new_class.model_rebuild(force=True)
+
+        # Build the indexes
+        if not meta.abstract and meta.indexes and meta.autogenerate_index:
+            execsync(new_class.create_indexes)()
         return new_class
 
     @property

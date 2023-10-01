@@ -93,6 +93,7 @@ class BaseField(FieldInfo, _repr.Representation):
         self.database: Database = kwargs.pop("database", None)
         self.comment = kwargs.pop("comment", None)
         self.parent = kwargs.pop("parent", None)
+        self.sparse = kwargs.pop("sparse", False)
 
         if self.name and not self.alias:
             self.alias = self.name

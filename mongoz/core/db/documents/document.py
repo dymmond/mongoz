@@ -143,8 +143,23 @@ class Document(MongozBaseModel):
         """Save the document.
 
         This is equivalent of a single instance update.
+
+        When saving the document, if an ID is not provided or it is None,
+        it will create a new docuemnt. These scenarios happen when for instance
+        a copy of the object is needed on save().
+
+        E.g.:
+
+            movie = await Movie(name="Avengers", year=2019).create()
+
+            # Making a copy of the object and save
+            movie.id = None
+            await movie.save()
         """
         is_operation_allowed(self)
+
+        if not self.id:
+            return await self.create()
 
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 

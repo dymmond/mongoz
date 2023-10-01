@@ -1,9 +1,12 @@
 import asyncio
-from typing import Callable, Sequence, Tuple, Union, cast
+from typing import TYPE_CHECKING, Callable, Dict, Sequence, Tuple, Union, cast
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from mongoz.core.connection.database import Database
+
+if TYPE_CHECKING:
+    from mongoz import Document
 
 
 class Registry:
@@ -20,6 +23,7 @@ class Registry:
         self.url = url
         self._client: AsyncIOMotorClient = AsyncIOMotorClient(self.url)
         self._client.get_io_loop = self.event_loop  # type: ignore
+        self.documents: Dict[str, "Document"] = {}
 
     @property
     def address(self) -> Tuple[str, int]:

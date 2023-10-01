@@ -11,13 +11,14 @@ from typing import (
     cast,
 )
 
+import bson
 import pydantic
 from bson import Code
 
 from mongoz.core.db.datastructures import Order
 from mongoz.core.db.fields import base
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
-from mongoz.exceptions import DocumentNotFound, MultipleDumentsReturned
+from mongoz.exceptions import DocumentNotFound, MultipleDocumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
 
 if TYPE_CHECKING:
@@ -104,7 +105,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         if len(objects) == 0:
             raise DocumentNotFound()
         elif len(objects) == 2:
-            raise MultipleDumentsReturned()
+            raise MultipleDocumentsReturned()
         return objects[0]
 
     async def get_or_none(self) -> Union["T", "Document", None]:
@@ -115,7 +116,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         if len(objects) == 0:
             return None
         elif len(objects) > 1:
-            raise MultipleDumentsReturned()
+            raise MultipleDocumentsReturned()
         return objects[0]
 
     async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
@@ -197,6 +198,21 @@ class QuerySet(QuerySetProtocol, Generic[T]):
                 self._filter.append(arg)
         return self
 
+    async def bulk_create(self, models: List["Document"]) -> List["Document"]:
+        """
+        Creates many documents (bulk create).
+        """
+        return await self.model_class.create_many(models=models)
+
+    async def update(self, **kwargs: Any) -> List[T]:
+        """
+        Updates a document
+        """
+        return await self.update_many(**kwargs)
+
+    async def bulk_update(self, **kwargs: Any) -> List[T]:
+        return await self.update_many(**kwargs)
+
     async def update_many(self, **kwargs: Any) -> List[T]:
         field_definitions = {
             name: (annotations, ...)
@@ -221,3 +237,9 @@ class QuerySet(QuerySetProtocol, Generic[T]):
 
             self._filter = _filter
         return await self.all()
+
+    async def get_document_by_id(self, id: Union[str, bson.ObjectId]) -> "Document":
+        """
+        Gets a document by the id.
+        """
+        return await self.model_class.get_document_by_id(id)

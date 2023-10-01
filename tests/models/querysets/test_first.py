@@ -39,6 +39,14 @@ async def prepare_database() -> AsyncGenerator:
     await Movie.create_indexes()
 
 
+async def test_model_first_simple() -> None:
+    await Movie(name="Batman", year=2022).create()
+
+    movie = await Movie.query().first()
+    assert movie is not None
+    assert movie.name == "Batman"
+
+
 async def test_model_first() -> None:
     await Movie(name="Batman", year=2022).create()
 

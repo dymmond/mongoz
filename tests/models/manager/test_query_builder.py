@@ -93,6 +93,10 @@ async def test_model_query_builder() -> None:
     assert movie.name == "The Two Towers"
     assert movie.year == 2002
 
+    movie = await Movie.objects.get(name__icontains="two")
+    assert movie.name == "The Two Towers"
+    assert movie.year == 2002
+
     assert (
         await Movie.objects.filter(name="Casablanca").filter(year=1942).get()
         == await Movie.objects.filter(name="Casablanca", year=1942).get()

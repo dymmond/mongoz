@@ -6,7 +6,7 @@ from tests.conftest import client
 
 import mongoz
 from mongoz import Document, Index, IndexType, ObjectId, Order
-from mongoz.exceptions import DocumentNotFound, MultipleDumentsReturned
+from mongoz.exceptions import DocumentNotFound, MultipleDocumentsReturned
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]
@@ -60,5 +60,5 @@ async def test_model_get() -> None:
     with pytest.raises(DocumentNotFound):
         await Movie.query({Movie.name: "Interstellar"}).get()
 
-    with pytest.raises(MultipleDumentsReturned):
+    with pytest.raises(MultipleDocumentsReturned):
         await Movie.query().get()

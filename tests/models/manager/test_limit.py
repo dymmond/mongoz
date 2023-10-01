@@ -50,3 +50,12 @@ async def test_model_limit() -> None:
     movies = await Movie.objects.sort("name", Order.ASCENDING).skip(1).limit(1).all()
     assert len(movies) == 1
     assert movies[0].name == "Oppenheimer"
+
+
+async def test_model_limit_with_filter() -> None:
+    await Movie.objects.create(name="Oppenheimer", year=2023)
+    await Movie.objects.create(name="Batman", year=2022)
+
+    movies = await Movie.objects.filter(name__icontains="b").limit(1)
+    assert len(movies) == 1
+    assert movies[0].name == "Batman"

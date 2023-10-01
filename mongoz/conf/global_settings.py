@@ -20,6 +20,7 @@ class MongozSettings(BaseSettings):
         "exact": "eq",
         "neq": "neq",
         "contains": "contains",
+        "icontains": "icontains",
         "in": "in_",
         "not_in": "not_in",
         "pattern": "pattern",

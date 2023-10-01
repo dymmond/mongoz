@@ -55,3 +55,19 @@ async def test_model_get_document_by_id() -> None:
 
     with pytest.raises(DocumentNotFound):
         await Movie.get_document_by_id(secrets.token_hex(12))
+
+
+async def test_model_get_document_by_id_in_queryset() -> None:
+    movie = await Movie(name="Barbie", year=2023).create()
+
+    a_movie = await Movie.query().get_document_by_id(str(movie.id))
+    assert movie.name == a_movie.name
+
+    b_movie = await Movie.query().get_document_by_id(movie.id)
+    assert movie.name == b_movie.name
+
+    with pytest.raises(InvalidKeyError):
+        await Movie.query().get_document_by_id("invalid_id")
+
+    with pytest.raises(DocumentNotFound):
+        await Movie.query().get_document_by_id(secrets.token_hex(12))

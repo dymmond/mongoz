@@ -27,6 +27,7 @@ theme:
             - search.suggest
             - search.highlight
             - content.tabs.link
+            - content.code.copy
 
 repo_name: tarsil/mongoz
 repo_url: https://github.com/tarsil/mongoz
@@ -37,11 +38,15 @@ plugins:
               data: data
 
 nav:
-      - Introduction: "index.md"
+      - Mongoz: "mongoz.md"
       - Documents: "documents.md"
-      - Queries: "queries.md"
+      - Embedded Documents: "embedded-documents.md"
       - Fields: "fields.md"
+      - Queries: "queries.md"
       - Signals: "signals.md"
+      - Settings: "settings.md"
+      - Registry: "registry.md"
+      - Exceptions: "exceptions.md"
       - Contributing: "contributing.md"
       - Sponsorship: "sponsorship.md"
       - Release Notes: "release-notes.md"

@@ -23,7 +23,7 @@ class DocumentNotFound(MongozException):
     ...
 
 
-class MultipleDumentsReturned(MongozException):
+class MultipleDocumentsReturned(MongozException):
     ...
 
 
@@ -52,4 +52,8 @@ class AbstractDocumentError(MongozException):
 
 
 class OperatorInvalid(MongozException):
+    ...
+
+
+class IndexError(MongozException):
     ...

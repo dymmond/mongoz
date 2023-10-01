@@ -9,10 +9,17 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class Expression:
-    def __init__(self, key: Union[str, "MongozField"], operator: str, value: Any) -> None:
+    def __init__(
+        self,
+        key: Union[str, "MongozField"],
+        operator: str,
+        value: Any,
+        options: Union[Any, None] = None,
+    ) -> None:
         self.key = key if isinstance(key, str) else key._name
         self.operator = operator
         self.value = value
+        self.options = options
 
     @property
     def compiled_value(self) -> Any:
@@ -28,7 +35,9 @@ class Expression:
             return v
 
     def compile(self) -> Dict[str, Dict[str, Any]]:
-        return {self.key: {self.operator: self.compiled_value}}
+        if not self.options:
+            return {self.key: {self.operator: self.compiled_value}}
+        return {self.key: {self.operator: self.compiled_value, "$options": self.options}}
 
     @classmethod
     def compile_many(cls, expressions: List["Expression"]) -> Dict[str, Dict[str, Any]]:
