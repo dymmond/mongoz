@@ -43,12 +43,10 @@ class Equality:
 
     @classmethod
     def eq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)
         return Expression(key=key, operator=ExpressionOperator.EQUAL, value=value)
 
     @classmethod
     def neq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)
         return Expression(key=key, operator=ExpressionOperator.NOT_EQUAL, value=value)
 
     @classmethod
