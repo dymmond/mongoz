@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.1.1
+
+### Fixed
+
+- Internal assertation for the `eq` and `neq` wasn't allowing booleans to be passed.
+
 ## 0.1.0
 
 This is the initial release of Edgy.
