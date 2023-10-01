@@ -25,7 +25,7 @@ widely applied across the system.
 
 #### Custom settings
 
-When creating your own custom settings class, you should inherit from `EdgySettings` which is
+When creating your own custom settings class, you should inherit from `MongozSettings` which is
 the class responsible for all internal settings of Mongoz and those can be extended and overriden
 with ease.
 

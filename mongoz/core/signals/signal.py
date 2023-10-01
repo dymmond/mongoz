@@ -19,7 +19,7 @@ def make_id(target: Any) -> Union[int, Tuple[int, int]]:
 
 class Signal:
     """
-    Base class for all Edgy signals.
+    Base class for all Mongoz signals.
     """
 
     def __init__(self, **kwargs: Any) -> None:

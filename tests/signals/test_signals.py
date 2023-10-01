@@ -172,7 +172,7 @@ async def test_multiple_senders():
         await Log(signal="pre_save", instance=instance.model_dump_json()).create()
 
     user = await User(name="Mongoz").create()
-    profile = await User(name="Profile Edgy").create()
+    profile = await User(name="Profile Mongoz").create()
 
     logs = await Log.query().all()
     assert len(logs) == 2
