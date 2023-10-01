@@ -109,7 +109,7 @@ Of course! That doesn't change anything with the registry.
 ### Table name
 
 This is actually very simple and also comes with defaults. When creating a [document](#declaring-documents)
-if a `tablename` field in the `Meta` object is not declared, it will pluralise the python class.
+if a `collection` field in the `Meta` object is not declared, it will pluralise the python class.
 
 #### Document without table name
 
@@ -117,7 +117,7 @@ if a `tablename` field in the `Meta` object is not declared, it will pluralise t
 {!> ../docs_src/documents/tablename/model_no_tablename.py !}
 ```
 
-As mentioned in the example, because a `tablename` was not declared, **Mongoz** will pluralise
+As mentioned in the example, because a `collection` was not declared, **Mongoz** will pluralise
 the python class name `User` and it will become `users` in your database.
 
 #### Document with a table name
@@ -126,7 +126,7 @@ the python class name `User` and it will become `users` in your database.
 {!> ../docs_src/documents/tablename/model_with_tablename.py !}
 ```
 
-Here the `tablename` is being explicitly declared as `users`. Although it matches with a
+Here the `collection` is being explicitly declared as `users`. Although it matches with a
 puralisation of the python class name, this could also be something else.
 
 ```python
@@ -136,7 +136,7 @@ puralisation of the python class name, this could also be something else.
 In this example, the `User` class will be represented by a `db_users` mapping into the database.
 
 !!! Tip
-    Calling `tablename` with a different name than your class it doesn't change the behaviour
+    Calling `collection` with a different name than your class it doesn't change the behaviour
     in your codebase. You will still access the given table in your codebase via main class.
 
 ### Abstract
