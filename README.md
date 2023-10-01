@@ -44,7 +44,10 @@ and pattern of development.
 
 Mongox implements really well some operations with MongoDB but for use cases where [Signals](https://mongoz.tarsild.io/sinals.md),
 for example, are needed, Mongox was not aiming at it and also since the creator of Mongoz is the
-same as [Mongoz][mongoz] and [Saffier][saffier], the friendly interface to interact is also a must.
+same as [Saffier][saffier] and [Saffier][saffier], the friendly interface to interact is also a must.
+
+In the end, there was a need to add Pydantic 2+ with some more extras that was not coming in the
+Mongox.
 
 ## Mongoz
 

@@ -735,6 +735,220 @@ When you need to update many instances in one go, or `in bulk`.
 When applying the functions that returns values directly and not managers or querysets,
 **you can still apply the operators such as `filter`, `skip`, `sort`...**
 
+## Querying Embedded documents
+
+Querying [embedded documents](./embedded-documents.md) is also easy and here the `queryset` is very powerful in doing it so.
+
+Let us see an example.
+
+```python hl_lines="17"
+{!> ../docs_src/queries/embed.py !}
+```
+
+We can now create some instances of the `User`.
+
+=== "Manager"
+
+    ```python hl_lines="5"
+    access_type = UserType(access_level="admin")
+
+    await User.objects.create(
+        first_name="Mongoz", last_name="ODM", email="mongoz@mongoz.com",
+        access_level=access_type
+    )
+    ```
+
+=== "QuerySet"
+
+    ```python hl_lines="5"
+    access_type = UserType(access_level="admin")
+
+    await User(
+        first_name="Mongoz", last_name="ODM", email="mongoz@mongoz.com",
+        access_level=access_type
+    ).create()
+    ```
+
+This will create the following document in the database:
+
+```json
+{
+    "email": "mongoz@mongoz.com", "first_name": "Mongoz", "last_name": "ODM",
+    "is_active": true, "access_level": {"level": "admin" }
+},
+```
+
+You can now query the user by embedded document field.
+
+```python
+await User.query(User.user_type.level == "admin").get()
+```
+
+This is the equivalent to the following filter:
+
+```json
+{"access_level.level": "admin" }
+```
+
+You can also use the complete embedded document.
+
+```python
+await User.query(User.user_type == level).get()
+```
+
+This is the equivalent to the following filter:
+
+```json
+{"access_level": {"level": "admin"} }
+```
+
+!!! Warning
+    For the [Embedded Documents](./embedded-documents.md) type of query, using the manager it won't
+    work. **You should use the `queryset` type of approach for the query**.
+
 ## The Q operator
+
+This operator was inspired by `Mongox` and extended for Mongoz needs. The credit for the initial
+design of the `Q` operator goes to `Mongox`.
+
+The `Q` class contains some useful and quite handy methods to be used in the queries.
+
+```python
+from mongoz import Q, Order
+```
+
+The `Q` operator is mainly used in the `queryset` and not so much in the `manager` and the main
+reason for this is because the `manager` internally manipulates the `Q` operator for you
+automatically. Pretty cool, hein?
+
+In order to create, for example a `sort` query, you would usually do this:
+
+```python
+users = await User.query().sort(User.email, Order.DESCENDING).all()
+```
+
+Where does the `Q` operator enters here? Well, you can see it as a shortcut for your queries.
+
+### Ascending
+
+```python
+users = await User.query().sort(Q.asc(User.email)).all()
+```
+
+### Descending
+
+```python
+users = await User.query().sort(Q.desc(User.email)).all()
+```
+
+### In
+
+The `in` operator.
+
+```python
+users = await User.query(Q.in_(User.id, [1, 2, 3, 4])).all()
+```
+
+### Not In
+
+The `not_in` operator.
+
+```python
+users = await User.query(Q.not_in(User.id, [1, 2, 3, 4])).all()
+```
+
+### And
+
+```python
+users = await User.query(Q.and_(User.email == "foo@bar.com", User.id > 1)).all()
+
+users = await User.query(User.email == "foo@bar.com").query(User.id > 1).all()
+```
+
+### Or
+
+```python
+users = await User.query(Q.or_(User.email == "foo@bar.com", User.id > 1)).all()
+```
+
+### Nor
+
+```python
+users = await User.query(Q.nor_(User.email == "foo@bar.com", User.id > 1)).all()
+```
+
+### Not
+
+```python
+users = await User.query(Q.not_(User.email == "foo@bar.com", User.id > 1)).all()
+```
+
+### Contains
+
+```python
+users = await User.query(Q.contains(User.email == "foo")).all()
+```
+
+### IContains
+
+```python
+users = await User.query(Q.contains(User.email == "foo")).all()
+```
+
+### Pattern
+
+Applies some `$regex` patterns.
+
+```python
+users = await User.query(Q.pattern(User.email == r"\w+ foo \w+")).all()
+```
+
+### Equals
+
+The `equals` operator.
+
+```python
+users = await User.query(Q.eq(User.email, "foo@bar.com")).all()
+```
+
+### Not Equals
+
+The `not equals` operator.
+
+```python
+users = await User.query(Q.neq(User.email, "foo@bar.com")).all()
+```
+
+### Where
+
+Applying the mongo `where` operator.
+
+```python
+users = await User.query(Q.where(User.email, "foo@bar.com")).all()
+```
+
+### Greater Than
+
+```python
+users = await User.query(Q.gt(User.id, 1)).all()
+```
+
+### Greater Than Equal
+
+```python
+users = await User.query(Q.gte(User.id, 1)).all()
+```
+
+### Less Than
+
+```python
+users = await User.query(Q.lt(User.id, 20)).all()
+```
+
+### Less Than Equal
+
+```python
+users = await User.query(Q.lte(User.id, 20)).all()
+```
 
 [document]: ./documents.md
