@@ -3,7 +3,7 @@
 Making queries is a must when using an ODM and being able to make complex queries is even better
 when allowed.
 
-MongDB is known for its performance when querying a database and it is very fast.
+MongoDB is known for its performance when querying a database and it is very fast.
 
 When making queries in a [document][document], the ODM allow two different possible ways of querying.
 One is using its internal **manager** and the second its internal **queryset**.
@@ -98,7 +98,7 @@ operators at the same time.
 This also means you can nest multiple different and same types. For example:
 
 ```python
-await User.manager.filter(...).sort(...).filter(...).limit(2)
+await User.objects.filter(...).sort(...).filter(...).limit(2)
 ```
 
 Every single operation that returns managers and querysets allows combined/nested calls.
@@ -113,7 +113,7 @@ The `queryset` version is the [Query](#query).
 These filters are the same **Django-style** lookups.
 
 ```python
-users = await User.query.filter(is_active=True, email__icontains="gmail")
+users = await User.obje ts.filter(is_active=True, email__icontains="gmail")
 ```
 
 The same special operators are also automatically added on every column.
@@ -177,9 +177,9 @@ Limiting the number of results.
 === "Manager"
 
     ```python
-    users = await User.query.limit(1)
+    users = await User.obje ts.limit(1)
 
-    users = await User.query.filter(email__icontains="mongo").limit(2)
+    users = await User.objects.filter(email__icontains="mongo").limit(2)
     ```
 
 === "QuerySet"
