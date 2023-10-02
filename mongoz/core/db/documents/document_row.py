@@ -16,7 +16,9 @@ class DocumentRow(MongozBaseModel):
         cls: "Document",
         row: Dict[str, Any],
         is_only_fields: bool = False,
+        is_defer_fields: bool = False,
         only_fields: Union[Sequence[str], None] = None,
+        defer_fields: Union[Sequence[str], None] = None,
     ) -> Union[Type["Document"], None]:
         """
         Class method to convert a dictionary row result into a Document row type.
@@ -24,11 +26,19 @@ class DocumentRow(MongozBaseModel):
         """
         item: Dict[str, Any] = {}
 
-        if is_only_fields:
+        if is_only_fields or is_defer_fields:
+            mapping = (
+                only_fields
+                if is_only_fields
+                else [
+                    cls.validate_id_field(name) for name in row.keys() if name not in defer_fields  # type: ignore
+                ]
+            )
+
             for column, value in row.items():
                 column = cls.validate_id_field(column)
 
-                if column not in only_fields:  # type: ignore
+                if column not in mapping:  # type: ignore
                     continue
 
                 if column not in item:

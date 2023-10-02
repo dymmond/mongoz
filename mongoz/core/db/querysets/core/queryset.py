@@ -34,6 +34,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         model_class: Type[T],
         filter_by: List[Expression] = None,
         only_fields: Union[str, None] = None,
+        defer_fields: Union[str, None] = None,
     ) -> None:
         self.model_class = model_class
         self._collection = model_class.meta.collection._collection  # type: ignore
@@ -42,6 +43,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         self._skip_count = 0
         self._sort: List[SortExpression] = []
         self._only_fields = [] if only_fields is None else only_fields
+        self._defer_fields = [] if defer_fields is None else defer_fields
 
     async def __aiter__(self) -> AsyncGenerator[T, None]:
         filter_query = Expression.compile_many(self._filter)
@@ -49,6 +51,29 @@ class QuerySet(QuerySetProtocol, Generic[T]):
 
         async for document in cursor:
             yield self.model_class(**document)
+
+    def validate_only_and_defer(self) -> None:
+        if self._only_fields and self._defer_fields:
+            raise FieldDefinitionError("You cannot use .only() and .defer() at the same time.")
+
+    def filter_only_and_defer(
+        self, *fields: Sequence[str], is_only: bool = False
+    ) -> "QuerySet[T]":
+        """
+        Filters by the only fields.
+        """
+        self.validate_only_and_defer()
+
+        document_fields: List[str] = list(fields)
+        if any(not isinstance(name, str) for name in document_fields):
+            raise FieldDefinitionError("The fields must be must strings.")
+
+        if self.model_class.meta.id_attribute not in fields and is_only:
+            document_fields.insert(0, self.model_class.meta.id_attribute)
+        only_or_defer = "_only_fields" if is_only else "_defer_fields"
+
+        setattr(self, only_or_defer, document_fields)
+        return self
 
     async def all(self) -> List[T]:
         """
@@ -69,12 +94,15 @@ class QuerySet(QuerySetProtocol, Generic[T]):
 
         # For only fields
         is_only_fields = True if self._only_fields else False
+        is_defer_fields = True if self._defer_fields else False
 
         results: List[T] = [
             self.model_class.from_row(  # type: ignore
                 document,
                 is_only_fields=is_only_fields,
                 only_fields=self._only_fields,
+                is_defer_fields=is_defer_fields,
+                defer_fields=self._defer_fields,
             )
             async for document in cursor
         ]
@@ -191,15 +219,13 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         """
         Filters by the only fields.
         """
-        only_fields: List[str] = list(fields)
-        if any(not isinstance(name, str) for name in only_fields):
-            raise FieldDefinitionError("The fields must be must strings.")
+        return self.filter_only_and_defer(*fields, is_only=True)
 
-        if self.model_class.meta.id_attribute not in fields:
-            only_fields.insert(0, self.model_class.meta.id_attribute)  # type: ignore
-
-        self._only_fields = only_fields
-        return self
+    def defer(self, *fields: Sequence[str]) -> "QuerySet[T]":
+        """
+        Returns a list of documents with the selected defers fields.
+        """
+        return self.filter_only_and_defer(*fields, is_only=False)
 
     def sort(self, key: Any, direction: Union[Order, None] = None) -> "QuerySet[T]":
         """Sort by (key, direction) or [(key, direction)]."""
