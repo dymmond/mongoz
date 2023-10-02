@@ -149,9 +149,8 @@ class Manager(QuerySetProtocol, Generic[T]):
         if any(not isinstance(name, str) for name in document_fields):
             raise FieldDefinitionError("The fields must be must strings.")
 
-        if self.model_class.meta.id_attribute not in fields:  # type: ignore
+        if self.model_class.meta.id_attribute not in fields and is_only:  # type: ignore
             document_fields.insert(0, self.model_class.meta.id_attribute)  # type: ignore
-
         only_or_defer = "_only_fields" if is_only else "_defer_fields"
 
         manager: "Manager" = self.clone()
@@ -237,7 +236,11 @@ class Manager(QuerySetProtocol, Generic[T]):
         return cast(
             "Manager",
             self.__class__(
-                model_class=self.model_class, filter_by=filter_clauses, sort_by=sort_clauses
+                model_class=self.model_class,
+                filter_by=filter_clauses,
+                sort_by=sort_clauses,
+                only_fields=self._only_fields,
+                defer_fields=self._defer_fields,
             ),
         )
 

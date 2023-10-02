@@ -26,11 +26,19 @@ class DocumentRow(MongozBaseModel):
         """
         item: Dict[str, Any] = {}
 
-        if is_only_fields:
+        if is_only_fields or is_defer_fields:
+            mapping = (
+                only_fields
+                if is_only_fields
+                else [
+                    cls.validate_id_field(name) for name in row.keys() if name not in defer_fields  # type: ignore
+                ]
+            )
+
             for column, value in row.items():
                 column = cls.validate_id_field(column)
 
-                if column not in only_fields:  # type: ignore
+                if column not in mapping:  # type: ignore
                     continue
 
                 if column not in item:
