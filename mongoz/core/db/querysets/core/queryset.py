@@ -6,6 +6,7 @@ from typing import (
     Generic,
     List,
     Sequence,
+    Set,
     Type,
     TypeVar,
     Union,
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
 T = TypeVar("T", bound="Document")
 
 
-class QuerySet(QuerySetProtocol, Generic[T]):
+class BaseQuerySet(QuerySetProtocol, Generic[T]):
     def __init__(
         self,
         model_class: Type[T],
@@ -45,20 +46,13 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         self._only_fields = [] if only_fields is None else only_fields
         self._defer_fields = [] if defer_fields is None else defer_fields
 
-    async def __aiter__(self) -> AsyncGenerator[T, None]:
-        filter_query = Expression.compile_many(self._filter)
-        cursor = self._collection.find(filter_query)
-
-        async for document in cursor:
-            yield self.model_class(**document)
-
     def validate_only_and_defer(self) -> None:
         if self._only_fields and self._defer_fields:
             raise FieldDefinitionError("You cannot use .only() and .defer() at the same time.")
 
     def filter_only_and_defer(
         self, *fields: Sequence[str], is_only: bool = False
-    ) -> "QuerySet[T]":
+    ) -> "BaseQuerySet[T]":
         """
         Filters by the only fields.
         """
@@ -74,6 +68,61 @@ class QuerySet(QuerySetProtocol, Generic[T]):
 
         setattr(self, only_or_defer, document_fields)
         return self
+
+    def limit(self, count: int = 0) -> "BaseQuerySet[T]":
+        self._limit_count = count
+        return self
+
+    def skip(self, count: int = 0) -> "BaseQuerySet[T]":
+        self._skip_count = count
+        return self
+
+    def only(self, *fields: Sequence[str]) -> "BaseQuerySet[T]":
+        """
+        Filters by the only fields.
+        """
+        return self.filter_only_and_defer(*fields, is_only=True)
+
+    def defer(self, *fields: Sequence[str]) -> "BaseQuerySet[T]":
+        """
+        Returns a list of documents with the selected defers fields.
+        """
+        return self.filter_only_and_defer(*fields, is_only=False)
+
+    def sort(self, key: Any, direction: Union[Order, None] = None) -> "BaseQuerySet[T]":
+        """Sort by (key, direction) or [(key, direction)]."""
+
+        direction = direction or Order.ASCENDING
+
+        if isinstance(key, list):
+            for key_dir in key:
+                sort_expression = SortExpression(*key_dir)
+                self._sort.append(sort_expression)
+        elif isinstance(key, (str, base.MongozField)):
+            sort_expression = SortExpression(key, direction)
+            self._sort.append(sort_expression)
+        else:
+            self._sort.append(key)
+        return self
+
+    def query(self, *args: Union[bool, Dict, Expression]) -> "BaseQuerySet[T]":
+        for arg in args:
+            assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
+            if isinstance(arg, dict):
+                query_expressions = Expression.unpack(arg)
+                self._filter.extend(query_expressions)
+            else:
+                self._filter.append(arg)
+        return self
+
+
+class QuerySet(BaseQuerySet[T]):
+    async def __aiter__(self) -> AsyncGenerator[T, None]:
+        filter_query = Expression.compile_many(self._filter)
+        cursor = self._collection.find(filter_query)
+
+        async for document in cursor:
+            yield self.model_class(**document)
 
     async def all(self) -> List[T]:
         """
@@ -129,7 +178,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         Returns the first document of a matching criteria.
         """
 
-        objects = await self.limit(1).all()
+        objects: List[T] = await self.limit(1).all()
         if not objects:
             return None
         return objects[0]
@@ -144,7 +193,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         return objects[-1]
 
     async def get(self) -> T:
-        objects = await self.limit(2).all()
+        objects: List[T] = await self.limit(2).all()
         if len(objects) == 0:
             raise DocumentNotFound()
         elif len(objects) == 2:
@@ -155,7 +204,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         """
         Gets a document or returns None.
         """
-        objects = await self.limit(2).all()
+        objects: List[T] = await self.limit(2).all()
         if len(objects) == 0:
             return None
         elif len(objects) > 1:
@@ -207,52 +256,6 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         cursor = self._collection.find(filter_query).where(condition)
         return [self.model_class(**document) async for document in cursor]
 
-    def limit(self, count: int = 0) -> "QuerySet[T]":
-        self._limit_count = count
-        return self
-
-    def skip(self, count: int = 0) -> "QuerySet[T]":
-        self._skip_count = count
-        return self
-
-    def only(self, *fields: Sequence[str]) -> "QuerySet[T]":
-        """
-        Filters by the only fields.
-        """
-        return self.filter_only_and_defer(*fields, is_only=True)
-
-    def defer(self, *fields: Sequence[str]) -> "QuerySet[T]":
-        """
-        Returns a list of documents with the selected defers fields.
-        """
-        return self.filter_only_and_defer(*fields, is_only=False)
-
-    def sort(self, key: Any, direction: Union[Order, None] = None) -> "QuerySet[T]":
-        """Sort by (key, direction) or [(key, direction)]."""
-
-        direction = direction or Order.ASCENDING
-
-        if isinstance(key, list):
-            for key_dir in key:
-                sort_expression = SortExpression(*key_dir)
-                self._sort.append(sort_expression)
-        elif isinstance(key, (str, base.MongozField)):
-            sort_expression = SortExpression(key, direction)
-            self._sort.append(sort_expression)
-        else:
-            self._sort.append(key)
-        return self
-
-    def query(self, *args: Union[bool, Dict, Expression]) -> "QuerySet[T]":
-        for arg in args:
-            assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
-            if isinstance(arg, dict):
-                query_expressions = Expression.unpack(arg)
-                self._filter.extend(query_expressions)
-            else:
-                self._filter.append(arg)
-        return self
-
     async def bulk_create(self, models: List["Document"]) -> List["Document"]:
         """
         Creates many documents (bulk create).
@@ -298,3 +301,75 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         Gets a document by the id.
         """
         return await self.model_class.get_document_by_id(id)
+
+    async def values(
+        self,
+        fields: Union[Sequence[str], str, None] = None,
+        exclude: Union[Sequence[str], Set[str]] = None,
+        exclude_none: bool = False,
+        flatten: bool = False,
+        **kwargs: Any,
+    ) -> List[T]:
+        """
+        Returns the results in a python dictionary format.
+        """
+        fields = fields or []
+        documents: List[T] = await self.all()
+
+        if not isinstance(fields, list):
+            raise FieldDefinitionError(detail="Fields must be an iterable.")
+
+        if not fields:
+            documents = [document.model_dump(exclude=exclude, exclude_none=exclude_none) for document in documents]  # type: ignore
+        else:
+            documents = [
+                document.model_dump(exclude=exclude, exclude_none=exclude_none, include=fields)  # type: ignore
+                for document in documents
+            ]
+
+        as_tuple = kwargs.pop("__as_tuple__", False)
+
+        if not as_tuple:
+            return documents
+
+        if not flatten:
+            documents = [tuple(document.values()) for document in documents]  # type: ignore
+        else:
+            try:
+                documents = [document[fields[0]] for document in documents]  # type: ignore
+            except KeyError:
+                raise FieldDefinitionError(
+                    detail=f"{fields[0]} does not exist in the results."
+                ) from None
+        return documents
+
+    async def values_list(
+        self,
+        fields: Union[Sequence[str], str, None] = None,
+        exclude: Union[Sequence[str], Set[str]] = None,
+        exclude_none: bool = False,
+        flat: bool = False,
+    ) -> List[Any]:
+        """
+        Returns the results in a python dictionary format.
+        """
+
+        fields = fields or []
+        if flat and len(fields) > 1:
+            raise FieldDefinitionError(
+                detail=f"Maximum of 1 in fields when `flat` is enables, got {len(fields)} instead."
+            ) from None
+
+        if flat and isinstance(fields, str):
+            fields = [fields]
+
+        if isinstance(fields, str):
+            fields = [fields]
+
+        return await self.values(
+            fields=fields,
+            exclude=exclude,
+            exclude_none=exclude_none,
+            flatten=flat,
+            __as_tuple__=True,
+        )
