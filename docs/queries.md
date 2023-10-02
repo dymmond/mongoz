@@ -571,6 +571,211 @@ Returns an integer with the total of records.
     total = await User.query().count()
     ```
 
+### Values
+
+Returns the model results in a dictionary like format.
+
+=== "Manager"
+
+    ```python
+    await User.objects.create(name="John" email="foo@bar.com")
+
+    # All values
+    user = User.objects.values()
+    users == [
+        {"id": 1, "name": "John", "email": "foo@bar.com"},
+    ]
+
+    # Only the name
+    user = User.objects.values("name")
+    users == [
+        {"name": "John"},
+    ]
+    # Or as a list
+    # Only the name
+    user = User.objects.values(["name"])
+    users == [
+        {"name": "John"},
+    ]
+
+    # Exclude some values
+    user = User.objects.values(exclude=["id"])
+    users == [
+        {"name": "John", "email": "foo@bar.com"},
+    ]
+    ```
+
+=== "QuerySet"
+
+    ```python
+    await User(name="John" email="foo@bar.com").create()
+
+    # All values
+    user = User.query().values()
+    users == [
+        {"id": 1, "name": "John", "email": "foo@bar.com"},
+    ]
+
+    # Only the name
+    user = User.query().values("name")
+    users == [
+        {"name": "John"},
+    ]
+    # Or as a list
+    # Only the name
+    user = User.query().values(["name"])
+    users == [
+        {"name": "John"},
+    ]
+
+    # Exclude some values
+    user = User.query().values(exclude=["id"])
+    users == [
+        {"name": "John", "email": "foo@bar.com"},
+    ]
+    ```
+
+The `values()` can also be combined with `filter`, `only` as per usual.
+
+**Parameters**:
+
+* **fields** - Fields of values to return.
+* **exclude** - Fields to exclude from the return.
+* **exclude_none** - Boolean flag indicating if the fields with `None` should be excluded.
+
+### Values list
+
+Returns the model results in a tuple like format.
+
+=== "Manager"
+
+    ```python
+    await User.objects.create(name="John" email="foo@bar.com")
+
+    # All values
+    user = User.objects.values_list()
+    users == [
+        (1, "John" "foo@bar.com"),
+    ]
+
+    # Only the name
+    user = User.objects.values_list("name")
+    users == [
+        ("John",),
+    ]
+    # Or as a list
+    # Only the name
+    user = User.objects.values_list(["name"])
+    users == [
+        ("John",),
+    ]
+
+    # Exclude some values
+    user = User.objects.values(exclude=["id"])
+    users == [
+        ("John", "foo@bar.com"),
+    ]
+
+    # Flattened
+    user = User.objects.values_list("email", flat=True)
+    users == [
+        "foo@bar.com",
+    ]
+    ```
+
+=== "QuerySet"
+
+    ```python
+    await User(name="John" email="foo@bar.com").create()
+
+    # All values
+    user = User.query().values_list()
+    users == [
+        (1, "John" "foo@bar.com"),
+    ]
+
+    # Only the name
+    user = User.query().values_list("name")
+    users == [
+        ("John",),
+    ]
+    # Or as a list
+    # Only the name
+    user = User.query().values_list(["name"])
+    users == [
+        ("John",),
+    ]
+
+    # Exclude some values
+    user = User.query().values(exclude=["id"])
+    users == [
+        ("John", "foo@bar.com"),
+    ]
+
+    # Flattened
+    user = User.query().values_list("email", flat=True)
+    users == [
+        "foo@bar.com",
+    ]
+    ```
+
+The `values_list()` can also be combined with `filter`, `only` as per usual.
+
+**Parameters**:
+
+* **fields** - Fields of values to return.
+* **exclude** - Fields to exclude from the return.
+* **exclude_none** - Boolean flag indicating if the fields with `None` should be excluded.
+* **flat** - Boolean flag indicating the results should be flattened.
+
+
+### Only
+
+Returns the results containing **only** the fields in the query and nothing else.
+
+=== "Manager"
+
+    ```python
+    await User.objects.create(name="John" email="foo@bar.com")
+
+    user = await User.objects.only("name")
+    ```
+
+=== "QuerySet"
+
+    ```python
+    await User(name="John" email="foo@bar.com").create
+
+    user = await User.query().only("name").all()
+    ```
+
+!!! Warning
+    You can only use `only()` or `defer()` but not both combined or a `FieldDefinitionError` is raised.
+
+### Defer
+
+Returns the results containing all the fields **but the ones you want to exclude**.
+
+=== "Manager"
+
+    ```python
+    await User.objects.create(name="John" email="foo@bar.com")
+
+    user = await User.objects.defer("name")
+    ```
+
+=== "QuerySet"
+
+    ```python
+    await User(name="John" email="foo@bar.com").create
+
+    user = await User.query().defer("name").all()
+    ```
+
+!!! Warning
+    You can only use `only()` or `defer()` but not both combined or a `FieldDefinitionError` is raised.
+
+
 ### Get or none
 
 When querying a document and do not want to raise a [DocumentNotFound](./exceptions.md#documentnotfound) and

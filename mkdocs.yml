@@ -47,6 +47,7 @@ nav:
       - Settings: "settings.md"
       - Registry: "registry.md"
       - Exceptions: "exceptions.md"
+      - Tips and Tricks: "tips-and-tricks.md"
       - Contributing: "contributing.md"
       - Sponsorship: "sponsorship.md"
       - Release Notes: "release-notes.md"
