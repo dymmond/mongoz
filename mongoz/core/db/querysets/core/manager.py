@@ -127,8 +127,6 @@ class Manager(QuerySetProtocol, Generic[T]):
             key = self._find_and_replace_id(key)
 
             if "__" in key:
-                if exclude:
-                    raise FieldDefinitionError("`exclude` does not allow nested lookup")
                 parts = key.split("__")
                 lookup_operator = parts[-1]
                 field_name = parts[-2]
@@ -187,16 +185,17 @@ class Manager(QuerySetProtocol, Generic[T]):
                 clauses.append(expression)
 
             else:
-                if not exclude:
-                    operator = self.get_operator("exact")
-                    expression = operator(key, value)  # type: ignore
-                else:
-                    operator = self.get_operator("neq")
-                    expression = operator(key, value)  # type: ignore
+                operator = self.get_operator("exact")
+                expression = operator(key, value)  # type: ignore
 
                 clauses.append(expression)
 
-            filter_clauses += clauses
+            if exclude:
+                operator = self.get_operator("not")
+                clauses = [operator(clause.key, clause) for clause in clauses]  # type: ignore
+                filter_clauses += clauses
+            else:
+                filter_clauses += clauses
 
         return cast(
             "Manager",
@@ -610,7 +609,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         records = await manager._all(**manager.extra)
         return records
 
-    async def exclude(self, **kwargs: Any) -> "Manager":
+    async def exclude(self, **kwargs: Any) -> List["Document"]:
         """
         Filters everything and excludes based on a specific condition.
         """

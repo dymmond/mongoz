@@ -31,6 +31,7 @@ class MongozSettings(BaseSettings):
         "lte": "lte",
         "asc": "asc",
         "desc": "desc",
+        "not": "not_",
     }
 
     def get_operator(self, name: str) -> "Expression":

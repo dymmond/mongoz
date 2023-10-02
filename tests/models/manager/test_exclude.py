@@ -46,10 +46,33 @@ async def test_model_exclude() -> None:
 
 async def test_model_exclude_operators() -> None:
     user1 = await User.objects.create(name="Mongoz", language="EN")
-    await User.objects.create(name="Edgy", language="PT", is_active=False)
-    await User.objects.create(name="Saffier", language="EN")
+    user2 = await User.objects.create(name="Edgy", language="PT", is_active=False)
+    user3 = await User.objects.create(name="Saffier", language="EN")
 
-    users = await User.objects.exclude(is_active=False)
+    users = await User.objects.exclude(language__in=["EN"])
     assert len(users) == 1
 
+    assert users[0].id == user2.id
+
+    users = await User.objects.exclude(id=user1.id)
+    assert len(users) == 2
+    assert users[0].id == user2.id
+    assert users[1].id == user3.id
+
+    users = await User.objects.exclude(language__not_in=["EN"])
+    assert len(users) == 2
     assert users[0].id == user1.id
+    assert users[1].id == user3.id
+
+    users = await User.objects.exclude(language__asc=True)
+    assert len(users) == 3
+
+
+async def test_model_exclude_with_filter() -> None:
+    await User.objects.create(name="Mongoz")
+    user2 = await User.objects.create(name="Edgy", is_active=False)
+
+    users = await User.objects.filter(is_active=False).exclude(is_active=True)
+    assert len(users) == 1
+
+    assert users[0].id == user2.id
