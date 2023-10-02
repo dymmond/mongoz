@@ -16,7 +16,9 @@ class DocumentRow(MongozBaseModel):
         cls: "Document",
         row: Dict[str, Any],
         is_only_fields: bool = False,
+        is_defer_fields: bool = False,
         only_fields: Union[Sequence[str], None] = None,
+        defer_fields: Union[Sequence[str], None] = None,
     ) -> Union[Type["Document"], None]:
         """
         Class method to convert a dictionary row result into a Document row type.

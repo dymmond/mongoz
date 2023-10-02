@@ -44,6 +44,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         filter_by: Union[List[Expression], None] = None,
         sort_by: Union[List[SortExpression], None] = None,
         only_fields: Union[str, None] = None,
+        defer_fields: Union[str, None] = None,
     ) -> None:
         self.model_class = model_class
 
@@ -57,6 +58,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         self._skip_count = 0
         self._sort: List[SortExpression] = [] if sort_by is None else sort_by
         self._only_fields = [] if only_fields is None else only_fields
+        self._defer_fields = [] if defer_fields is None else defer_fields
         self.extra: Dict[str, Any] = {}
 
     def __get__(self, instance: Any, owner: Any) -> "Manager":
@@ -71,8 +73,13 @@ class Manager(QuerySetProtocol, Generic[T]):
         manager._sort = self._sort
         manager._collection = self._collection
         manager._only_fields = self._only_fields
+        manager._defer_fields = self._defer_fields
         manager.extra = self.extra
         return manager
+
+    def validate_only_and_defer(self) -> None:
+        if self._only_fields and self._defer_fields:
+            raise FieldDefinitionError("You cannot use .only() and .defer() at the same time.")
 
     def get_operator(self, name: str) -> Expression:
         """
@@ -108,12 +115,15 @@ class Manager(QuerySetProtocol, Generic[T]):
 
         # For only fields
         is_only_fields = True if manager._only_fields else False
+        is_defer_fields = True if manager._defer_fields else False
 
         results: List[T] = [
             manager.model_class.from_row(  # type: ignore
                 document,
                 is_only_fields=is_only_fields,
                 only_fields=manager._only_fields,
+                is_defer_fields=is_defer_fields,
+                defer_fields=manager._defer_fields,
             )
             async for document in cursor
         ]
@@ -128,6 +138,25 @@ class Manager(QuerySetProtocol, Generic[T]):
         if key in settings.parsed_ids:
             return cast(str, self.model_class.id.pydantic_field.alias)  # type: ignore
         return key
+
+    def filter_only_and_defer(self, *fields: Sequence[str], is_only: bool = False) -> "Manager":
+        """
+        Validates if should be defer or only and checks it out
+        """
+        self.validate_only_and_defer()
+
+        document_fields: List[str] = list(fields)
+        if any(not isinstance(name, str) for name in document_fields):
+            raise FieldDefinitionError("The fields must be must strings.")
+
+        if self.model_class.meta.id_attribute not in fields:  # type: ignore
+            document_fields.insert(0, self.model_class.meta.id_attribute)  # type: ignore
+
+        only_or_defer = "_only_fields" if is_only else "_defer_fields"
+
+        manager: "Manager" = self.clone()
+        setattr(manager, only_or_defer, document_fields)
+        return manager
 
     def filter_query(self, **kwargs: Any) -> "Manager":
         """
@@ -250,16 +279,15 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         Filters by the only fields.
         """
-        only_fields: List[str] = list(fields)
-        if any(not isinstance(name, str) for name in only_fields):
-            raise FieldDefinitionError("The fields must be must strings.")
-
-        if self.model_class.meta.id_attribute not in fields:  # type: ignore
-            only_fields.insert(0, self.model_class.meta.id_attribute)  # type: ignore
-
         manager: "Manager" = self.clone()
-        manager._only_fields = only_fields
-        return manager
+        return manager.filter_only_and_defer(*fields, is_only=True)
+
+    def defer(self, *fields: Sequence[str]) -> "Manager":
+        """
+        Returns a list of documents with the selected defers fields.
+        """
+        manager: "Manager" = self.clone()
+        return manager.filter_only_and_defer(*fields, is_only=False)
 
     async def count(self, **kwargs: Any) -> int:
         """
