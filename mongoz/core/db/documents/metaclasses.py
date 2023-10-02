@@ -371,7 +371,7 @@ class BaseModelMeta(ModelMetaclass):
             new_class.__proxy_document__ = proxy_document
             new_class.__proxy_document__.parent = new_class
             new_class.__proxy_document__.model_rebuild(force=True)
-            meta.registry.documents[new_class.__name__] = new_class  # type: ignore
+            meta.registry.documents[new_class.__name__] = new_class
 
         new_class.model_rebuild(force=True)
 
