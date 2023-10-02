@@ -115,7 +115,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         setattr(manager, only_or_defer, document_fields)
         return manager
 
-    def filter_query(self, **kwargs: Any) -> "Manager":
+    def filter_query(self, exclude: bool = False, **kwargs: Any) -> "Manager":
         """
         Builds the filter query for the given manager.
         """
@@ -127,6 +127,8 @@ class Manager(QuerySetProtocol, Generic[T]):
             key = self._find_and_replace_id(key)
 
             if "__" in key:
+                if exclude:
+                    raise FieldDefinitionError("`exclude` does not allow nested lookup")
                 parts = key.split("__")
                 lookup_operator = parts[-1]
                 field_name = parts[-2]
@@ -185,8 +187,13 @@ class Manager(QuerySetProtocol, Generic[T]):
                 clauses.append(expression)
 
             else:
-                operator = self.get_operator("exact")
-                expression = operator(key, value)  # type: ignore
+                if not exclude:
+                    operator = self.get_operator("exact")
+                    expression = operator(key, value)  # type: ignore
+                else:
+                    operator = self.get_operator("neq")
+                    expression = operator(key, value)  # type: ignore
+
                 clauses.append(expression)
 
             filter_clauses += clauses
@@ -291,6 +298,11 @@ class Manager(QuerySetProtocol, Generic[T]):
 
         async for document in cursor:
             yield self.model_class(**document)
+
+    def __await__(
+        self,
+    ) -> Generator[Any, None, List["Document"]]:
+        return self.execute().__await__()
 
     async def _all(self) -> List[T]:
         """
@@ -598,7 +610,9 @@ class Manager(QuerySetProtocol, Generic[T]):
         records = await manager._all(**manager.extra)
         return records
 
-    def __await__(
-        self,
-    ) -> Generator[Any, None, List["Document"]]:
-        return self.execute().__await__()
+    async def exclude(self, **kwargs: Any) -> "Manager":
+        """
+        Filters everything and excludes based on a specific condition.
+        """
+        manager: "Manager" = self.clone()
+        return await manager.filter_query(exclude=True, **kwargs)
