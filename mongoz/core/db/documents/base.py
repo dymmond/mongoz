@@ -1,3 +1,5 @@
+import copy
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Mapping, Type, Union
 
 import bson
@@ -6,12 +8,14 @@ from pydantic import BaseModel, ConfigDict
 from pydantic_core._pydantic_core import SchemaValidator as SchemaValidator
 
 from mongoz.core.db.documents._internal import DescriptiveMeta
+from mongoz.core.db.documents.document_proxy import ProxyDocument
 from mongoz.core.db.documents.metaclasses import BaseModelMeta, MetaInfo
 from mongoz.core.db.fields.base import MongozField
 from mongoz.core.db.fields.core import ObjectId
 from mongoz.core.db.querysets.base import Manager, QuerySet
 from mongoz.core.db.querysets.expressions import Expression
 from mongoz.core.signals.signal import Signal
+from mongoz.core.utils.documents import generify_model_fields
 from mongoz.utils.mixins import is_operation_allowed
 
 if TYPE_CHECKING:
@@ -25,6 +29,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     """
 
     __db_document__: ClassVar[bool] = False
+    __proxy_document__: ClassVar[Union[Type["Document"], None]] = None
 
     model_config = ConfigDict(
         extra="allow",
@@ -32,6 +37,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         json_encoders={bson.ObjectId: str, Signal: str},
         validate_assignment=True,
     )
+    is_proxy_document: ClassVar[bool] = False
     meta: ClassVar[MetaInfo] = MetaInfo(None)
     Meta: ClassVar[DescriptiveMeta] = DescriptiveMeta()
     objects: ClassVar[Manager] = Manager()
@@ -73,6 +79,27 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         return self.__class__.__name__.lower()
 
     @classmethod
+    def generate_proxy_document(cls) -> Type["Document"]:
+        """
+        Generates a proxy document for each model. This proxy model is a simple
+        shallow copy of the original model being generated.
+        """
+        if cls.__proxy_document__:
+            return cls.__proxy_document__
+
+        fields = {key: copy.copy(field) for key, field in cls.meta.fields.items()}
+        proxy_document = ProxyDocument(
+            name=cls.__name__,
+            module=cls.__module__,
+            metadata=cls.meta,
+            definitions=fields,
+        )
+
+        proxy_document.build()
+        generify_model_fields(proxy_document.model, exclude={"id"})
+        return proxy_document.model
+
+    @classmethod
     def query(
         cls: Type["BaseMongoz"], *values: Union[bool, Dict, Expression]
     ) -> QuerySet["Document"]:
@@ -96,6 +123,10 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     @property
     def signals(self) -> "Broadcaster":
         return self.__class__.signals  # type: ignore
+
+    @cached_property
+    def proxy_document(self) -> Any:
+        return self.__class__.proxy_document
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self}>"

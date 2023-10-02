@@ -30,6 +30,7 @@ from mongoz.exceptions import ImproperlyConfigured, IndexError
 
 if TYPE_CHECKING:
     from mongoz.core.db.documents import Document
+    from mongoz.core.db.documents.document_proxy import ProxyDocument
 
 
 class MetaInfo:
@@ -359,6 +360,19 @@ class BaseModelMeta(ModelMetaclass):
 
         new_class.Meta = meta
         new_class.__mongoz_fields__ = mongoz_fields
+
+        # Update the model references with the validations of the model
+        # Being done by the Edgy fields instead.
+        # Generates a proxy model for each model created
+        # Making sure the core model where the fields are inherited
+        # And mapped contains the main proxy_model
+        if not new_class.is_proxy_document and not new_class.meta.abstract:
+            proxy_document: "ProxyDocument" = new_class.generate_proxy_document()
+            new_class.__proxy_document__ = proxy_document
+            new_class.__proxy_document__.parent = new_class
+            new_class.__proxy_document__.model_rebuild(force=True)
+            meta.registry.documents[new_class.__name__] = new_class  # type: ignore
+
         new_class.model_rebuild(force=True)
 
         # Build the indexes
@@ -372,6 +386,13 @@ class BaseModelMeta(ModelMetaclass):
         Returns the signals of a class
         """
         return cast("Broadcaster", cls.meta.signals)
+
+    @property
+    def proxy_document(cls) -> Any:
+        """
+        Returns the proxy_document from the Document when called using the cache.
+        """
+        return cls.__proxy_document__
 
     def __getattr__(self, name: str) -> Any:
         if name in self.__mongoz_fields__:
