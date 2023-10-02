@@ -1115,7 +1115,7 @@ users = await User.query(Q.contains(User.email, "foo")).all()
 ### IContains
 
 ```python
-users = await User.query(Q.contains(User.email, "foo")).all()
+users = await User.query(Q.icontains(User.email, "foo")).all()
 ```
 
 ### Pattern
