@@ -87,49 +87,6 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         return cast(Expression, settings.get_operator(name))
 
-    async def __aiter__(self) -> AsyncGenerator[T, None]:
-        filter_query = Expression.compile_many(self._filter)
-        cursor = self._collection.find(filter_query)
-
-        async for document in cursor:
-            yield self.model_class(**document)
-
-    async def _all(self) -> List[T]:
-        """
-        Returns all the results for a given collection of a document
-        """
-        manager: "Manager" = self.clone()
-
-        filter_query = Expression.compile_many(manager._filter)
-        cursor = manager._collection.find(filter_query)
-
-        if manager._sort:
-            sort_query = [expr.compile() for expr in manager._sort]
-            cursor = cursor.sort(sort_query)
-
-        if manager._skip_count:
-            cursor = cursor.skip(manager._skip_count)
-
-        if manager._limit_count:
-            cursor = cursor.limit(manager._limit_count)
-
-        # For only fields
-        is_only_fields = True if manager._only_fields else False
-        is_defer_fields = True if manager._defer_fields else False
-
-        results: List[T] = [
-            manager.model_class.from_row(  # type: ignore
-                document,
-                is_only_fields=is_only_fields,
-                only_fields=manager._only_fields,
-                is_defer_fields=is_defer_fields,
-                defer_fields=manager._defer_fields,
-            )
-            async for document in cursor
-        ]
-
-        return results
-
     def _find_and_replace_id(self, key: str) -> str:
         """
         Making sure the ID is always parsed as `_id`.
@@ -292,6 +249,84 @@ class Manager(QuerySetProtocol, Generic[T]):
         manager: "Manager" = self.clone()
         return manager.filter_only_and_defer(*fields, is_only=False)
 
+    def limit(self, count: int = 0) -> "Manager[T]":
+        manager: "Manager" = self.clone()
+        manager._limit_count = count
+        return manager
+
+    def skip(self, count: int = 0) -> "Manager[T]":
+        manager: "Manager" = self.clone()
+        manager._skip_count = count
+        return manager
+
+    def sort(
+        self, key: Union[Any, None] = None, direction: Union[Order, None] = None, **kwargs: Any
+    ) -> "Manager[T]":
+        """Sort by (key, direction) or [(key, direction)]."""
+        manager: "Manager" = self.clone()
+
+        if kwargs:
+            assert (
+                len(kwargs) == 1
+            ), "`sort` only allows one field per sort. Use `sort(field).sort(field) for multiple fields instead"
+            return manager.filter_query(**kwargs)
+
+        direction = direction or Order.ASCENDING
+
+        if isinstance(key, list):
+            for key_dir in key:
+                sort_expression = SortExpression(*key_dir)
+                manager._sort.append(sort_expression)
+        elif isinstance(key, (str, base.MongozField)):
+            sort_expression = SortExpression(key, direction)
+            manager._sort.append(sort_expression)
+        else:
+            manager._sort.append(key)
+        return manager
+
+    async def __aiter__(self) -> AsyncGenerator[T, None]:
+        filter_query = Expression.compile_many(self._filter)
+        cursor = self._collection.find(filter_query)
+
+        async for document in cursor:
+            yield self.model_class(**document)
+
+    async def _all(self) -> List[T]:
+        """
+        Returns all the results for a given collection of a document
+        """
+        manager: "Manager" = self.clone()
+
+        filter_query = Expression.compile_many(manager._filter)
+        cursor = manager._collection.find(filter_query)
+
+        if manager._sort:
+            sort_query = [expr.compile() for expr in manager._sort]
+            cursor = cursor.sort(sort_query)
+
+        if manager._skip_count:
+            cursor = cursor.skip(manager._skip_count)
+
+        if manager._limit_count:
+            cursor = cursor.limit(manager._limit_count)
+
+        # For only fields
+        is_only_fields = True if manager._only_fields else False
+        is_defer_fields = True if manager._defer_fields else False
+
+        results: List[T] = [
+            manager.model_class.from_row(  # type: ignore
+                document,
+                is_only_fields=is_only_fields,
+                only_fields=manager._only_fields,
+                is_defer_fields=is_defer_fields,
+                defer_fields=manager._defer_fields,
+            )
+            async for document in cursor
+        ]
+
+        return results
+
     async def count(self, **kwargs: Any) -> int:
         """
         Counts all the documents for a given colletion.
@@ -418,41 +453,6 @@ class Manager(QuerySetProtocol, Generic[T]):
         filter_query = Expression.compile_many(manager._filter)
         cursor = manager._collection.find(filter_query).where(condition)
         return [manager.model_class(**document) async for document in cursor]
-
-    def limit(self, count: int = 0) -> "Manager[T]":
-        manager: "Manager" = self.clone()
-        manager._limit_count = count
-        return manager
-
-    def skip(self, count: int = 0) -> "Manager[T]":
-        manager: "Manager" = self.clone()
-        manager._skip_count = count
-        return manager
-
-    def sort(
-        self, key: Union[Any, None] = None, direction: Union[Order, None] = None, **kwargs: Any
-    ) -> "Manager[T]":
-        """Sort by (key, direction) or [(key, direction)]."""
-        manager: "Manager" = self.clone()
-
-        if kwargs:
-            assert (
-                len(kwargs) == 1
-            ), "`sort` only allows one field per sort. Use `sort(field).sort(field) for multiple fields instead"
-            return manager.filter_query(**kwargs)
-
-        direction = direction or Order.ASCENDING
-
-        if isinstance(key, list):
-            for key_dir in key:
-                sort_expression = SortExpression(*key_dir)
-                manager._sort.append(sort_expression)
-        elif isinstance(key, (str, base.MongozField)):
-            sort_expression = SortExpression(key, direction)
-            manager._sort.append(sort_expression)
-        else:
-            manager._sort.append(key)
-        return manager
 
     async def update(self, **kwargs: Any) -> List["Document"]:
         """

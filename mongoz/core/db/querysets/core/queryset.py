@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 T = TypeVar("T", bound="Document")
 
 
-class QuerySet(QuerySetProtocol, Generic[T]):
+class BaseQuerySet(QuerySetProtocol, Generic[T]):
     def __init__(
         self,
         model_class: Type[T],
@@ -45,20 +45,13 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         self._only_fields = [] if only_fields is None else only_fields
         self._defer_fields = [] if defer_fields is None else defer_fields
 
-    async def __aiter__(self) -> AsyncGenerator[T, None]:
-        filter_query = Expression.compile_many(self._filter)
-        cursor = self._collection.find(filter_query)
-
-        async for document in cursor:
-            yield self.model_class(**document)
-
     def validate_only_and_defer(self) -> None:
         if self._only_fields and self._defer_fields:
             raise FieldDefinitionError("You cannot use .only() and .defer() at the same time.")
 
     def filter_only_and_defer(
         self, *fields: Sequence[str], is_only: bool = False
-    ) -> "QuerySet[T]":
+    ) -> "BaseQuerySet[T]":
         """
         Filters by the only fields.
         """
@@ -74,6 +67,61 @@ class QuerySet(QuerySetProtocol, Generic[T]):
 
         setattr(self, only_or_defer, document_fields)
         return self
+
+    def limit(self, count: int = 0) -> "BaseQuerySet[T]":
+        self._limit_count = count
+        return self
+
+    def skip(self, count: int = 0) -> "BaseQuerySet[T]":
+        self._skip_count = count
+        return self
+
+    def only(self, *fields: Sequence[str]) -> "BaseQuerySet[T]":
+        """
+        Filters by the only fields.
+        """
+        return self.filter_only_and_defer(*fields, is_only=True)
+
+    def defer(self, *fields: Sequence[str]) -> "BaseQuerySet[T]":
+        """
+        Returns a list of documents with the selected defers fields.
+        """
+        return self.filter_only_and_defer(*fields, is_only=False)
+
+    def sort(self, key: Any, direction: Union[Order, None] = None) -> "BaseQuerySet[T]":
+        """Sort by (key, direction) or [(key, direction)]."""
+
+        direction = direction or Order.ASCENDING
+
+        if isinstance(key, list):
+            for key_dir in key:
+                sort_expression = SortExpression(*key_dir)
+                self._sort.append(sort_expression)
+        elif isinstance(key, (str, base.MongozField)):
+            sort_expression = SortExpression(key, direction)
+            self._sort.append(sort_expression)
+        else:
+            self._sort.append(key)
+        return self
+
+    def query(self, *args: Union[bool, Dict, Expression]) -> "BaseQuerySet[T]":
+        for arg in args:
+            assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
+            if isinstance(arg, dict):
+                query_expressions = Expression.unpack(arg)
+                self._filter.extend(query_expressions)
+            else:
+                self._filter.append(arg)
+        return self
+
+
+class QuerySet(BaseQuerySet[T]):
+    async def __aiter__(self) -> AsyncGenerator[T, None]:
+        filter_query = Expression.compile_many(self._filter)
+        cursor = self._collection.find(filter_query)
+
+        async for document in cursor:
+            yield self.model_class(**document)
 
     async def all(self) -> List[T]:
         """
@@ -129,7 +177,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         Returns the first document of a matching criteria.
         """
 
-        objects = await self.limit(1).all()
+        objects: List[T] = await self.limit(1).all()
         if not objects:
             return None
         return objects[0]
@@ -144,7 +192,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         return objects[-1]
 
     async def get(self) -> T:
-        objects = await self.limit(2).all()
+        objects: List[T] = await self.limit(2).all()
         if len(objects) == 0:
             raise DocumentNotFound()
         elif len(objects) == 2:
@@ -155,7 +203,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         """
         Gets a document or returns None.
         """
-        objects = await self.limit(2).all()
+        objects: List[T] = await self.limit(2).all()
         if len(objects) == 0:
             return None
         elif len(objects) > 1:
@@ -206,52 +254,6 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         filter_query = Expression.compile_many(self._filter)
         cursor = self._collection.find(filter_query).where(condition)
         return [self.model_class(**document) async for document in cursor]
-
-    def limit(self, count: int = 0) -> "QuerySet[T]":
-        self._limit_count = count
-        return self
-
-    def skip(self, count: int = 0) -> "QuerySet[T]":
-        self._skip_count = count
-        return self
-
-    def only(self, *fields: Sequence[str]) -> "QuerySet[T]":
-        """
-        Filters by the only fields.
-        """
-        return self.filter_only_and_defer(*fields, is_only=True)
-
-    def defer(self, *fields: Sequence[str]) -> "QuerySet[T]":
-        """
-        Returns a list of documents with the selected defers fields.
-        """
-        return self.filter_only_and_defer(*fields, is_only=False)
-
-    def sort(self, key: Any, direction: Union[Order, None] = None) -> "QuerySet[T]":
-        """Sort by (key, direction) or [(key, direction)]."""
-
-        direction = direction or Order.ASCENDING
-
-        if isinstance(key, list):
-            for key_dir in key:
-                sort_expression = SortExpression(*key_dir)
-                self._sort.append(sort_expression)
-        elif isinstance(key, (str, base.MongozField)):
-            sort_expression = SortExpression(key, direction)
-            self._sort.append(sort_expression)
-        else:
-            self._sort.append(key)
-        return self
-
-    def query(self, *args: Union[bool, Dict, Expression]) -> "QuerySet[T]":
-        for arg in args:
-            assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
-            if isinstance(arg, dict):
-                query_expressions = Expression.unpack(arg)
-                self._filter.extend(query_expressions)
-            else:
-                self._filter.append(arg)
-        return self
 
     async def bulk_create(self, models: List["Document"]) -> List["Document"]:
         """
