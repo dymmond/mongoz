@@ -571,6 +571,24 @@ Returns an integer with the total of records.
     total = await User.query().count()
     ```
 
+### Exclude
+
+The `exclude()` is used when you want to filter results by excluding instances.
+
+=== "Manager"
+
+    ```python
+    users = await User.objects.exclude(is_active=False)
+    ```
+
+=== "QuerySet"
+
+    ```python
+    users = await User.query(Q.not_(User.is_active, False)).all()
+    ```
+
+    With the queryset we simply call the [Not](#not) operator.
+
 ### Values
 
 Returns the model results in a dictionary like format.
@@ -1085,19 +1103,19 @@ users = await User.query(Q.nor_(User.email == "foo@bar.com", User.id > 1)).all()
 ### Not
 
 ```python
-users = await User.query(Q.not_(User.email == "foo@bar.com", User.id > 1)).all()
+users = await User.query(Q.not_(User.email, "foo@bar.com")).all()
 ```
 
 ### Contains
 
 ```python
-users = await User.query(Q.contains(User.email == "foo")).all()
+users = await User.query(Q.contains(User.email, "foo")).all()
 ```
 
 ### IContains
 
 ```python
-users = await User.query(Q.contains(User.email == "foo")).all()
+users = await User.query(Q.contains(User.email, "foo")).all()
 ```
 
 ### Pattern
@@ -1105,7 +1123,7 @@ users = await User.query(Q.contains(User.email == "foo")).all()
 Applies some `$regex` patterns.
 
 ```python
-users = await User.query(Q.pattern(User.email == r"\w+ foo \w+")).all()
+users = await User.query(Q.pattern(User.email, r"\w+ foo \w+")).all()
 ```
 
 ### Equals

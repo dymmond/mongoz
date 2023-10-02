@@ -135,4 +135,6 @@ class Q(Ordering, Iterable, Equality, Comparison):
 
     @classmethod
     def not_(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+        if hasattr(key, "pydantic_field"):
+            value = Expression(key=key, operator=ExpressionOperator.EQUAL, value=value)
         return Expression(key=key, operator=ExpressionOperator.NOT, value=value)

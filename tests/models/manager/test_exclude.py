@@ -74,5 +74,17 @@ async def test_model_exclude_with_filter() -> None:
 
     users = await User.objects.filter(is_active=False).exclude(is_active=True)
     assert len(users) == 1
+    assert users[0].id == user2.id
 
+
+async def test_model_exclude_with_filter_operator() -> None:
+    user1 = await User.objects.create(name="Mongoz")
+    user2 = await User.objects.create(name="Edgy", is_active=False)
+
+    users = await User.query(mongoz.Q.not_(User.is_active, False)).all()
+    assert len(users) == 1
+    assert users[0].id == user1.id
+
+    users = await User.query(mongoz.Q.contains(User.is_active, False)).all()
+    assert len(users) == 1
     assert users[0].id == user2.id
