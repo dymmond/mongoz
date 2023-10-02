@@ -571,6 +571,8 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         Returns the results in a python dictionary format.
         """
+        manager: "Manager" = self.clone()
+
         fields = fields or []
         if flat and len(fields) > 1:
             raise FieldDefinitionError(
@@ -583,7 +585,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         if isinstance(fields, str):
             fields = [fields]
 
-        return await self.values(
+        return await manager.values(
             fields=fields,
             exclude=exclude,
             exclude_none=exclude_none,

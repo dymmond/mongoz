@@ -6,6 +6,7 @@ from typing import (
     Generic,
     List,
     Sequence,
+    Set,
     Type,
     TypeVar,
     Union,
@@ -300,3 +301,75 @@ class QuerySet(BaseQuerySet[T]):
         Gets a document by the id.
         """
         return await self.model_class.get_document_by_id(id)
+
+    async def values(
+        self,
+        fields: Union[Sequence[str], str, None] = None,
+        exclude: Union[Sequence[str], Set[str]] = None,
+        exclude_none: bool = False,
+        flatten: bool = False,
+        **kwargs: Any,
+    ) -> List[T]:
+        """
+        Returns the results in a python dictionary format.
+        """
+        fields = fields or []
+        documents: List[T] = await self.all()
+
+        if not isinstance(fields, list):
+            raise FieldDefinitionError(detail="Fields must be an iterable.")
+
+        if not fields:
+            documents = [document.model_dump(exclude=exclude, exclude_none=exclude_none) for document in documents]  # type: ignore
+        else:
+            documents = [
+                document.model_dump(exclude=exclude, exclude_none=exclude_none, include=fields)  # type: ignore
+                for document in documents
+            ]
+
+        as_tuple = kwargs.pop("__as_tuple__", False)
+
+        if not as_tuple:
+            return documents
+
+        if not flatten:
+            documents = [tuple(document.values()) for document in documents]  # type: ignore
+        else:
+            try:
+                documents = [document[fields[0]] for document in documents]  # type: ignore
+            except KeyError:
+                raise FieldDefinitionError(
+                    detail=f"{fields[0]} does not exist in the results."
+                ) from None
+        return documents
+
+    async def values_list(
+        self,
+        fields: Union[Sequence[str], str, None] = None,
+        exclude: Union[Sequence[str], Set[str]] = None,
+        exclude_none: bool = False,
+        flat: bool = False,
+    ) -> List[Any]:
+        """
+        Returns the results in a python dictionary format.
+        """
+
+        fields = fields or []
+        if flat and len(fields) > 1:
+            raise FieldDefinitionError(
+                detail=f"Maximum of 1 in fields when `flat` is enables, got {len(fields)} instead."
+            ) from None
+
+        if flat and isinstance(fields, str):
+            fields = [fields]
+
+        if isinstance(fields, str):
+            fields = [fields]
+
+        return await self.values(
+            fields=fields,
+            exclude=exclude,
+            exclude_none=exclude_none,
+            flatten=flat,
+            __as_tuple__=True,
+        )
