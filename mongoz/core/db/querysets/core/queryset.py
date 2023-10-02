@@ -5,6 +5,7 @@ from typing import (
     Dict,
     Generic,
     List,
+    Sequence,
     Type,
     TypeVar,
     Union,
@@ -18,7 +19,7 @@ from bson import Code
 from mongoz.core.db.datastructures import Order
 from mongoz.core.db.fields import base
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
-from mongoz.exceptions import DocumentNotFound, MultipleDocumentsReturned
+from mongoz.exceptions import DocumentNotFound, FieldDefinitionError, MultipleDocumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
 
 if TYPE_CHECKING:
@@ -32,6 +33,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         self,
         model_class: Type[T],
         filter_by: List[Expression] = None,
+        only_fields: Union[str, None] = None,
     ) -> None:
         self.model_class = model_class
         self._collection = model_class.meta.collection._collection  # type: ignore
@@ -39,6 +41,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         self._limit_count = 0
         self._skip_count = 0
         self._sort: List[SortExpression] = []
+        self._only_fields = [] if only_fields is None else only_fields
 
     async def __aiter__(self) -> AsyncGenerator[T, None]:
         filter_query = Expression.compile_many(self._filter)
@@ -64,7 +67,19 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         if self._limit_count:
             cursor = cursor.limit(self._limit_count)
 
-        return [self.model_class.from_row(document) async for document in cursor]
+        # For only fields
+        is_only_fields = True if self._only_fields else False
+
+        results: List[T] = [
+            self.model_class.from_row(  # type: ignore
+                document,
+                is_only_fields=is_only_fields,
+                only_fields=self._only_fields,
+            )
+            async for document in cursor
+        ]
+
+        return results
 
     async def count(self) -> int:
         """
@@ -170,6 +185,20 @@ class QuerySet(QuerySetProtocol, Generic[T]):
 
     def skip(self, count: int = 0) -> "QuerySet[T]":
         self._skip_count = count
+        return self
+
+    def only(self, *fields: Sequence[str]) -> "QuerySet[T]":
+        """
+        Filters by the only fields.
+        """
+        only_fields: List[str] = list(fields)
+        if any(not isinstance(name, str) for name in only_fields):
+            raise FieldDefinitionError("The fields must be must strings.")
+
+        if self.model_class.meta.id_attribute not in fields:
+            only_fields.insert(0, self.model_class.meta.id_attribute)  # type: ignore
+
+        self._only_fields = only_fields
         return self
 
     def sort(self, key: Any, direction: Union[Order, None] = None) -> "QuerySet[T]":

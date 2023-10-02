@@ -192,7 +192,7 @@ class BaseModelMeta(ModelMetaclass):
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
         fields: Dict[str, BaseField] = {}
         meta_class: "object" = attrs.get("Meta", type("Meta", (), {}))
-        id_attribute: str = "_id"
+        id_attribute: str = "id"
         registry: Any = None
 
         # Extract the custom Mongoz Fields in a pydantic format.

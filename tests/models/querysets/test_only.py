@@ -42,28 +42,28 @@ class User(mongoz.Document):
 @pytest.fixture(scope="function", autouse=True)
 async def prepare_database() -> AsyncGenerator:
     await Movie.drop_indexes(force=True)
-    await Movie.objects.delete()
+    await Movie.query().delete()
     await Movie.create_indexes()
     yield
     await Movie.drop_indexes(force=True)
-    await Movie.objects.delete()
+    await Movie.query().delete()
     await Movie.create_indexes()
 
 
 async def test_model_only() -> None:
-    movies = await Movie.objects.all()
+    movies = await Movie.query().all()
     assert len(movies) == 0
 
-    await Movie.objects.create(
+    await Movie(
         name="Forrest Gump", year=2003, is_published=True, tags=["movie", "hollywood"]
-    )
-    movies = await Movie.objects.only("name", "tags")
+    ).create()
+    movies = await Movie.query().only("name", "tags").all()
     assert len(movies) == 1
 
 
 async def test_model_only_attribute_error():
-    barbie = await Movie.objects.create(name="Barbie", year=2023, tags=["movie", "hollywood"])
-    movies = await Movie.objects.only("name", "tags")
+    barbie = await Movie(name="Barbie", year=2023, tags=["movie", "hollywood"]).create()
+    movies = await Movie.query().only("name", "tags").all()
 
     assert len(movies) == 1
     assert movies[0].id == barbie.id
@@ -73,60 +73,60 @@ async def test_model_only_attribute_error():
 
 
 async def test_model_only_with_all():
-    await User.objects.create(name="John", language="PT")
-    await User.objects.create(name="Jane", language="EN", description="Another simple description")
+    await User(name="John", language="PT").create()
+    await User(name="Jane", language="EN", description="Another simple description").create()
 
-    users = await User.objects.only("name", "language").all()
+    users = await User.query().only("name", "language").all()
 
     assert len(users) == 2
 
 
 async def test_model_only_with_filter():
-    john = await User.objects.create(name="John", language="PT")
-    jane = await User.objects.create(
+    john = await User(name="John", language="PT").create()
+    jane = await User(
         name="Jane", language="EN", description="Another simple description"
-    )
+    ).create()
 
-    users = await User.objects.filter(pk=john.id).only("name", "language")
-
-    assert len(users) == 1
-
-    users = await User.objects.filter(id=jane.id).only("name", "language")
+    users = await User.query(User.id == john.id).only("name", "language").all()
 
     assert len(users) == 1
 
-    users = await User.objects.filter(id=3).only("name", "language")
+    users = await User.query(User.id == jane.id).only("name", "language").all()
+
+    assert len(users) == 1
+
+    users = await User.query(User.id == 3).only("name", "language").all()
 
     assert len(users) == 0
 
 
 async def test_model_only_save():
-    user = await User.objects.create(name="John", language="PT")
+    user = await User(name="John", language="PT").create()
 
-    user = await User.objects.filter(pk=user.id).only("name", "language").get()
+    user = await User.query(User.id == user.id).only("name", "language").get()
     user.name = "Edgy"
     user.language = "EN"
     user.description = "LOL"
     await user.save()
 
-    user = await User.objects.get(pk=user.id)
+    user = await User.query(User.id == user.id).get()
 
     assert user.name == "Edgy"
     assert user.language == "EN"
 
 
 async def test_model_only_save_without_nullable_field():
-    user = await User.objects.create(name="John", language="PT", description="John")
+    user = await User(name="John", language="PT", description="John").create()
 
     assert user.description == "John"
     assert user.language == "PT"
 
-    user = await User.objects.filter(pk=user.id).only("description", "language").get()
+    user = await User.query(User.id == user.id).only("description", "language").get()
     user.language = "EN"
     user.description = "A new description"
     await user.save()
 
-    user = await User.objects.get(pk=user.id)
+    user = await User.query(User.id == user.id).get()
 
     assert user.name == "John"
     assert user.language == "EN"
@@ -134,8 +134,8 @@ async def test_model_only_save_without_nullable_field():
 
 
 async def test_model_only_model_dump():
-    user = await User.objects.create(name="John", language="PT", description="A description")
-    user = await User.objects.filter(pk=user.id).only("name", "language").get()
+    user = await User(name="John", language="PT", description="A description").create()
+    user = await User.query(User.id == user.id).only("name", "language").get()
 
     data = user.model_dump()
 

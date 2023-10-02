@@ -219,7 +219,6 @@ class Manager(QuerySetProtocol, Generic[T]):
         Filters the queryset based on the given clauses.
         """
         manager: "Manager" = self.clone()
-
         if clause is None:
             return manager.filter_query(**kwargs)
         manager._filter.append(clause)

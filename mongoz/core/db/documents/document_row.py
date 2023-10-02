@@ -49,5 +49,5 @@ class DocumentRow(MongozBaseModel):
     @classmethod
     def validate_id_field(cls, field: str) -> str:
         if field in ["_id", "id", "pk"]:
-            field = "_id"
+            field = "id"
         return field

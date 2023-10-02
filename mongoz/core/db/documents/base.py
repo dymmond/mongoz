@@ -61,7 +61,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         """
         fields: Dict[str, Any] = kwargs if is_proxy else self.model_dump()
 
-        kwargs = {k: v for k, v in fields.items() if k in self.meta.fields}
+        kwargs = {k: v for k, v in fields.items() if k in self.model_fields}
         for key, value in kwargs.items():
             if key not in self.meta.fields:
                 if not hasattr(self, key):
@@ -80,10 +80,10 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                 setattr(self, key, field.get_default_value())
                 continue
 
-        if is_proxy:
-            kwargs[key] = value
-            return kwargs
-        return None
+            if is_proxy:
+                kwargs[key] = value
+
+        return kwargs if is_proxy else None
 
     def get_instance_name(self) -> str:
         """
@@ -145,7 +145,9 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         return f"<{self.__class__.__name__}: {self}>"
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}(id={self.pk})"
+        if not hasattr(self, "id"):
+            return f"{self.__class__.__name__}(id={None})"
+        return f"{self.__class__.__name__}(id={self.id})"
 
 
 class MongozBaseModel(BaseMongoz):
