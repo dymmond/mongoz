@@ -329,25 +329,29 @@ class BaseModelMeta(ModelMetaclass):
         # For inherited fields
         # We need to make sure the default is the pydantic_field
         # and not the MongozField itself and create any index as well.
+
         for name, field in new_class.model_fields.items():
             if isinstance(field.default, MongozField):
                 new_class.model_fields[name] = field.default.pydantic_field
 
-            # For the indexes
-            _index: Union[Index, None] = None
-            if hasattr(field, "index") and field.index and field.unique is True:
-                _index = Index(name, unique=True, sparse=field.sparse)
-            elif hasattr(field, "index") and field.index:
-                _index = Index(name, sparse=field.sparse)
+            if not new_class.is_proxy_document:
+                # For the indexes
+                _index: Union[Index, None] = None
+                if hasattr(field, "index") and field.index and field.unique is True:
+                    _index = Index(name, unique=True, sparse=field.sparse)
+                elif hasattr(field, "index") and field.index:
+                    _index = Index(name, sparse=field.sparse)
 
-            if _index is not None:
-                index_names = [index.name for index in meta.indexes or []]
-                if _index.name in index_names:
-                    raise IndexError(f"There is already an index with the name `{_index.name}`")
+                if _index is not None:
+                    index_names = [index.name for index in meta.indexes or []]
+                    if _index.name in index_names:
+                        raise IndexError(
+                            f"There is already an index with the name `{_index.name}`"
+                        )
 
-                if meta.indexes is None:
-                    meta.indexes = []
-                meta.indexes.insert(0, _index)
+                    if meta.indexes is None:
+                        meta.indexes = []
+                    meta.indexes.insert(0, _index)
 
         # Set the manager
         for _, value in attrs.items():
@@ -377,7 +381,8 @@ class BaseModelMeta(ModelMetaclass):
 
         # Build the indexes
         if not meta.abstract and meta.indexes and meta.autogenerate_index:
-            execsync(new_class.create_indexes)()
+            if not new_class.is_proxy_document:
+                execsync(new_class.create_indexes)()
         return new_class
 
     @property
