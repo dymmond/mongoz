@@ -143,17 +143,17 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         Validates if should be defer or only and checks it out
         """
-        self.validate_only_and_defer()
+        manager: "Manager" = self.clone()
+        manager.validate_only_and_defer()
 
         document_fields: List[str] = list(fields)
         if any(not isinstance(name, str) for name in document_fields):
             raise FieldDefinitionError("The fields must be must strings.")
 
-        if self.model_class.meta.id_attribute not in fields and is_only:  # type: ignore
-            document_fields.insert(0, self.model_class.meta.id_attribute)  # type: ignore
+        if manager.model_class.meta.id_attribute not in fields and is_only:  # type: ignore
+            document_fields.insert(0, manager.model_class.meta.id_attribute)  # type: ignore
         only_or_defer = "_only_fields" if is_only else "_defer_fields"
 
-        manager: "Manager" = self.clone()
         setattr(manager, only_or_defer, document_fields)
         return manager
 
