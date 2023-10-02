@@ -53,8 +53,13 @@ class Expression:
                     values = [v.compile() if isinstance(v, Expression) else v for v in list_value]
                     compiled_lists[key] = values
                 else:
-                    compiled_dicts[key].update(value)
-
+                    values_dict: Dict[str, Any] = {}
+                    for k, v in value.items():
+                        if isinstance(v, Expression) and k in ["$not"]:
+                            values_dict[k] = {v.operator: v.compiled_value}
+                            compiled_dicts[key].update(values_dict)
+                        else:
+                            compiled_dicts[key].update(value)
         return cast(Dict[str, Dict[str, Any]], {**compiled_dicts, **compiled_lists})
 
     @classmethod

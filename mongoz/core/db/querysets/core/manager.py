@@ -115,7 +115,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         setattr(manager, only_or_defer, document_fields)
         return manager
 
-    def filter_query(self, **kwargs: Any) -> "Manager":
+    def filter_query(self, exclude: bool = False, **kwargs: Any) -> "Manager":
         """
         Builds the filter query for the given manager.
         """
@@ -187,9 +187,15 @@ class Manager(QuerySetProtocol, Generic[T]):
             else:
                 operator = self.get_operator("exact")
                 expression = operator(key, value)  # type: ignore
+
                 clauses.append(expression)
 
-            filter_clauses += clauses
+            if exclude:
+                operator = self.get_operator("not")
+                clauses = [operator(clause.key, clause) for clause in clauses]  # type: ignore
+                filter_clauses += clauses
+            else:
+                filter_clauses += clauses
 
         return cast(
             "Manager",
@@ -291,6 +297,11 @@ class Manager(QuerySetProtocol, Generic[T]):
 
         async for document in cursor:
             yield self.model_class(**document)
+
+    def __await__(
+        self,
+    ) -> Generator[Any, None, List["Document"]]:
+        return self.execute().__await__()
 
     async def _all(self) -> List[T]:
         """
@@ -598,7 +609,9 @@ class Manager(QuerySetProtocol, Generic[T]):
         records = await manager._all(**manager.extra)
         return records
 
-    def __await__(
-        self,
-    ) -> Generator[Any, None, List["Document"]]:
-        return self.execute().__await__()
+    async def exclude(self, **kwargs: Any) -> List["Document"]:
+        """
+        Filters everything and excludes based on a specific condition.
+        """
+        manager: "Manager" = self.clone()
+        return await manager.filter_query(exclude=True, **kwargs)
