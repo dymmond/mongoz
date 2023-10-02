@@ -14,6 +14,7 @@ class User(mongoz.Model):
 
     class Meta:
         registry = registry
+        database = "my_db"
         indexes = [
             Index(keys=[("age", Order.DESCENDING), ("email", IndexType.HASHED)]),
         ]

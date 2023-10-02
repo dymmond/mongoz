@@ -8,3 +8,4 @@ class BaseDocument(mongoz.Document):
     class Meta:
         abstract = True
         registry = registry
+        database = "my_db"
