@@ -35,7 +35,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         extra="allow",
         arbitrary_types_allowed=True,
         json_encoders={bson.ObjectId: str, Signal: str},
-        validate_assignment=True,
+        # validate_assignment=True,
     )
     is_proxy_document: ClassVar[bool] = False
     meta: ClassVar[MetaInfo] = MetaInfo(None)
@@ -44,16 +44,24 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        self.extract_default_values_from_field()
+        if self.is_proxy_document:
+            values = self.extract_default_values_from_field(is_proxy=True, **data)
+            self.__dict__ = values  # type: ignore
+        else:
+            self.extract_default_values_from_field()
 
-    def extract_default_values_from_field(self) -> None:
+    def extract_default_values_from_field(
+        self, is_proxy: bool = False, **kwargs: Any
+    ) -> Union[Dict[str, Any], None]:
         """
         Populate the defaults of each Mongoz field if any is passed.
 
         E.g.: DateTime(auto_now=True) will generate the default for automatic
         dates.
         """
-        kwargs = {k: v for k, v in self.model_dump().items() if k in self.meta.fields}
+        fields: Dict[str, Any] = kwargs if is_proxy else self.model_dump()
+
+        kwargs = {k: v for k, v in fields.items() if k in self.meta.fields}
         for key, value in kwargs.items():
             if key not in self.meta.fields:
                 if not hasattr(self, key):
@@ -71,6 +79,11 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
             if hasattr(field, "has_default") and field.has_default():
                 setattr(self, key, field.get_default_value())
                 continue
+
+        if is_proxy:
+            kwargs[key] = value
+            return kwargs
+        return None
 
     def get_instance_name(self) -> str:
         """
@@ -138,3 +151,13 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
 class MongozBaseModel(BaseMongoz):
     __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]
     id: Union[ObjectId, None] = pydantic.Field(alias="_id")
+
+    def model_dump(self, show_id: bool = False, **kwargs: Any) -> Dict[str, Any]:
+        """
+        Args:
+            show_pk: bool - Enforces showing the id in the model_dump.
+        """
+        model = super().model_dump(**kwargs)
+        if "id" not in model and show_id:
+            model = {**{"id": self.id}, **model}
+        return model

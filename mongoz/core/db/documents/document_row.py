@@ -24,9 +24,30 @@ class DocumentRow(MongozBaseModel):
         """
         item: Dict[str, Any] = {}
 
-        for column, value in row.items():
-            if column not in item:
-                item[column] = value
+        if is_only_fields:
+            for column, value in row.items():
+                column = cls.validate_id_field(column)
+
+                if column not in only_fields:  # type: ignore
+                    continue
+
+                if column not in item:
+                    item[column] = value
+
+            # We need to generify the document fields to make sure we can populate the
+            # model without mandatory fields
+            model = cast("Type[Document]", cls.proxy_document(**item))
+            return model
+        else:
+            for column, value in row.items():
+                if column not in item:
+                    item[column] = value
 
         model = cast("Type[Document]", cls(**item))  # type: ignore
         return model
+
+    @classmethod
+    def validate_id_field(cls, field: str) -> str:
+        if field in ["_id", "id", "pk"]:
+            field = "_id"
+        return field

@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 class MetaInfo:
     __slots__ = (
         "pk",
-        "pk_attribute",
+        "id_attribute",
         "abstract",
         "fields",
         "registry",
@@ -52,7 +52,7 @@ class MetaInfo:
     def __init__(self, meta: Any = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.pk: Optional[BaseField] = None
-        self.pk_attribute: Union[BaseField, str] = getattr(meta, "pk_attribute", "")
+        self.id_attribute: Union[BaseField, str] = getattr(meta, "id_attribute", "")
         self.abstract: bool = getattr(meta, "abstract", False)
         self.fields: Dict[str, BaseField] = {}
         self.registry: Optional[Type[Registry]] = getattr(meta, "registry", None)
@@ -192,7 +192,7 @@ class BaseModelMeta(ModelMetaclass):
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
         fields: Dict[str, BaseField] = {}
         meta_class: "object" = attrs.get("Meta", type("Meta", (), {}))
-        pk_attribute: str = "id"
+        id_attribute: str = "_id"
         registry: Any = None
 
         # Extract the custom Mongoz Fields in a pydantic format.
@@ -244,8 +244,8 @@ class BaseModelMeta(ModelMetaclass):
 
         attrs["meta"] = meta = MetaInfo(meta_class)
         meta.fields = fields
-        meta.pk_attribute = pk_attribute
-        meta.pk = fields.get(pk_attribute)
+        meta.id_attribute = id_attribute
+        meta.pk = fields.get(id_attribute)
 
         if not fields:
             meta.abstract = True

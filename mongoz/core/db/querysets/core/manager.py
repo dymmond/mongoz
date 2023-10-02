@@ -6,6 +6,7 @@ from typing import (
     Generator,
     Generic,
     List,
+    Sequence,
     Type,
     TypeVar,
     Union,
@@ -26,7 +27,7 @@ from mongoz.core.db.querysets.core.constants import (
     VALUE_EQUALITY,
 )
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
-from mongoz.exceptions import DocumentNotFound, MultipleDocumentsReturned
+from mongoz.exceptions import DocumentNotFound, FieldDefinitionError, MultipleDocumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
 from mongoz.utils.enums import OrderEnum
 
@@ -42,6 +43,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         model_class: Union[Type["Document"], None] = None,
         filter_by: Union[List[Expression], None] = None,
         sort_by: Union[List[SortExpression], None] = None,
+        only_fields: Union[str, None] = None,
     ) -> None:
         self.model_class = model_class
 
@@ -54,6 +56,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         self._limit_count = 0
         self._skip_count = 0
         self._sort: List[SortExpression] = [] if sort_by is None else sort_by
+        self._only_fields = [] if only_fields is None else only_fields
         self.extra: Dict[str, Any] = {}
 
     def __get__(self, instance: Any, owner: Any) -> "Manager":
@@ -67,6 +70,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         manager._skip_count = self._skip_count
         manager._sort = self._sort
         manager._collection = self._collection
+        manager._only_fields = self._only_fields
         manager.extra = self.extra
         return manager
 
@@ -102,7 +106,19 @@ class Manager(QuerySetProtocol, Generic[T]):
         if manager._limit_count:
             cursor = cursor.limit(manager._limit_count)
 
-        return [manager.model_class.from_row(document) async for document in cursor]  # type: ignore
+        # For only fields
+        is_only_fields = True if manager._only_fields else False
+
+        results: List[T] = [
+            manager.model_class.from_row(  # type: ignore
+                document,
+                is_only_fields=is_only_fields,
+                only_fields=manager._only_fields,
+            )
+            async for document in cursor
+        ]
+
+        return results
 
     def _find_and_replace_id(self, key: str) -> str:
         """
@@ -229,6 +245,21 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         manager: "Manager" = self.clone()
         manager.extra = kwargs
+        return manager
+
+    def only(self, *fields: Sequence[str]) -> "Manager":
+        """
+        Filters by the only fields.
+        """
+        only_fields: List[str] = list(fields)
+        if any(not isinstance(name, str) for name in only_fields):
+            raise FieldDefinitionError("The fields must be must strings.")
+
+        if self.model_class.meta.id_attribute not in fields:  # type: ignore
+            only_fields.insert(0, self.model_class.meta.id_attribute)  # type: ignore
+
+        manager: "Manager" = self.clone()
+        manager._only_fields = only_fields
         return manager
 
     async def count(self, **kwargs: Any) -> int:

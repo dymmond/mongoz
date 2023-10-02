@@ -40,16 +40,12 @@ async def prepare_database() -> AsyncGenerator:
     await Movie.create_indexes()
 
 
-async def test_model_all() -> None:
+async def test_model_only() -> None:
     movies = await Movie.objects.all()
     assert len(movies) == 0
 
-    await Movie(name="Forrest Gump", year=2003, is_published=True).create()
-
-    movies = await Movie.objects.all()
+    await Movie.objects.create(
+        name="Forrest Gump", year=2003, is_published=True, tags=["movie", "hollywood"]
+    )
+    movies = await Movie.objects.only("name", "tags")
     assert len(movies) == 1
-
-    cursor = Movie.query()
-    async for movie in cursor:
-        assert movie.name == "Forrest Gump"
-        assert movie.is_published is True
