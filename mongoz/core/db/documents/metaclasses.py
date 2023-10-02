@@ -30,12 +30,13 @@ from mongoz.exceptions import ImproperlyConfigured, IndexError
 
 if TYPE_CHECKING:
     from mongoz.core.db.documents import Document
+    from mongoz.core.db.documents.document_proxy import ProxyDocument
 
 
 class MetaInfo:
     __slots__ = (
         "pk",
-        "pk_attribute",
+        "id_attribute",
         "abstract",
         "fields",
         "registry",
@@ -51,7 +52,7 @@ class MetaInfo:
     def __init__(self, meta: Any = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.pk: Optional[BaseField] = None
-        self.pk_attribute: Union[BaseField, str] = getattr(meta, "pk_attribute", "")
+        self.id_attribute: Union[BaseField, str] = getattr(meta, "id_attribute", "")
         self.abstract: bool = getattr(meta, "abstract", False)
         self.fields: Dict[str, BaseField] = {}
         self.registry: Optional[Type[Registry]] = getattr(meta, "registry", None)
@@ -191,7 +192,7 @@ class BaseModelMeta(ModelMetaclass):
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
         fields: Dict[str, BaseField] = {}
         meta_class: "object" = attrs.get("Meta", type("Meta", (), {}))
-        pk_attribute: str = "id"
+        id_attribute: str = "id"
         registry: Any = None
 
         # Extract the custom Mongoz Fields in a pydantic format.
@@ -243,8 +244,8 @@ class BaseModelMeta(ModelMetaclass):
 
         attrs["meta"] = meta = MetaInfo(meta_class)
         meta.fields = fields
-        meta.pk_attribute = pk_attribute
-        meta.pk = fields.get(pk_attribute)
+        meta.id_attribute = id_attribute
+        meta.pk = fields.get(id_attribute)
 
         if not fields:
             meta.abstract = True
@@ -328,25 +329,29 @@ class BaseModelMeta(ModelMetaclass):
         # For inherited fields
         # We need to make sure the default is the pydantic_field
         # and not the MongozField itself and create any index as well.
+
         for name, field in new_class.model_fields.items():
             if isinstance(field.default, MongozField):
                 new_class.model_fields[name] = field.default.pydantic_field
 
-            # For the indexes
-            _index: Union[Index, None] = None
-            if hasattr(field, "index") and field.index and field.unique is True:
-                _index = Index(name, unique=True, sparse=field.sparse)
-            elif hasattr(field, "index") and field.index:
-                _index = Index(name, sparse=field.sparse)
+            if not new_class.is_proxy_document:
+                # For the indexes
+                _index: Union[Index, None] = None
+                if hasattr(field, "index") and field.index and field.unique is True:
+                    _index = Index(name, unique=True, sparse=field.sparse)
+                elif hasattr(field, "index") and field.index:
+                    _index = Index(name, sparse=field.sparse)
 
-            if _index is not None:
-                index_names = [index.name for index in meta.indexes or []]
-                if _index.name in index_names:
-                    raise IndexError(f"There is already an index with the name `{_index.name}`")
+                if _index is not None:
+                    index_names = [index.name for index in meta.indexes or []]
+                    if _index.name in index_names:
+                        raise IndexError(
+                            f"There is already an index with the name `{_index.name}`"
+                        )
 
-                if meta.indexes is None:
-                    meta.indexes = []
-                meta.indexes.insert(0, _index)
+                    if meta.indexes is None:
+                        meta.indexes = []
+                    meta.indexes.insert(0, _index)
 
         # Set the manager
         for _, value in attrs.items():
@@ -359,11 +364,25 @@ class BaseModelMeta(ModelMetaclass):
 
         new_class.Meta = meta
         new_class.__mongoz_fields__ = mongoz_fields
+
+        # Update the model references with the validations of the model
+        # Being done by the Edgy fields instead.
+        # Generates a proxy model for each model created
+        # Making sure the core model where the fields are inherited
+        # And mapped contains the main proxy_document
+        if not new_class.is_proxy_document and not new_class.meta.abstract:
+            proxy_document: "ProxyDocument" = new_class.generate_proxy_document()
+            new_class.__proxy_document__ = proxy_document
+            new_class.__proxy_document__.parent = new_class
+            new_class.__proxy_document__.model_rebuild(force=True)
+            meta.registry.documents[new_class.__name__] = new_class
+
         new_class.model_rebuild(force=True)
 
         # Build the indexes
         if not meta.abstract and meta.indexes and meta.autogenerate_index:
-            execsync(new_class.create_indexes)()
+            if not new_class.is_proxy_document:
+                execsync(new_class.create_indexes)()
         return new_class
 
     @property
@@ -372,6 +391,13 @@ class BaseModelMeta(ModelMetaclass):
         Returns the signals of a class
         """
         return cast("Broadcaster", cls.meta.signals)
+
+    @property
+    def proxy_document(cls) -> Any:
+        """
+        Returns the proxy_document from the Document when called using the cache.
+        """
+        return cls.__proxy_document__
 
     def __getattr__(self, name: str) -> Any:
         if name in self.__mongoz_fields__:

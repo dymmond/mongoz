@@ -6,6 +6,7 @@ from typing import (
     Generator,
     Generic,
     List,
+    Sequence,
     Type,
     TypeVar,
     Union,
@@ -26,7 +27,7 @@ from mongoz.core.db.querysets.core.constants import (
     VALUE_EQUALITY,
 )
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
-from mongoz.exceptions import DocumentNotFound, MultipleDocumentsReturned
+from mongoz.exceptions import DocumentNotFound, FieldDefinitionError, MultipleDocumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
 from mongoz.utils.enums import OrderEnum
 
@@ -42,6 +43,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         model_class: Union[Type["Document"], None] = None,
         filter_by: Union[List[Expression], None] = None,
         sort_by: Union[List[SortExpression], None] = None,
+        only_fields: Union[str, None] = None,
     ) -> None:
         self.model_class = model_class
 
@@ -54,6 +56,8 @@ class Manager(QuerySetProtocol, Generic[T]):
         self._limit_count = 0
         self._skip_count = 0
         self._sort: List[SortExpression] = [] if sort_by is None else sort_by
+        self._only_fields = [] if only_fields is None else only_fields
+        self.extra: Dict[str, Any] = {}
 
     def __get__(self, instance: Any, owner: Any) -> "Manager":
         return self.__class__(model_class=owner)
@@ -66,6 +70,8 @@ class Manager(QuerySetProtocol, Generic[T]):
         manager._skip_count = self._skip_count
         manager._sort = self._sort
         manager._collection = self._collection
+        manager._only_fields = self._only_fields
+        manager.extra = self.extra
         return manager
 
     def get_operator(self, name: str) -> Expression:
@@ -81,7 +87,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         async for document in cursor:
             yield self.model_class(**document)
 
-    async def all(self) -> List[T]:
+    async def _all(self) -> List[T]:
         """
         Returns all the results for a given collection of a document
         """
@@ -100,7 +106,19 @@ class Manager(QuerySetProtocol, Generic[T]):
         if manager._limit_count:
             cursor = cursor.limit(manager._limit_count)
 
-        return [manager.model_class(**document) async for document in cursor]
+        # For only fields
+        is_only_fields = True if manager._only_fields else False
+
+        results: List[T] = [
+            manager.model_class.from_row(  # type: ignore
+                document,
+                is_only_fields=is_only_fields,
+                only_fields=manager._only_fields,
+            )
+            async for document in cursor
+        ]
+
+        return results
 
     def _find_and_replace_id(self, key: str) -> str:
         """
@@ -201,7 +219,6 @@ class Manager(QuerySetProtocol, Generic[T]):
         Filters the queryset based on the given clauses.
         """
         manager: "Manager" = self.clone()
-
         if clause is None:
             return manager.filter_query(**kwargs)
         manager._filter.append(clause)
@@ -219,6 +236,29 @@ class Manager(QuerySetProtocol, Generic[T]):
                 manager._filter.extend(query_expressions)
             else:
                 manager._filter.append(value)
+        return manager
+
+    def all(self, **kwargs: Any) -> "Manager":
+        """
+        Returns the queryset records based on specific filters
+        """
+        manager: "Manager" = self.clone()
+        manager.extra = kwargs
+        return manager
+
+    def only(self, *fields: Sequence[str]) -> "Manager":
+        """
+        Filters by the only fields.
+        """
+        only_fields: List[str] = list(fields)
+        if any(not isinstance(name, str) for name in only_fields):
+            raise FieldDefinitionError("The fields must be must strings.")
+
+        if self.model_class.meta.id_attribute not in fields:  # type: ignore
+            only_fields.insert(0, self.model_class.meta.id_attribute)  # type: ignore
+
+        manager: "Manager" = self.clone()
+        manager._only_fields = only_fields
         return manager
 
     async def count(self, **kwargs: Any) -> int:
@@ -262,7 +302,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         Returns the last document of a matching criteria.
         """
         manager: "Manager" = self.clone()
-        objects = await manager.all()
+        objects = await manager._all()
         if not objects:
             return None
         return cast(T, objects[-1])
@@ -420,7 +460,7 @@ class Manager(QuerySetProtocol, Generic[T]):
             _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
 
             manager._filter = _filter
-        return await manager.all()
+        return await manager._all()
 
     async def create_many(self, models: List["Document"]) -> List["Document"]:
         """
@@ -447,7 +487,12 @@ class Manager(QuerySetProtocol, Generic[T]):
         manager: "Manager" = self.clone()
         return await manager.model_class.get_document_by_id(id)  # type: ignore
 
+    async def execute(self) -> Any:
+        manager: "Manager" = self.clone()
+        records = await manager._all(**manager.extra)
+        return records
+
     def __await__(
         self,
     ) -> Generator[Any, None, List["Document"]]:
-        return self.all().__await__()  # type: ignore
+        return self.execute().__await__()

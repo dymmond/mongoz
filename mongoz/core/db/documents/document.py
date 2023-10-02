@@ -5,7 +5,7 @@ import pydantic
 from bson.errors import InvalidId
 from pydantic import BaseModel
 
-from mongoz.core.db.documents.base import MongozBaseModel
+from mongoz.core.db.documents.document_row import DocumentRow
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.core.db.fields.base import MongozField
 from mongoz.exceptions import InvalidKeyError
@@ -14,7 +14,7 @@ from mongoz.utils.mixins import is_operation_allowed
 T = TypeVar("T", bound="Document")
 
 
-class Document(MongozBaseModel):
+class Document(DocumentRow):
     """
     Representation of an Mongoz Document.
     """
