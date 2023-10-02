@@ -64,7 +64,7 @@ class QuerySet(QuerySetProtocol, Generic[T]):
         if self._limit_count:
             cursor = cursor.limit(self._limit_count)
 
-        return [self.model_class(**document) async for document in cursor]
+        return [self.model_class.from_row(document) async for document in cursor]
 
     async def count(self) -> int:
         """

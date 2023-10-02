@@ -369,7 +369,7 @@ class BaseModelMeta(ModelMetaclass):
         # Being done by the Edgy fields instead.
         # Generates a proxy model for each model created
         # Making sure the core model where the fields are inherited
-        # And mapped contains the main proxy_model
+        # And mapped contains the main proxy_document
         if not new_class.is_proxy_document and not new_class.meta.abstract:
             proxy_document: "ProxyDocument" = new_class.generate_proxy_document()
             new_class.__proxy_document__ = proxy_document

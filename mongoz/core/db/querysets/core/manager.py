@@ -100,7 +100,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         if manager._limit_count:
             cursor = cursor.limit(manager._limit_count)
 
-        return [manager.model_class(**document) async for document in cursor]
+        return [manager.model_class.from_row(document) async for document in cursor]  # type: ignore
 
     def _find_and_replace_id(self, key: str) -> str:
         """
