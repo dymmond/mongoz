@@ -1,5 +1,24 @@
 # Release Notes
 
+## 0.2.0
+
+### Added
+
+- Support for `only()` query.
+- Support for `defer()` query.
+- Support for `values()` query.
+- Support for `values_list` query.
+- Support for `exclude()` query.
+
+### Changed
+
+- Updated documentation with new queries.
+- Added [Tips and Tricks](./tips-and-tricks.md).
+
+### Fixed
+
+- `Q.not_` was not returning proper values and denying the query.
+
 ## 0.1.1
 
 ### Fixed

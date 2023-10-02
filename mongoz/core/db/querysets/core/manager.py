@@ -604,14 +604,14 @@ class Manager(QuerySetProtocol, Generic[T]):
             __as_tuple__=True,
         )
 
-    async def execute(self) -> Any:
-        manager: "Manager" = self.clone()
-        records = await manager._all(**manager.extra)
-        return records
-
     async def exclude(self, **kwargs: Any) -> List["Document"]:
         """
         Filters everything and excludes based on a specific condition.
         """
         manager: "Manager" = self.clone()
         return await manager.filter_query(exclude=True, **kwargs)
+
+    async def execute(self) -> Any:
+        manager: "Manager" = self.clone()
+        records = await manager._all(**manager.extra)
+        return records
