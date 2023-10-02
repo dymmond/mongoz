@@ -54,6 +54,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         self._limit_count = 0
         self._skip_count = 0
         self._sort: List[SortExpression] = [] if sort_by is None else sort_by
+        self.extra: Dict[str, Any] = {}
 
     def __get__(self, instance: Any, owner: Any) -> "Manager":
         return self.__class__(model_class=owner)
@@ -66,6 +67,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         manager._skip_count = self._skip_count
         manager._sort = self._sort
         manager._collection = self._collection
+        manager.extra = self.extra
         return manager
 
     def get_operator(self, name: str) -> Expression:
@@ -81,7 +83,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         async for document in cursor:
             yield self.model_class(**document)
 
-    async def all(self) -> List[T]:
+    async def _all(self) -> List[T]:
         """
         Returns all the results for a given collection of a document
         """
@@ -221,6 +223,14 @@ class Manager(QuerySetProtocol, Generic[T]):
                 manager._filter.append(value)
         return manager
 
+    def all(self, **kwargs: Any) -> "Manager":
+        """
+        Returns the queryset records based on specific filters
+        """
+        manager: "Manager" = self.clone()
+        manager.extra = kwargs
+        return manager
+
     async def count(self, **kwargs: Any) -> int:
         """
         Counts all the documents for a given colletion.
@@ -262,7 +272,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         Returns the last document of a matching criteria.
         """
         manager: "Manager" = self.clone()
-        objects = await manager.all()
+        objects = await manager._all()
         if not objects:
             return None
         return cast(T, objects[-1])
@@ -420,7 +430,7 @@ class Manager(QuerySetProtocol, Generic[T]):
             _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
 
             manager._filter = _filter
-        return await manager.all()
+        return await manager._all()
 
     async def create_many(self, models: List["Document"]) -> List["Document"]:
         """
@@ -447,7 +457,12 @@ class Manager(QuerySetProtocol, Generic[T]):
         manager: "Manager" = self.clone()
         return await manager.model_class.get_document_by_id(id)  # type: ignore
 
+    async def execute(self) -> Any:
+        manager: "Manager" = self.clone()
+        records = await manager._all(**manager.extra)
+        return records
+
     def __await__(
         self,
     ) -> Generator[Any, None, List["Document"]]:
-        return self.all().__await__()  # type: ignore
+        return self.execute().__await__()
