@@ -64,7 +64,7 @@ class MetaInfo:
         )
         self.signals: Optional[Broadcaster] = {}  # type: ignore
         self.manager: "Manager" = getattr(meta, "manager", Manager())
-        self.autogenerate_index: bool = getattr(meta, "autogenerate_index", True)
+        self.autogenerate_index: bool = getattr(meta, "autogenerate_index", False)
 
     def model_dump(self) -> Dict[Any, Any]:
         return {k: getattr(self, k, None) for k in self.__slots__}
