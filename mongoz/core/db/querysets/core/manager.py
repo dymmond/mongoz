@@ -291,6 +291,14 @@ class Manager(QuerySetProtocol, Generic[T]):
             manager._sort.append(key)
         return manager
 
+    async def none(self) -> "Manager":
+        """
+        Returns an empty Manager.
+        """
+        manager = self.__class__(model_class=self.model_class)
+        manager._collection = self.model_class.meta.collection._collection  # type: ignore
+        return manager
+
     async def __aiter__(self) -> AsyncGenerator[T, None]:
         filter_query = Expression.compile_many(self._filter)
         cursor = self._collection.find(filter_query)

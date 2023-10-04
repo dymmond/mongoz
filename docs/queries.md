@@ -113,7 +113,7 @@ The `queryset` version is the [Query](#query).
 These filters are the same **Django-style** lookups.
 
 ```python
-users = await User.obje ts.filter(is_active=True, email__icontains="gmail")
+users = await User.objects.filter(is_active=True, email__icontains="gmail")
 ```
 
 The same special operators are also automatically added on every column.
@@ -311,6 +311,22 @@ users = await User.objects.sort(Q.desc(User.name)).sort(Q.asc(User.email)).all()
 
 !!! Danger
     The syntax from the `queryset` is allowed inside the `manager` **but not the other way around**.
+
+### None
+
+If you only need to return an empty manager or queryset.
+
+=== "Manager"
+
+    ```python
+    manager = await User.objects.none()
+    ```
+
+=== "QuerySet"
+
+    ```python
+    queryset = await User.query().none()
+    ```
 
 ## Returning results
 

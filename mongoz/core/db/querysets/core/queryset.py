@@ -124,6 +124,12 @@ class QuerySet(BaseQuerySet[T]):
         async for document in cursor:
             yield self.model_class(**document)
 
+    async def none(self) -> "QuerySet[T]":
+        """
+        Returns an empty QuerySet
+        """
+        return self.__class__(model_class=self.model_class)
+
     async def all(self) -> List[T]:
         """
         Returns all the results for a given collection of a document
