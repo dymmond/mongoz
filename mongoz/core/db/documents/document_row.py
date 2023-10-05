@@ -50,6 +50,7 @@ class DocumentRow(MongozBaseModel):
             return model
         else:
             for column, value in row.items():
+                column = cls.validate_id_field(column)
                 if column not in item:
                     item[column] = value
 

@@ -208,17 +208,12 @@ class Manager(QuerySetProtocol, Generic[T]):
             ),
         )
 
-    def filter(
-        self, clause: Union[str, List[Expression], None] = None, **kwargs: Any
-    ) -> "Manager":
+    def filter(self, **kwargs: Any) -> "Manager":
         """
         Filters the queryset based on the given clauses.
         """
         manager: "Manager" = self.clone()
-        if clause is None:
-            return manager.filter_query(**kwargs)
-        manager._filter.append(clause)
-        return manager
+        return manager.filter_query(**kwargs)
 
     def raw(self, *values: Union[bool, Dict, Expression]) -> "Manager":
         """
@@ -289,6 +284,14 @@ class Manager(QuerySetProtocol, Generic[T]):
             manager._sort.append(sort_expression)
         else:
             manager._sort.append(key)
+        return manager
+
+    async def none(self) -> "Manager":
+        """
+        Returns an empty Manager.
+        """
+        manager = self.__class__(model_class=self.model_class)
+        manager._collection = self.model_class.meta.collection._collection  # type: ignore
         return manager
 
     async def __aiter__(self) -> AsyncGenerator[T, None]:
