@@ -92,7 +92,6 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         Making sure the ID is always parsed as `_id`.
         """
-
         if key in settings.parsed_ids:
             return cast(str, self.model_class.id.pydantic_field.alias)  # type: ignore
         return key
@@ -393,7 +392,6 @@ class Manager(QuerySetProtocol, Generic[T]):
         Gets a document.
         """
         manager: "Manager" = self.clone()
-
         if kwargs:
             return await manager.filter(**kwargs).get()
 

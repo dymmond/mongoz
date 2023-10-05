@@ -193,6 +193,7 @@ class BaseModelMeta(ModelMetaclass):
         fields: Dict[str, BaseField] = {}
         meta_class: "object" = attrs.get("Meta", type("Meta", (), {}))
         id_attribute: str = "id"
+        id_attribute_alias: str = "_id"
         registry: Any = None
 
         # Extract the custom Mongoz Fields in a pydantic format.
@@ -321,8 +322,10 @@ class BaseModelMeta(ModelMetaclass):
 
         mongoz_fields: Dict[str, MongozField] = {}
         for field_name, field in new_class.model_fields.items():
-            if not field.alias:
+            if not field.alias and field_name != id_attribute:
                 field.alias = field_name
+            elif field_name == id_attribute:
+                field.alias = id_attribute_alias
             new_field = MongozField(pydantic_field=field, model_class=field.annotation)
             mongoz_fields[field_name] = new_field
 
