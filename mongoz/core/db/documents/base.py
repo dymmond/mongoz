@@ -72,7 +72,6 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                 # Checks if the default is a callable and executes it.
                 if callable(value):
                     setattr(self, key, value())
-                    continue
                 else:
                     setattr(self, key, value)
                 continue
