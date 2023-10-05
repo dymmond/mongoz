@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.3.1
+
+### Fix
+
+- Hotfix in introduced `alias` for ids when generating metaclasses.
+
 ## 0.3.0
 
 ### Added
