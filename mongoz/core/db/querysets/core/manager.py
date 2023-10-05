@@ -208,17 +208,12 @@ class Manager(QuerySetProtocol, Generic[T]):
             ),
         )
 
-    def filter(
-        self, clause: Union[str, List[Expression], None] = None, **kwargs: Any
-    ) -> "Manager":
+    def filter(self, **kwargs: Any) -> "Manager":
         """
         Filters the queryset based on the given clauses.
         """
         manager: "Manager" = self.clone()
-        if clause is None:
-            return manager.filter_query(**kwargs)
-        manager._filter.append(clause)
-        return manager
+        return manager.filter_query(**kwargs)
 
     def raw(self, *values: Union[bool, Dict, Expression]) -> "Manager":
         """

@@ -35,7 +35,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         extra="allow",
         arbitrary_types_allowed=True,
         json_encoders={bson.ObjectId: str, Signal: str},
-        # validate_assignment=True,
+        validate_assignment=True,
     )
     is_proxy_document: ClassVar[bool] = False
     meta: ClassVar[MetaInfo] = MetaInfo(None)
@@ -72,6 +72,9 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                 # Checks if the default is a callable and executes it.
                 if callable(value):
                     setattr(self, key, value())
+                    continue
+                else:
+                    setattr(self, key, value)
                 continue
 
             # Validate the default fields
@@ -107,8 +110,8 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
             metadata=cls.meta,
             definitions=fields,
         )
-
         proxy_document.build()
+        proxy_document.model.model_config["validate_assignment"] = False
         generify_model_fields(proxy_document.model, exclude={"id"})
         return proxy_document.model
 
