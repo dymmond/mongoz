@@ -1,5 +1,21 @@
 # Release Notes
 
+## 0.3.0
+
+### Added
+
+- `none()` added to manager.
+- `none()` added to queryset.
+
+### Changed
+
+- `autogenerate_index` in the Meta is now defaulting to `False`.
+
+### Fixed
+
+- `model_dump()` for all the fields on `all()` was not populating the id.
+- Internal validations when parsing results from the cursor.
+
 ## 0.2.0
 
 ### Added
