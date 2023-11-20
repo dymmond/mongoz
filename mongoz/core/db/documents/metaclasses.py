@@ -15,7 +15,6 @@ from typing import (
     no_type_check,
 )
 
-from bson import UuidRepresentation
 from pydantic._internal._model_construction import ModelMetaclass
 
 from mongoz.core.connection.collections import Collection
@@ -320,7 +319,6 @@ class BaseModelMeta(ModelMetaclass):
 
         new_class.__db_document__ = True
         meta.collection = meta.database.get_collection(collection_name)
-        meta.collection._collection.codec_options.uuid_representation = UuidRepresentation.STANDARD
 
         mongoz_fields: Dict[str, MongozField] = {}
         for field_name, field in new_class.model_fields.items():
