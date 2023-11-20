@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.3.2
+
+### Fix
+
+- Code options for `UuidRepresentation.STANDARD`.
+
 ## 0.3.1
 
 ### Fix
