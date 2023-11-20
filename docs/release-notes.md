@@ -1,10 +1,16 @@
 # Release Notes
 
+## 0.3.3
+
+### Fix
+
+- Codec options as defaults were not loading properly.
+
 ## 0.3.2
 
 ### Fix
 
-- Code options for `UuidRepresentation.STANDARD`.
+- Codec options for `UuidRepresentation.STANDARD`.
 
 ## 0.3.1
 
