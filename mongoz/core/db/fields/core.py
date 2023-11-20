@@ -349,7 +349,6 @@ class UUID(FieldFactory, uuid.UUID):
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
         }
-
         return super().__new__(cls, **kwargs)
 
 
