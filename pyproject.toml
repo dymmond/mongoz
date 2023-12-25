@@ -41,7 +41,7 @@ classifiers = [
 dependencies = [
     "motor>=3.3.1",
     "orjson>=3.9.5",
-    "pydantic>=2.4.0",
+    "pydantic>=2.5.3,<3.0.0",
     "pydantic-settings>=2.0.3",
 ]
 keywords = ["mongoz"]
