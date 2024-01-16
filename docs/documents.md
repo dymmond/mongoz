@@ -278,7 +278,7 @@ What if you only want to manually create an index? Well that is also possible by
 `create_index()`.
 
 !!! Tip
-    This is only necessary/needed if the `autogenerate_indexes` is set to `False`, otherwise
+    This is only necessary/needed if the `autogenerate_index` is set to `False`, otherwise
     this can be ignored.
 
 The syntax is very clear ans simple:
