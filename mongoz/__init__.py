@@ -29,6 +29,7 @@ from .core.db.querysets.base import Manager, QuerySet
 from .core.db.querysets.expressions import Expression, SortExpression
 from .core.db.querysets.operators import Q
 from .core.signals import Signal
+from .core.utils.sync import run_sync
 from .exceptions import DocumentNotFound, ImproperlyConfigured, MultipleDocumentsReturned
 
 __all__ = [
@@ -67,4 +68,5 @@ __all__ = [
     "Time",
     "UUID",
     "settings",
+    "run_sync",
 ]

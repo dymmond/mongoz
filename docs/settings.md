@@ -10,17 +10,17 @@ This is exactly what happened.
 
 The way of using the settings object within a Mongoz use of the ORM is via:
 
-* **MONGOZ_SETTINGS_MODULE** environment variable.
+* **SETTINGS_MODULE** environment variable.
 
 All the settings are **[Pydantic BaseSettings](https://pypi.org/project/pydantic-settings/)** objects which makes it easier to use and override
 when needed.
 
-### MONGOZ_SETTINGS_MODULE
+### SETTINGS_MODULE
 
-Mongoz by default uses is looking for a `MONGOZ_SETTINGS_MODULE` environment variable to run and
+Mongoz by default uses is looking for a `SETTINGS_MODULE` environment variable to run and
 apply the given settings to your instance.
 
-If no `MONGOZ_SETTINGS_MODULE` is found, Mongoz then uses its own internal settings which are
+If no `SETTINGS_MODULE` is found, Mongoz then uses its own internal settings which are
 widely applied across the system.
 
 #### Custom settings
