@@ -13,13 +13,13 @@
 #### Breaking changes
 
 Mongoz now uses  [Dymmond Settings](https://settings.dymmond.com) which this simply affects the way the
-settings module is loaded. Prior to version 1.3.0 it was like this:
+settings module is loaded. Prior to version 0.4.0 it was like this:
 
 ```python
 MONGOZ_SETTINGS_MODULE=...
 ```
 
-**From version 1.3.0 is**:
+**From version 0.4.0 is**:
 
 ```python
 SETTINGS_MODULE=...
