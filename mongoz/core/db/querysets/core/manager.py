@@ -4,7 +4,6 @@ from typing import (
     AsyncGenerator,
     Dict,
     Generator,
-    Generic,
     List,
     Sequence,
     Set,
@@ -27,6 +26,7 @@ from mongoz.core.db.querysets.core.constants import (
     ORDER_EQUALITY,
     VALUE_EQUALITY,
 )
+from mongoz.core.db.querysets.core.protocols import AwaitableQuery, MongozDocument
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.exceptions import DocumentNotFound, FieldDefinitionError, MultipleDocumentsReturned
 from mongoz.protocols.queryset import QuerySetProtocol
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 T = TypeVar("T", bound="Document")
 
 
-class Manager(QuerySetProtocol, Generic[T]):
+class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
     def __init__(
         self,
         model_class: Union[Type["Document"], None] = None,
@@ -47,7 +47,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         only_fields: Union[str, None] = None,
         defer_fields: Union[str, None] = None,
     ) -> None:
-        self.model_class = model_class
+        self.model_class = model_class  # type: ignore
 
         if self.model_class:
             self._collection = self.model_class.meta.collection._collection  # type: ignore
@@ -107,8 +107,8 @@ class Manager(QuerySetProtocol, Generic[T]):
         if any(not isinstance(name, str) for name in document_fields):
             raise FieldDefinitionError("The fields must be must strings.")
 
-        if manager.model_class.meta.id_attribute not in fields and is_only:  # type: ignore
-            document_fields.insert(0, manager.model_class.meta.id_attribute)  # type: ignore
+        if manager.model_class.meta.id_attribute not in fields and is_only:
+            document_fields.insert(0, manager.model_class.meta.id_attribute)
         only_or_defer = "_only_fields" if is_only else "_defer_fields"
 
         setattr(manager, only_or_defer, document_fields)
@@ -329,7 +329,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         is_defer_fields = True if manager._defer_fields else False
 
         results: List[T] = [
-            manager.model_class.from_row(  # type: ignore
+            manager.model_class.from_row(
                 document,
                 is_only_fields=is_only_fields,
                 only_fields=manager._only_fields,
@@ -356,7 +356,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         """
         manager: "Manager" = self.clone()
         instance = await manager.model_class(**kwargs).create()
-        return instance
+        return cast("Document", instance)
 
     async def delete(self) -> int:
         """Delete documents matching the criteria."""
@@ -382,7 +382,7 @@ class Manager(QuerySetProtocol, Generic[T]):
         Returns the last document of a matching criteria.
         """
         manager: "Manager" = self.clone()
-        objects = await manager._all()
+        objects: Any = await manager._all()
         if not objects:
             return None
         return cast(T, objects[-1])
@@ -488,8 +488,8 @@ class Manager(QuerySetProtocol, Generic[T]):
 
         if field_definitions:
             pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
-                __model_name=manager.model_class.__name__,  # type: ignore
-                __config__=manager.model_class.model_config,  # type: ignore
+                __model_name=manager.model_class.__name__,
+                __config__=manager.model_class.model_config,
                 **field_definitions,
             )
             model = pydantic_model.model_validate(kwargs)
@@ -614,5 +614,5 @@ class Manager(QuerySetProtocol, Generic[T]):
 
     async def execute(self) -> Any:
         manager: "Manager" = self.clone()
-        records = await manager._all(**manager.extra)
+        records: Any = await manager._all(**manager.extra)
         return records

@@ -1190,4 +1190,42 @@ users = await User.query(Q.lt(User.id, 20)).all()
 users = await User.query(Q.lte(User.id, 20)).all()
 ```
 
+## Blocking Queries
+
+What happens if you want to use Mongoz with a blocking operation? So by blocking means `sync`.
+For instance, Flask does not support natively `async` and Mongoz is an async agnotic ORM and you
+probably would like to take advantage of Mongoz but you want without doing a lot of magic behind.
+
+Well, Mongoz also supports the `run_sync` functionality that allows you to run the queries in
+*blocking* mode with ease!
+
+### How to use
+
+You simply need to use the `run_sync` functionality from Mongoz and make it happen almost immediatly.
+
+```python
+from mongoz import run_sync
+```
+
+All the available functionalities of Mongoz run within this wrapper without extra syntax.
+
+Let us see some examples.
+
+**Async mode**
+
+```python
+await User.query.all()
+await User.query.filter(name__icontains="example")
+await User.query.create(name="Mongoz")
+```
+
+**With run_sync**
+
+```python
+from mongoz import run_sync
+
+run_sync(User.query.filter(name__icontains="example"))
+run_sync(User.query.create(name="Mongoz"))
+```
+
 [document]: ./documents.md
