@@ -1,5 +1,32 @@
 # Release Notes
 
+## 0.4.0
+
+### Added
+
+- New `run_sync` allowing to run sync operations within Mongoz.
+
+### Changed
+
+- Deprecating internal settings from Pydantic in favour of [Dymmond Settings](https://settings.dymmond.com).
+
+#### Breaking changes
+
+Mongoz now uses  [Dymmond Settings](https://settings.dymmond.com) which this simply affects the way the
+settings module is loaded. Prior to version 1.3.0 it was like this:
+
+```python
+MONGOZ_SETTINGS_MODULE=...
+```
+
+**From version 1.3.0 is**:
+
+```python
+SETTINGS_MODULE=...
+```
+
+The rest remains as it. More information about [how to use it in the official documentation](https://settings.dymmond.com/#how-to-use-it_1).
+
 ## 0.3.3
 
 ### Fix
