@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.4.1
+
+### Added
+
+- `unique` validation for indexing in the metaclass.
+
 ## 0.4.0
 
 ### Added
