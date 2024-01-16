@@ -24,8 +24,8 @@ from mongoz.core.db.datastructures import Index
 from mongoz.core.db.fields.base import BaseField, MongozField
 from mongoz.core.db.querysets.core.manager import Manager
 from mongoz.core.signals import Broadcaster, Signal
-from mongoz.core.sync import execsync
 from mongoz.core.utils.functional import extract_field_annotations_and_defaults, mongoz_setattr
+from mongoz.core.utils.sync import run_sync
 from mongoz.exceptions import ImproperlyConfigured, IndexError
 
 if TYPE_CHECKING:
@@ -385,7 +385,7 @@ class BaseModelMeta(ModelMetaclass):
         # Build the indexes
         if not meta.abstract and meta.indexes and meta.autogenerate_index:
             if not new_class.is_proxy_document:
-                execsync(new_class.create_indexes)()
+                run_sync(new_class.create_indexes())
         return new_class
 
     @property
