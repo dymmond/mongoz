@@ -45,7 +45,7 @@ from mongoz.core.signals import (
 #### pre_save
 
 The `pre_save` is used when a document is about to be saved and triggered on `Document.save()` and
-`Document.query.create` functions.
+`Document.objects.create` functions.
 
 ```python
 pre_save(send: Type["Document"], instance: "Document")
@@ -55,7 +55,7 @@ pre_save(send: Type["Document"], instance: "Document")
 
 The `post_save` is used after the document is already created and stored in the database, meaning,
 when an instance already exists after `save`. This signal is triggered on `Document.save()` and
-`Document.query.create` functions.
+`Document.objects.create` functions.
 
 ```python
 post_save(send: Type["Document"], instance: "Document")
@@ -64,7 +64,7 @@ post_save(send: Type["Document"], instance: "Document")
 #### pre_update
 
 The `pre_update` is used when a document is about to receive the updates and triggered on `Document.update()`
-and `Document.query.update` functions.
+and `Document.objects.update` functions.
 
 ```python
 pre_update(send: Type["Document"], instance: "Document")
@@ -73,7 +73,7 @@ pre_update(send: Type["Document"], instance: "Document")
 #### post_update
 
 The `post_update` is used when a document **already performed the updates** and triggered on `Document.update()`
-and `Document.query.update` functions.
+and `Document.objects.update` functions.
 
 ```python
 post_update(send: Type["Document"], instance: "Document")
@@ -82,7 +82,7 @@ post_update(send: Type["Document"], instance: "Document")
 #### pre_delete
 
 The `pre_delete` is used when a document is about to be deleted and triggered on `Document.delete()`
-and `Document.query.delete` functions.
+and `Document.objects.delete` functions.
 
 ```python
 pre_delete(send: Type["Document"], instance: "Document")
@@ -91,7 +91,7 @@ pre_delete(send: Type["Document"], instance: "Document")
 #### post_delete
 
 The `post_update` is used when a document **is already deleted** and triggered on `Document.delete()`
-and `Document.query.delete` functions.
+and `Document.objects.delete` functions.
 
 ```python
 post_update(send: Type["Document"], instance: "Document")

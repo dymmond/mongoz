@@ -133,18 +133,18 @@ The same special operators are also automatically added on every column.
 ##### Example
 
 ```python
-users = await User.query.filter(email__icontains="foo")
-users = await User.query.filter(id__in=[1, 2, 3])
-users = await User.query.filter(id__not_in=[1, 2, 3])
-users = await User.query.filter(id__gt=1)
-users = await User.query.filter(id__lte=3)
-users = await User.query.filter(id__lt=2)
-users = await User.query.filter(id__gte=4)
-users = await User.query.filter(id__asc=True)
-users = await User.query.filter(id__asc=False) # same as desc True
-users = await User.query.filter(id__desc=True)
-users = await User.query.filter(id__desc=False) # same as asc True
-users = await User.query.filter(id__neq=1) # same as asc True
+users = await User.objects.filter(email__icontains="foo")
+users = await User.objects.filter(id__in=[1, 2, 3])
+users = await User.objects.filter(id__not_in=[1, 2, 3])
+users = await User.objects.filter(id__gt=1)
+users = await User.objects.filter(id__lte=3)
+users = await User.objects.filter(id__lt=2)
+users = await User.objects.filter(id__gte=4)
+users = await User.objects.filter(id__asc=True)
+users = await User.objects.filter(id__asc=False) # same as desc True
+users = await User.objects.filter(id__desc=True)
+users = await User.objects.filter(id__desc=False) # same as asc True
+users = await User.objects.filter(id__neq=1) # same as asc True
 ```
 
 ### Query
@@ -177,7 +177,7 @@ Limiting the number of results.
 === "Manager"
 
     ```python
-    users = await User.obje ts.limit(1)
+    users = await User.objects.limit(1)
 
     users = await User.objects.filter(email__icontains="mongo").limit(2)
     ```
@@ -187,7 +187,7 @@ Limiting the number of results.
     ```python
     users = await User.query().limit(1)
 
-    users = await User.query.sort(User.email, Order.ASCENDING).limit(2)
+    users = await User.query().sort(User.email, Order.ASCENDING).limit(2)
     ```
 
 ### Skip
@@ -1214,9 +1214,9 @@ Let us see some examples.
 **Async mode**
 
 ```python
-await User.query.all()
-await User.query.filter(name__icontains="example")
-await User.query.create(name="Mongoz")
+await User.objects.all()
+await User.objects.filter(name__icontains="example")
+await User.objects.create(name="Mongoz")
 ```
 
 **With run_sync**
@@ -1224,8 +1224,8 @@ await User.query.create(name="Mongoz")
 ```python
 from mongoz import run_sync
 
-run_sync(User.query.filter(name__icontains="example"))
-run_sync(User.query.create(name="Mongoz"))
+run_sync(User.objects.filter(name__icontains="example"))
+run_sync(User.objects.create(name="Mongoz"))
 ```
 
 [document]: ./documents.md
