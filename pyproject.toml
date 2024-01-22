@@ -44,7 +44,7 @@ dependencies = [
     "orjson>=3.9.5",
     "pydantic>=2.5.3,<3.0.0",
 ]
-keywords = ["mongoz"]
+keywords = ["mongoz", "odm", "nosql", "mongodb"]
 
 [project.urls]
 Homepage = "https://github.com/tarsil/mongoz"
