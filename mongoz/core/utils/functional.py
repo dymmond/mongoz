@@ -1,6 +1,7 @@
 """
 All functional common to MongoZ
 """
+
 from typing import Any, Dict, Tuple, Union
 
 from mongoz.core.db.fields.base import BaseField

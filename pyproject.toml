@@ -40,7 +40,7 @@ classifiers = [
 ]
 dependencies = [
     "motor>=3.3.1",
-    "dymmond-settings>=1.0.1",
+    "dymmond-settings>=1.0.2",
     "orjson>=3.9.5",
     "pydantic>=2.5.3,<3.0.0",
 ]
@@ -56,18 +56,18 @@ Source = "https://github.com/tarsil/mongoz"
 [project.optional-dependencies]
 test = [
     "autoflake>=2.0.2,<3.0.0",
-    "black>=23.3.0,<24.0.0",
+    "black==24.1.1,<25.0",
     "esmerald>=2.0.6",
     "isort>=5.12.0,<6.0.0",
     "mypy==1.5.1",
-    "pytest>=7.2.2,<8.0.0",
+    "pytest>=7.2.2,<9.0.0",
     "pytest-asyncio>=0.21.1,<1.0.0",
     "pytest-cov>=4.0.0,<5.0.0",
     "requests>=2.28.2",
     "ruff>=0.0.256,<1.0.0",
 ]
 
-dev = ["anyio>=3.6.2,<5", "ipdb>=0.13.13,<1.0.0", "pre-commit>=3.3.1,<4.0.0"]
+dev = ["anyio>=4.0.0,<5", "ipdb>=0.13.13,<1.0.0", "pre-commit>=3.3.1,<4.0.0"]
 
 doc = [
     "mkautodoc>=0.2.0,<0.3.0",
