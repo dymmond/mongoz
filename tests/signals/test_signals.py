@@ -56,8 +56,7 @@ def test_passing_no_kwargs():
     with pytest.raises(SignalError):
 
         @pre_save(User)
-        def execute(sender, instance):
-            ...
+        def execute(sender, instance): ...
 
 
 def test_invalid_signal():
