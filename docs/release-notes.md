@@ -1,5 +1,13 @@
 # Release Notes
 
+## 0.5.0
+
+### Changed
+
+**BREAKING CHANGE**
+
+- `SETTINGS_MODULE` was renamed to `MONGOZ_SETTINGS_MODULE`.
+
 ## 0.4.1
 
 ### Added
