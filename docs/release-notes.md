@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.5.1
+
+### Changed
+
+- Update internal `dymmond-settings` minimum requirement.
+
 ## 0.5.0
 
 ### Changed
