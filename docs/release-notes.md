@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.6.0
+
+### Changed
+
+- New lazy loading settings working side by side with `dymmond-settings`.
+
 ## 0.5.1
 
 ### Changed
