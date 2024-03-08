@@ -40,7 +40,7 @@ classifiers = [
 ]
 dependencies = [
     "motor>=3.3.1",
-    "dymmond-settings>=1.0.3",
+    "dymmond-settings>=1.0.4",
     "orjson>=3.9.5",
     "pydantic>=2.5.3,<3.0.0",
 ]
