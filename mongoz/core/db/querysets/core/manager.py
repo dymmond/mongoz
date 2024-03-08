@@ -86,7 +86,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         """
         Returns the operator for the given filter.
         """
-        return cast(Expression, settings.get_operator(name))
+        return settings.get_operator(name)  # type: ignore
 
     def _find_and_replace_id(self, key: str) -> str:
         """
