@@ -92,7 +92,7 @@ class LazyObject:  # pragma: no cover
     __getitem__ = new_method_proxy(operator.getitem)
     __setitem__ = new_method_proxy(operator.setitem)
     __delitem__ = new_method_proxy(operator.delitem)
-    __iter__ = new_method_proxy(iter)
+    __iter__ = new_method_proxy(iter)  # type: ignore
     __len__ = new_method_proxy(len)
     __contains__ = new_method_proxy(operator.contains)
 
