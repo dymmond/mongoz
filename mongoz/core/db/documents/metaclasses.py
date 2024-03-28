@@ -166,7 +166,7 @@ def _check_document_inherited_database(
 
     if not found_database:
         raise ImproperlyConfigured(
-            "Database for the table not found in the Meta class or any of the superclasses. You must set the database in the Meta."
+            "'database' for the table not found in the Meta class or any of the superclasses. You must set the database in the Meta."
         )
     return found_database
 
