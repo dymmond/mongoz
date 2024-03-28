@@ -294,6 +294,9 @@ class BaseModelMeta(ModelMetaclass):
                     "database must be a string name or an instance of mongoz.Database."
                 )
 
+        if getattr(meta, "database", None) is None:
+            raise ImproperlyConfigured("'database' must be declared in the Meta.")
+
         # Handle indexes
         if getattr(meta, "indexes", None) is not None:
             indexes = meta.indexes
