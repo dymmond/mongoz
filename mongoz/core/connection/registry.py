@@ -31,7 +31,7 @@ class Registry:
 
     @property
     def host(self) -> str:
-        return cast(str, self._client.HOST)
+        return self._client.HOST
 
     @property
     def port(self) -> str:
@@ -39,7 +39,7 @@ class Registry:
 
     @property
     def driver(self) -> AsyncIOMotorDatabase:
-        return cast(AsyncIOMotorDatabase, self._client.driver)
+        return self._client.driver
 
     async def drop_database(self, database: Union[str, Database]) -> None:
         """
