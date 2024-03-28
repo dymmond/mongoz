@@ -166,7 +166,7 @@ def _check_document_inherited_database(
 
     if not found_database:
         raise ImproperlyConfigured(
-            "Database for the table not found in the Meta class or any of the superclasses. You must set the database in the Meta."
+            "'database' for the table not found in the Meta class or any of the superclasses. You must set the database in the Meta."
         )
     return found_database
 
@@ -293,9 +293,6 @@ class BaseModelMeta(ModelMetaclass):
                 raise ImproperlyConfigured(
                     "database must be a string name or an instance of mongoz.Database."
                 )
-
-        if getattr(meta, "database", None) is None:
-            raise ImproperlyConfigured("'database' must be declared in the Meta.")
 
         # Handle indexes
         if getattr(meta, "indexes", None) is not None:
