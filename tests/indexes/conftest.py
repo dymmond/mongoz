@@ -2,9 +2,9 @@ import asyncio
 import typing
 
 import pytest
-from tests.settings import TEST_DATABASE_URL
 
 from mongoz.core.connection.registry import Registry
+from tests.settings import TEST_DATABASE_URL
 
 database_uri = TEST_DATABASE_URL
 client = Registry(database_uri, event_loop=asyncio.get_running_loop)

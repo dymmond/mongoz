@@ -2,10 +2,10 @@ from typing import Optional
 
 import pytest
 from pymongo.errors import DuplicateKeyError
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document, Index, IndexType, ObjectId, Order
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 

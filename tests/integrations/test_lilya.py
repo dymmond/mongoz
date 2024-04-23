@@ -7,10 +7,10 @@ from lilya.requests import Request
 from lilya.responses import Ok
 from lilya.routing import Path
 from lilya.testclient import TestClient
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 

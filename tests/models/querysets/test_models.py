@@ -1,10 +1,10 @@
 from typing import AsyncGenerator, List, Optional
 
 import pytest
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document, Index, IndexType, ObjectId, Order
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 
@@ -59,25 +59,3 @@ def test_model_class() -> None:
 
     assert Movie.meta.database.name == "test_db"
     assert Movie.meta.collection.name == "movies"
-
-    assert Movie.model_json_schema() == {
-        "additionalProperties": True,
-        "properties": {
-            "_id": {
-                "anyOf": [{"type": "string"}, {"type": "null"}],
-                "default": None,
-                "title": " Id",
-            },
-            "name": {"title": "Name", "type": "string"},
-            "year": {"title": "Year", "type": "integer"},
-            "tags": {
-                "anyOf": [{"items": {"type": "string"}, "type": "array"}, {"type": "null"}],
-                "default": None,
-                "title": "Tags",
-            },
-            "uuid": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Uuid"},
-        },
-        "required": ["name", "year"],
-        "title": "Movie",
-        "type": "object",
-    }

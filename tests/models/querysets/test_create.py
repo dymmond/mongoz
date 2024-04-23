@@ -5,10 +5,10 @@ import pydantic
 import pytest
 from pydantic import ValidationError
 from pymongo import errors
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document, Index, IndexType, ObjectId, Order
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]

@@ -1,7 +1,6 @@
 import pydantic
 import pytest
 from loguru import logger
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document, Q
@@ -15,6 +14,7 @@ from mongoz.core.signals import (
     pre_update,
 )
 from mongoz.exceptions import SignalError
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]

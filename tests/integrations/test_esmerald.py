@@ -3,10 +3,10 @@ import json
 import pytest
 from esmerald import Esmerald, Gateway, JSONResponse, Request, get, post
 from esmerald.testclient import EsmeraldTestClient
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 

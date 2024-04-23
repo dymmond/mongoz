@@ -2,10 +2,10 @@ from typing import AsyncGenerator
 
 import pydantic
 import pytest
-from tests.conftest import client
 
 import mongoz
 from mongoz.exceptions import FieldDefinitionError
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]
