@@ -11,6 +11,8 @@ from mongoz.core.db.fields.base import MongozField
 from mongoz.exceptions import InvalidKeyError
 from mongoz.utils.mixins import is_operation_allowed
 
+from motor.motor_asyncio import AsyncIOMotorCollection
+
 T = TypeVar("T", bound="Document")
 
 
@@ -19,7 +21,7 @@ class Document(DocumentRow):
     Representation of an Mongoz Document.
     """
 
-    async def create(self: "Document") -> "Document":
+    async def create(self: "Document", collection: AsyncIOMotorCollection = None) -> "Document":
         """
         Inserts a document.
         """
@@ -28,7 +30,10 @@ class Document(DocumentRow):
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         data = self.model_dump(exclude={"id"})
-        result = await self.meta.collection._collection.insert_one(data)  # type: ignore
+        if collection:
+            result = await collection.insert_one(data)  # type: ignore
+        else:
+            result = await self.meta.collection._collection.insert_one(data)  # type: ignore
         self.id = result.inserted_id
 
         await self.signals.post_save.send(sender=self.__class__, instance=self)
