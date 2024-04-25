@@ -30,7 +30,7 @@ class Document(DocumentRow):
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         data = self.model_dump(exclude={"id"})
-        if collection:
+        if collection is not None:
             result = await collection.insert_one(data)  # type: ignore
         else:
             result = await self.meta.collection._collection.insert_one(data)  # type: ignore

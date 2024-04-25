@@ -147,6 +147,16 @@ users = await User.objects.filter(id__desc=False) # same as asc True
 users = await User.objects.filter(id__neq=1) # same as asc True
 ```
 
+### Using
+
+Change the database while querying, only need to supply the database name in order to change the database.
+
+=== "Manager"
+
+    ```python
+    users = await User.objects.using("my_mongo_db").all()
+    ```
+
 ### Query
 
 The `query` is what is used by the `queryset` instead of the `manager`. In other words, the `query`
