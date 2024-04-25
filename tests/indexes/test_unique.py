@@ -3,10 +3,10 @@ from typing import AsyncGenerator
 import pydantic
 import pytest
 from pymongo.errors import DuplicateKeyError
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]

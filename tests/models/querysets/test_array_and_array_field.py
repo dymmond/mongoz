@@ -3,10 +3,10 @@ from typing import Any, AsyncGenerator, List, Optional
 import pydantic
 import pytest
 from pydantic import ValidationError
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document, ObjectId
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]

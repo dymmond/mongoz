@@ -3,10 +3,10 @@ from typing import AsyncGenerator, List, Optional
 
 import pydantic
 import pytest
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document, Index, IndexType, ObjectId, Order
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]

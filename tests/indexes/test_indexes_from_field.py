@@ -1,11 +1,11 @@
 from typing import Optional
 
 import pytest
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document, Index, IndexType, ObjectId, Order
 from mongoz.exceptions import InvalidKeyError
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 
