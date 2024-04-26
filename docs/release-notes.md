@@ -1,5 +1,17 @@
 # Release Notes
 
+## 0.7.0
+
+### Added
+
+- Support for `QuerySetManagers`. Users can now build their own custom managers
+and add into the documents.
+- Documentation for the [QuerySetManager](./managers.md).
+
+### Fixed
+
+- Validation for abstract classes with multiple `managers`.
+
 ## 0.6.0
 
 ### Changed
