@@ -31,6 +31,8 @@ class SmallerManager(QuerySetManager):
 
 
 class BaseDocument(Document):
+    bigger: ClassVar[BiggerManager] = BiggerManager()
+    smaller: ClassVar[SmallerManager] = SmallerManager()
 
     class Meta:
         abstract = True
@@ -39,9 +41,6 @@ class BaseDocument(Document):
 
 
 class Movie(BaseDocument):
-    bigger: ClassVar[BiggerManager] = BiggerManager()
-    smaller: ClassVar[SmallerManager] = SmallerManager()
-
     uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
     name: str = mongoz.String()
     year: int = mongoz.Integer()
