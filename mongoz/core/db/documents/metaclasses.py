@@ -235,8 +235,8 @@ class BaseModelMeta(ModelMetaclass):
             attrs = {**inherited_fields, **attrs}
 
         for key, value in attrs.items():
-            if isinstance(value, BaseField):
-                if getattr(meta_class, "abstract", None) is None:
+            if isinstance(value, (BaseField)):
+                if getattr(meta_class, "abstract", None):
                     value = copy.copy(value)
                 fields[key] = value
 
@@ -261,10 +261,16 @@ class BaseModelMeta(ModelMetaclass):
         meta.parents = parents
         new_class = cast("Type[Document]", model_class(cls, name, bases, attrs))
 
+        # Update the model_fields are updated to the latest
+        new_class.model_fields.update(model_fields)
+
         # Abstract classes do not allow multiple managers. This make sure it is enforced.
-        managers = [k for k, v in attrs.items() if isinstance(v, Manager)]
-        if len(managers) > 1:
-            raise ImproperlyConfigured("Multiple managers are not allowed.")
+        if meta.abstract:
+            managers = [k for k, v in attrs.items() if isinstance(v, Manager)]
+            if len(managers) > 1:
+                raise ImproperlyConfigured(
+                    "Multiple managers are not allowed in abstract classes."
+                )
 
         if "id" in new_class.model_fields:
             new_class.model_fields["id"].default = None

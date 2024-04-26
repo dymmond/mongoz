@@ -7,6 +7,7 @@ from .core.connection.registry import Registry
 from .core.db import fields
 from .core.db.datastructures import Index, IndexType, Order
 from .core.db.documents import Document, EmbeddedDocument
+from .core.db.documents.managers import QuerySetManager
 from .core.db.fields import (
     UUID,
     Array,
@@ -61,6 +62,7 @@ __all__ = [
     "Order",
     "Q",
     "QuerySet",
+    "QuerySetManager",
     "Registry",
     "Signal",
     "SortExpression",

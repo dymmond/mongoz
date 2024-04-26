@@ -43,6 +43,7 @@ nav:
       - Embedded Documents: "embedded-documents.md"
       - Fields: "fields.md"
       - Queries: "queries.md"
+      - Managers: "managers.md"
       - Signals: "signals.md"
       - Settings: "settings.md"
       - Registry: "registry.md"
