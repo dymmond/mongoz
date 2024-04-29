@@ -3,6 +3,7 @@ from typing import Any, ClassVar, List, Mapping, Type, TypeVar, Union, cast
 import bson
 import pydantic
 from bson.errors import InvalidId
+from motor.motor_asyncio import AsyncIOMotorCollection
 from pydantic import BaseModel
 
 from mongoz.core.db.documents.document_row import DocumentRow
@@ -10,8 +11,6 @@ from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.core.db.fields.base import MongozField
 from mongoz.exceptions import InvalidKeyError
 from mongoz.utils.mixins import is_operation_allowed
-
-from motor.motor_asyncio import AsyncIOMotorCollection
 
 T = TypeVar("T", bound="Document")
 
@@ -21,7 +20,7 @@ class Document(DocumentRow):
     Representation of an Mongoz Document.
     """
 
-    async def create(self: "Document", collection: AsyncIOMotorCollection = None) -> "Document":  # type: ignore
+    async def create(self: "Document", collection: Union[AsyncIOMotorCollection, None] = None) -> "Document":  # type: ignore
         """
         Inserts a document.
         """
