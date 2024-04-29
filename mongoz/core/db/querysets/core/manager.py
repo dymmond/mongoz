@@ -65,7 +65,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
     def __get__(self, instance: Any, owner: Any) -> "Manager":
         return self.__class__(model_class=owner)
 
-    def using(self, database_name: str):
+    def using(self, database_name: str) -> "Manager":
         """
             **Type** Public
 
@@ -87,7 +87,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                     self._collection.name
                 - return the self instance.
         """
-        database = self.model_class.meta.registry.get_database(database_name)
+        database = self.model_class.meta.registry.get_database(database_name) # type: ignore
         self._collection = database.get_collection(
             self._collection.name)._collection
         return self

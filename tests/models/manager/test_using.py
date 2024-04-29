@@ -6,7 +6,7 @@ from tests.conftest import client
 
 import mongoz
 from mongoz import Document, ObjectId
-from mongoz.exceptions import DocumentNotFound, MultipleDocumentsReturned
+from mongoz.exceptions import DocumentNotFound
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]

@@ -21,7 +21,7 @@ class Document(DocumentRow):
     Representation of an Mongoz Document.
     """
 
-    async def create(self: "Document", collection: AsyncIOMotorCollection = None) -> "Document":
+    async def create(self: "Document", collection: AsyncIOMotorCollection = None) -> "Document":  # type: ignore
         """
         Inserts a document.
         """
