@@ -22,4 +22,4 @@ fi
 
 set -x
 
-${PREFIX}twine upload dist/*
+hatch twine upload dist/*
