@@ -8,8 +8,6 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: mongoadmin
       MONGO_INITDB_DATABASE: mongodb
-    volumes:
-        - "mongo_db_data:/data/db"
     expose:
       - 27017
     ports:
@@ -27,7 +25,3 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: mongoadmin
       ME_CONFIG_BASICAUTH_USERNAME: admin
       ME_CONFIG_BASICAUTH_PASSWORD: password
-
-volumes:
-  mongo_db_data:
-      external: true
