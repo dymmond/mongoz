@@ -1,5 +1,13 @@
 # Release Notes
 
+## 0.8.0
+
+### Changed
+
+- Internal support for `hatch` and removed the need for a `Makefile`
+- Documentation references
+- Add using method to QuerySet manager [#28](https://github.com/tarsil/mongoz/pull/28) by [@harshalizode](https://github.com/harshalizode).
+
 ## 0.7.0
 
 ### Added
