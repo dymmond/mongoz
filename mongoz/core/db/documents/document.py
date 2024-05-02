@@ -3,8 +3,10 @@ from typing import Any, ClassVar, List, Mapping, Type, TypeVar, Union, cast
 import bson
 import pydantic
 from bson.errors import InvalidId
+from motor.motor_asyncio import AsyncIOMotorCollection
 from pydantic import BaseModel
 
+from mongoz.core.connection.collections import Collection
 from mongoz.core.db.documents.document_row import DocumentRow
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.core.db.fields.base import MongozField
@@ -19,7 +21,9 @@ class Document(DocumentRow):
     Representation of an Mongoz Document.
     """
 
-    async def create(self: "Document") -> "Document":
+    async def create(
+        self: "Document", collection: Union[AsyncIOMotorCollection, None] = None
+    ) -> "Document":
         """
         Inserts a document.
         """
@@ -28,7 +32,11 @@ class Document(DocumentRow):
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         data = self.model_dump(exclude={"id"})
-        result = await self.meta.collection._collection.insert_one(data)  # type: ignore
+        if collection is not None:
+            result = await collection.insert_one(data)
+        else:
+            if isinstance(self.meta.collection, Collection):
+                result = await self.meta.collection._collection.insert_one(data)  # noqa
         self.id = result.inserted_id
 
         await self.signals.post_save.send(sender=self.__class__, instance=self)

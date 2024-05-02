@@ -65,6 +65,32 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
     def __get__(self, instance: Any, owner: Any) -> "Manager":
         return self.__class__(model_class=owner)
 
+    def using(self, database_name: str) -> "Manager":
+        """
+            **Type** Public
+
+            **Arguments:**
+                - database_name (str): string contains the database name.
+
+            **Returns:**
+                - Object: self instance.
+
+            **Raises:**
+                - None
+
+            This method is use to select the database:
+                - get the data base using the get_database method form the meta \
+                    class registry using the database_name that provided in \
+                        argument.
+                - store the database object as database.
+                - get the collection from the data base based on \
+                    self._collection.name
+                - return the self instance.
+        """
+        database = self.model_class.meta.registry.get_database(database_name)  # type: ignore
+        self._collection = database.get_collection(self._collection.name)._collection
+        return self
+
     def clone(self) -> Any:
         manager = self.__class__.__new__(self.__class__)
         manager.model_class = self.model_class
@@ -196,7 +222,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             else:
                 filter_clauses += clauses
 
-        return cast(
+        manager = cast(
             "Manager",
             self.__class__(
                 model_class=self.model_class,
@@ -206,6 +232,8 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 defer_fields=self._defer_fields,
             ),
         )
+        manager._collection = self._collection
+        return manager
 
     def filter(self, **kwargs: Any) -> "Manager":
         """
@@ -355,7 +383,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         Creates a mongo db document.
         """
         manager: "Manager" = self.clone()
-        instance = await manager.model_class(**kwargs).create()
+        instance = await manager.model_class(**kwargs).create(manager._collection)
         return cast("Document", instance)
 
     async def delete(self) -> int:
