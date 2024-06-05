@@ -47,11 +47,11 @@ dependencies = [
 keywords = ["mongoz", "odm", "nosql", "mongodb"]
 
 [project.urls]
-Homepage = "https://github.com/tarsil/mongoz"
-Documentation = "https://mongoz.tarsild.io"
-Changelog = "https://mongoz.tarsild.io/release-notes/"
+Homepage = "https://github.com/dymmond/mongoz"
+Documentation = "https://mongoz.dymmond.com"
+Changelog = "https://mongoz.dymmond.com/release-notes/"
 Funding = "https://github.com/sponsors/tarsil"
-Source = "https://github.com/tarsil/mongoz"
+Source = "https://github.com/dymmond/mongoz"
 
 
 [tool.hatch.version]

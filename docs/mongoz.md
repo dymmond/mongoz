@@ -1,7 +1,7 @@
 # MongoZ
 
 <p align="center">
-  <a href="https://mongoz.tarsild.io"><img src="https://res.cloudinary.com/tarsild/image/upload/v1695724284/packages/mongoz/nwtcudxmncgoyw4em0th.png" alt='mongoz'></a>
+  <a href="https://mongoz.dymmond.com"><img src="https://res.cloudinary.com/tarsild/image/upload/v1695724284/packages/mongoz/nwtcudxmncgoyw4em0th.png" alt='mongoz'></a>
 </p>
 
 <p align="center">
@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-<a href="https://github.com/tarsil/mongoz/workflows/Test%20Suite/badge.svg?event=push&branch=main" target="_blank">
-    <img src="https://github.com/tarsil/mongoz/workflows/Test%20Suite/badge.svg?event=push&branch=main" alt="Test Suite">
+<a href="https://github.com/dymmond/mongoz/workflows/Test%20Suite/badge.svg?event=push&branch=main" target="_blank">
+    <img src="https://github.com/dymmond/mongoz/workflows/Test%20Suite/badge.svg?event=push&branch=main" alt="Test Suite">
 </a>
 
 <a href="https://pypi.org/project/mongoz" target="_blank">
@@ -24,9 +24,9 @@
 
 ---
 
-**Documentation**: [https://mongoz.tarsild.io][mongoz] 📚
+**Documentation**: [https://mongoz.dymmond.com][mongoz] 📚
 
-**Source Code**: [https://github.com/tarsil/mongoz](https://github.com/tarsil/mongoz)
+**Source Code**: [https://github.com/dymmond/mongoz](https://github.com/dymmond/mongoz)
 
 ---
 
@@ -189,10 +189,10 @@ are done exactly in the same way you do a normal Pydantic model.
 Nothing to worry about!
 
 
-[mongoz]: https://mongoz.tarsild.io
+[mongoz]: https://mongoz.dymmond.com
 [motor]: https://github.com/mongodb/motor
 [pydantic]: https://pydantic.dev/
-[mongoz]: https://mongoz.tarsild.io
+[mongoz]: https://mongoz.dymmond.com
 [saffier]: https://saffier.tarsild.io
 [edgy]: https://edgy.tarsild.io
 [esmerald]: https://esmerald.dev

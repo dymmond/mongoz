@@ -6,7 +6,7 @@
 
 - Internal support for `hatch` and removed the need for a `Makefile`
 - Documentation references
-- Add using method to QuerySet manager [#28](https://github.com/tarsil/mongoz/pull/28) by [@harshalizode](https://github.com/harshalizode).
+- Add using method to QuerySet manager [#28](https://github.com/dymmond/mongoz/pull/28) by [@harshalizode](https://github.com/harshalizode).
 
 ## 0.7.0
 

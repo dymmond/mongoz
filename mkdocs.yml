@@ -1,6 +1,6 @@
 site_name: Mongoz
 site_description: ODM with pydantic made it simple.
-site_url: https://mongoz.tarsild.io
+site_url: https://mongoz.dymmond.com
 
 theme:
       name: "material"
@@ -29,8 +29,8 @@ theme:
             - content.tabs.link
             - content.code.copy
 
-repo_name: tarsil/mongoz
-repo_url: https://github.com/tarsil/mongoz
+repo_name: dymmond/mongoz
+repo_url: https://github.com/dymmond/mongoz
 edit_uri: ""
 plugins:
       - search

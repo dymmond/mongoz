@@ -8,7 +8,7 @@ Giving a star to MongoZ is very simple and helps promoting the work across the d
 
 The button is located at the top right.
 
-[https://github.com/tarsil/mongoz](https://github.com/tarsil/mongoz).
+[https://github.com/dymmond/mongoz](https://github.com/dymmond/mongoz).
 
 This will help spreading the word about the tool and how helpful has been.
 

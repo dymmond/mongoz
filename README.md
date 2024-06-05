@@ -1,7 +1,7 @@
 # MongoZ
 
 <p align="center">
-  <a href="https://mongoz.tarsild.io"><img src="https://res.cloudinary.com/tarsild/image/upload/v1695724284/packages/mongoz/nwtcudxmncgoyw4em0th.png" alt='mongoz'></a>
+  <a href="https://mongoz.dymmond.com"><img src="https://res.cloudinary.com/tarsild/image/upload/v1695724284/packages/mongoz/nwtcudxmncgoyw4em0th.png" alt='mongoz'></a>
 </p>
 
 <p align="center">
@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-<a href="https://github.com/tarsil/mongoz/workflows/Test%20Suite/badge.svg?event=push&branch=main" target="_blank">
-    <img src="https://github.com/tarsil/mongoz/workflows/Test%20Suite/badge.svg?event=push&branch=main" alt="Test Suite">
+<a href="https://github.com/dymmond/mongoz/workflows/Test%20Suite/badge.svg?event=push&branch=main" target="_blank">
+    <img src="https://github.com/dymmond/mongoz/workflows/Test%20Suite/badge.svg?event=push&branch=main" alt="Test Suite">
 </a>
 
 <a href="https://pypi.org/project/mongoz" target="_blank">
@@ -24,9 +24,9 @@
 
 ---
 
-**Documentation**: [https://mongoz.tarsild.io][mongoz] 📚
+**Documentation**: [https://mongoz.dymmond.com][mongoz] 📚
 
-**Source Code**: [https://github.com/tarsil/mongoz](https://github.com/tarsil/mongoz)
+**Source Code**: [https://github.com/dymmond/mongoz](https://github.com/dymmond/mongoz)
 
 ---
 
@@ -42,7 +42,7 @@ So why a MongoZ if there is a MongoX? Well, MongoZ is from the same author of [E
 [Saffier][saffier], [Mongoz][mongoz] and many other tools out there and they all follow a specific need
 and pattern of development.
 
-Mongox implements really well some operations with MongoDB but for use cases where [Signals](https://mongoz.tarsild.io/sinals.md),
+Mongox implements really well some operations with MongoDB but for use cases where [Signals](https://mongoz.dymmond.com/sinals.md),
 for example, are needed, Mongox was not aiming at it and also since the creator of Mongoz is the
 same as [Saffier][saffier] and [Saffier][saffier], the friendly interface to interact is also a must.
 
@@ -204,10 +204,10 @@ are done exactly in the same way you do a normal Pydantic model.
 Nothing to worry about!
 
 
-[mongoz]: https://mongoz.tarsild.io
+[mongoz]: https://mongoz.dymmond.com
 [motor]: https://github.com/mongodb/motor
 [pydantic]: https://pydantic.dev/
-[mongoz]: https://mongoz.tarsild.io
+[mongoz]: https://mongoz.dymmond.com
 [saffier]: https://saffier.tarsild.io
 [edgy]: https://edgy.tarsild.io
 [esmerald]: https://esmerald.dev
