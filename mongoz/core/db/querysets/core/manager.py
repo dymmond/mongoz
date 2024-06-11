@@ -67,29 +67,30 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
     def using(self, database_name: str) -> "Manager":
         """
-            **Type** Public
+        **Type** Public
 
-            **Arguments:**
-                - database_name (str): string contains the database name.
+        **Arguments:**
+            - database_name (str): string contains the database name.
 
-            **Returns:**
-                - Object: self instance.
+        **Returns:**
+            - Object: self instance.
 
-            **Raises:**
-                - None
+        **Raises:**
+            - None
 
-            This method is use to select the database:
-                - get the data base using the get_database method form the meta \
-                    class registry using the database_name that provided in \
-                        argument.
-                - store the database object as database.
-                - get the collection from the data base based on \
-                    self._collection.name
-                - return the self instance.
+        This method is use to select the database:
+            - get the data base using the get_database method form the meta \
+                class registry using the database_name that provided in \
+                    argument.
+            - store the database object as database.
+            - get the collection from the data base based on \
+                self._collection.name
+            - return the self instance.
         """
+        manager: "Manager" = self.clone()
         database = self.model_class.meta.registry.get_database(database_name)  # type: ignore
-        self._collection = database.get_collection(self._collection.name)._collection
-        return self
+        manager._collection = database.get_collection(self._collection.name)._collection
+        return manager
 
     def clone(self) -> Any:
         manager = self.__class__.__new__(self.__class__)
