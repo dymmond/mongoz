@@ -11,7 +11,7 @@ The registry is also the object that you might want to use when generating migra
 Alembic.
 
 ```python hl_lines="19"
-{!> ../docs_src/registry/model.py !}
+{!> ../../../docs_src/registry/model.py !}
 ```
 
 ## Parameters
@@ -30,5 +30,5 @@ Can you have your own custom Registry? Yes, of course! You simply need to subcla
 class and continue from there like any other python class.
 
 ```python
-{!> ../docs_src/registry/custom_registry.py !}
+{!> ../../../docs_src/registry/custom_registry.py !}
 ```

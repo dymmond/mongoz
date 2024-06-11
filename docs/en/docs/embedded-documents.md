@@ -8,7 +8,7 @@ To define an `EmbeddedDocument` you should inherit from `mongoz.EmbeddedDocument
 [fields](./fields.md) in the way you would define for any other `mongoz.Document`.
 
 ```python hl_lines="4 10 14-15 19 23 28 30-31"
-{!> ../docs_src/documents/embed.py !}
+{!> ../../../docs_src/documents/embed.py !}
 ```
 
 As you can see, the `EmbeddedDocument` is not a standlone document itself but part of the

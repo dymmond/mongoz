@@ -8,7 +8,7 @@ allow you to build unique tailored queries ready to be used by your documents.
 Let us see an example.
 
 ```python
-{!> ../docs_src/managers/simple.py !}
+{!> ../../../docs_src/managers/simple.py !}
 ```
 
 When querying the `User` table, the `objects` (manager) is the default and **should** be always
@@ -28,13 +28,13 @@ For those familiar with Django managers, the principle is exactly the same. 😀
 **The managers must be type annotated ClassVar** or an error be raised.
 
 ```python
-{!> ../docs_src/managers/example.py !}
+{!> ../../../docs_src/managers/example.py !}
 ```
 
 Let us now create new manager and use it with our previous example.
 
 ```python
-{!> ../docs_src/managers/custom.py !}
+{!> ../../../docs_src/managers/custom.py !}
 ```
 
 These managers can be as complex as you like with as many filters as you desire. What you need is
@@ -46,7 +46,7 @@ Overriding the default manager is also possible by creating the custom manager a
 the `objects` manager.
 
 ```python
-{!> ../docs_src/managers/override.py !}
+{!> ../../../docs_src/managers/override.py !}
 ```
 
 !!! Warning

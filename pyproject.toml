@@ -85,6 +85,18 @@ testing = [
     "ruff>=0.0.256,<1.0.0",
 ]
 
+docs = [
+    "griffe-typingdoc>=0.2.2,<1.0",
+    "mkautodoc>=0.2.0,<0.3.0",
+    "mkdocs>=1.1.2,<2.0.0",
+    "mkdocs-material>=9.4.4,<10.0.0",
+    "mdx-include>=1.4.2,<2.0.0",
+    "mkdocs-macros-plugin>=0.4.0",
+    "mkdocs-meta-descriptions-plugin>=2.3.0",
+    "mkdocstrings[python]>=0.23.0,<0.30.0",
+    "pyyaml>=6.0,<7.0.0",
+]
+
 [tool.hatch.envs.default.scripts]
 clean_pyc = "find . -type f -name \"*.pyc\" -delete"
 clean_pyi = "find . -type f -name \"*.pyi\" -delete"
@@ -93,11 +105,16 @@ build_with_check = "hatch build; twine check dist/*"
 lint = "ruff check --fix --line-length 99  mongoz tests {args}"
 
 [tool.hatch.envs.docs]
-dependencies = ["mongoz[testing]"]
+features = ["testing", "docs"]
 
 [tool.hatch.envs.docs.scripts]
-build = "mkdocs build"
-serve = "mkdocs serve --dev-addr localhost:8000"
+update_languages = "scripts/docs.py update-languages"
+build = "hatch run docs:update_languages; scripts/docs.py build-all"
+build_lang = "hatch run docs:update_languages; scripts/docs.py build --lang {args}"
+serve = "hatch run docs:update_languages; scripts/docs.py live"
+dev = "hatch run docs:update_languages; scripts/docs.py serve"
+serve_lang = "hatch run docs:update_languages; scripts/docs.py live --lang {args}"
+new_lang = "hatch run docs:update_languages; scripts/docs.py new-lang --lang {args}"
 
 [tool.hatch.envs.test]
 dependencies = [
@@ -114,6 +131,7 @@ dependencies = [
     "requests>=2.28.2",
     "ruff>=0.0.256,<1.0.0",
 ]
+
 [tool.hatch.envs.test.scripts]
 # needs docker services running
 test = "pytest {args}"

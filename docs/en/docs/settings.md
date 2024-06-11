@@ -32,7 +32,7 @@ with ease.
 Something like this:
 
 ```python title="myproject/configs/settings.py"
-{!> ../docs_src/settings/custom_settings.py !}
+{!> ../../../docs_src/settings/custom_settings.py !}
 ```
 
 Super simple right? Yes and that is the intention. Mongoz does not have a lot of settings but
