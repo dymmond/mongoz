@@ -346,12 +346,14 @@ class BaseModelMeta(ModelMetaclass):
             if not new_class.is_proxy_document:
                 # For the indexes
                 _index: Union[Index, None] = None
-                if hasattr(field, "index") and field.index and field.unique:
-                    _index = Index(name, unique=True, sparse=field.sparse)
-                elif hasattr(field, "index") and field.index:
-                    _index = Index(name, sparse=field.sparse)
-                elif hasattr(field, "unique") and field.unique:
-                    _index = Index(name, unique=True)
+                if (
+                    hasattr(field, "index")
+                    and field.index
+                    or hasattr(field, "unique")
+                    and field.unique
+                ):
+                    index_data = {"unique": field.unique, "sparse": field.sparse}
+                    _index = Index(name, **index_data)
 
                 if _index is not None:
                     index_names = [index.name for index in meta.indexes or []]

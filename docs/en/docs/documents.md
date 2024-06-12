@@ -6,7 +6,7 @@ As you are probably aware, MongoDB is a NoSQL database, which means it doesn't h
 This also means that with documents and NoSQL, **there are no joins and foreign keys**.
 
 **Mongoz** implements those documents in a more friendly interface if you are still familiar with
-ORMs or even if you use something like [Mongoz][edgy]. No reason to overcomplicate, right?
+ORMs or even if you use something like [Edgy][edgy]. No reason to overcomplicate, right?
 
 ## Declaring documents
 
@@ -19,7 +19,7 @@ an instance of `Registry` from Mongoz.
 There are more parameters you can use and pass into the document such as [tablename](#metaclass) and
 a few more but more on this in this document.
 
-Since **Mongoz** took inspiration from the interface of [Mongoz][edgy], that also means that a [Meta](#the-meta-class)
+Since **Mongoz** took inspiration from the interface of [Edgy][edgy], that also means that a [Meta](#the-meta-class)
 class should be declared.
 
 Although this looks very simple, in fact **Mongoz** is doing a lot of work for you behind the
@@ -337,5 +337,28 @@ await User.drop_index("name")
 !!! Warning
     If you try to drop an index with a field name not declared in the document or not declared
     as Index, at least, a `InvalidKeyError` is raised.
+
+#### Document checks
+
+If you also want to make sure that you run the proper checks for the indexes, for example, an index was dropped
+from the document and you want to make sure that is reflected, you can also do it.
+
+The syntax is very clear ans simple:
+
+```python
+await MyDocument.check_indexes()
+```
+
+For example:
+
+```python
+await User.check_indexes()
+```
+
+This can be useful if you want to make sure that for every [registry](./registry.md), all the documents have the
+indexes checked before hand.
+
+[Read more](./registry.md#run-some-document-checks) about that in that section.
+
 
 [edgy]: https://edgy.tarsild.io

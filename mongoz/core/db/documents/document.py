@@ -1,4 +1,4 @@
-from typing import Any, ClassVar, List, Mapping, Tuple, Type, TypeVar, Union, cast
+from typing import Any, ClassVar, Dict, List, Mapping, Tuple, Type, TypeVar, Union, cast
 
 import bson
 import pydantic
@@ -104,9 +104,18 @@ class Document(DocumentRow):
 
     @classmethod
     async def create_indexes(cls) -> List[str]:
-        """Create indexes defined for the collection."""
-        is_operation_allowed(cls)
+        """
+        Create indexes defined for the collection or drop for existing ones.
 
+        This method creates indexes defined for the collection associated with the document class.
+        It checks if the operation is allowed for the class and then creates the indexes using the
+        `create_indexes` method of the collection.
+
+        Returns:
+            A list of strings representing the names of the created indexes.
+
+        """
+        is_operation_allowed(cls)
         return await cls.meta.collection._collection.create_indexes(cls.meta.indexes)  # type: ignore
 
     @classmethod
@@ -115,6 +124,26 @@ class Document(DocumentRow):
     ) -> None:
         """
         Create indexes for multiple databases.
+
+        Args:
+            database_names (Union[List[str], Tuple[str]]): List or tuple of database names.
+
+        Raises:
+            MongozException: If database_names is not a list or tuple.
+
+        Note:
+            This method creates indexes for multiple databases. It iterates over the provided
+            database names and retrieves the corresponding database and collection objects.
+            Then it calls the `create_indexes` method on the collection object with the indexes
+            defined in the meta class of the document.
+
+            If `autogenerate_index` is set to True in the meta class, the database name of the
+            document is also added to the list of database names.
+
+        Example:
+            ```
+            Document.create_indexes_for_multiple_databases(["db1", "db2"])
+            ```
         """
         is_operation_allowed(cls)
 
@@ -129,6 +158,74 @@ class Document(DocumentRow):
             database = cls.meta.registry.get_database(database_name)  # type: ignore
             collection = database.get_collection(cls.meta.collection.name)  # type: ignore
             await collection._collection.create_indexes(cls.meta.indexes)
+
+    @classmethod
+    async def list_indexes(cls) -> List[Dict[str, Any]]:
+        """
+        List all indexes in the collection.
+
+        This method retrieves all the indexes defined in the collection associated with the document class.
+        It checks if the operation is allowed for the class and then uses the `list_indexes` method of the
+        collection object to fetch the indexes.
+
+        Returns:
+            A list of dictionaries representing the indexes in the collection.
+
+        """
+        is_operation_allowed(cls)
+
+        collection_indexes = []
+
+        async for index in cls.meta.collection._collection.list_indexes():  # type: ignore
+            collection_indexes.append(index)
+        return collection_indexes
+
+    @classmethod
+    async def check_indexes(cls) -> None:
+        """
+        Check the indexes defined in the Meta object and perform any possible drop operation.
+
+        This method checks if the indexes defined in the Meta object are present in the collection.
+        If an index is defined in the Meta object but not present in the collection, it performs a drop operation
+        to remove the index from the collection.
+
+        Args:
+            cls: The class object.
+
+        Returns:
+            None
+        """
+        is_operation_allowed(cls)
+
+        # Creates the indexes defined in the Meta object
+        await cls.create_indexes()
+
+        # Get the names of indexes in the collection
+        collection_indexes = {index["name"] for index in await cls.list_indexes()}
+
+        # Get the names of indexes defined in the Meta object
+        document_index_names = {index.name for index in cls.meta.indexes}
+
+        # Find the indexes that are present in one set but not in the other
+        symmetric_difference = collection_indexes.symmetric_difference(document_index_names)
+
+        # Remove the "_id_" index from the symmetric difference
+        symmetric_difference.discard("_id_")
+
+        # Drop the indexes that are present in the collection but not in the Meta object
+        for name in symmetric_difference:
+            await cls.meta.collection._collection.drop_index(name)  # type: ignore
+
+        # Check if the indexes defined in the Meta object are present in the collection
+        # And perform any possible drop operation
+        for name in collection_indexes:
+            if name in symmetric_difference:
+                continue
+            if (
+                cls.model_fields.get(name, None) is not None
+                and not cls.model_fields.get(name).index  # type: ignore
+            ):
+                await cls.drop_index(name)
 
     async def delete(self) -> int:
         """Delete the document."""
