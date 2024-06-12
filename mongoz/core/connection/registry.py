@@ -57,3 +57,10 @@ class Registry:
     async def get_databases(self) -> Sequence[Database]:
         databases = await self._client.list_database_names()
         return list(map(self.get_database, databases))
+
+    async def document_checks(self) -> None:
+        """
+        Runs the document checks for all the documents in the registry.
+        """
+        for document in self.documents.values():
+            await document.check_indexes()

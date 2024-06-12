@@ -1,0 +1,99 @@
+site_name: Mongoz
+site_description: ODM with pydantic made it simple.
+site_url: https://mongoz.dymmond.com
+theme:
+  name: material
+  custom_dir: ../en/overrides
+  language: en
+  palette:
+  - scheme: default
+    primary: blue grey
+    accent: red
+    media: '(prefers-color-scheme: light)'
+    toggle:
+      icon: material/lightbulb
+      name: Switch to dark mode
+  - scheme: slate
+    media: '(prefers-color-scheme: dark)'
+    primary: blue grey
+    accent: red
+    toggle:
+      icon: material/lightbulb-outline
+      name: Switch to light mode
+  favicon: statics/images/favicon.ico
+  logo: statics/images/white.png
+  features:
+  - search.suggest
+  - search.highlight
+  - content.tabs.link
+  - content.code.copy
+repo_name: dymmond/mongoz
+repo_url: https://github.com/dymmond/mongoz
+edit_uri: ''
+plugins:
+- search
+- meta-descriptions:
+    export_csv: false
+    quiet: false
+    enable_checks: false
+    min_length: 50
+    max_length: 160
+    trim: false
+- mkdocstrings:
+    handlers:
+      python:
+        options:
+          extensions:
+          - griffe_typingdoc
+          show_root_heading: true
+          show_if_no_docstring: true
+          preload_modules:
+          - httpx
+          - a2wsgi
+          inherited_members: true
+          members_order: source
+          separate_signature: true
+          unwrap_annotated: true
+          filters:
+          - '!^_'
+          merge_init_into_class: true
+          docstring_section_style: spacy
+          signature_crossrefs: true
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
+nav:
+- Mongoz: mongoz.md
+- Documents: documents.md
+- Embedded Documents: embedded-documents.md
+- Fields: fields.md
+- Queries: queries.md
+- Managers: managers.md
+- Signals: signals.md
+- Settings: settings.md
+- Registry: registry.md
+- Exceptions: exceptions.md
+- Tips and Tricks: tips-and-tricks.md
+- Contributing: contributing.md
+- Sponsorship: sponsorship.md
+- Release Notes: release-notes.md
+markdown_extensions:
+- attr_list
+- toc:
+    permalink: true
+- markdown.extensions.codehilite:
+    guess_lang: false
+- mdx_include:
+    base_path: docs
+- admonition
+- codehilite
+- extra
+- pymdownx.superfences
+- pymdownx.tabbed:
+    alternate_style: true
+- md_in_html
+extra:
+  alternate:
+  - link: /
+    name: en - English
+hooks:
+- ../../scripts/hooks.py

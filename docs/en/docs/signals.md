@@ -105,7 +105,7 @@ in other words, **it is what is listening to a given event**.
 Let us see an example. Given the following document.
 
 ```python
-{!> ../docs_src/signals/receiver/document.py !}
+{!> ../../../docs_src/signals/receiver/document.py !}
 ```
 
 You can set a trigger to send an email to the registered user upon the creation of the record by
@@ -114,7 +114,7 @@ be sent **after** the creation of the record and not before. If it was before, t
 be the one to use.
 
 ```python hl_lines="11-12"
-{!> ../docs_src/signals/receiver/post_save.py !}
+{!> ../../../docs_src/signals/receiver/post_save.py !}
 ```
 
 As you can see, the `post_save` decorator is pointing the `User` document, meaning, it is "listing"
@@ -140,13 +140,13 @@ What if you want to use the same receiver but for multiple models? Let us now ad
 document.
 
 ```python
-{!> ../docs_src/signals/receiver/multiple.py !}
+{!> ../../../docs_src/signals/receiver/multiple.py !}
 ```
 
 The way you define the receiver for both can simply be achieved like this:
 
 ```python hl_lines="11"
-{!> ../docs_src/signals/receiver/post_multiple.py !}
+{!> ../../../docs_src/signals/receiver/post_multiple.py !}
 ```
 
 This way you can match and do any custom logic without the need of replicating yourself too much and
@@ -160,7 +160,7 @@ in one place but you might want to do something else entirely and split those in
 You can easily achieve this like this:
 
 ```python
-{!> ../docs_src/signals/receiver/multiple_receivers.py !}
+{!> ../../../docs_src/signals/receiver/multiple_receivers.py !}
 ```
 
 This will make sure that every receiver will execute the given defined action.
@@ -172,7 +172,7 @@ If you wish to disconnect the receiver and stop it from running for a given docu
 achieve this in a simple way.
 
 ```python hl_lines="20 23"
-{!> ../docs_src/signals/receiver/disconnect.py !}
+{!> ../../../docs_src/signals/receiver/disconnect.py !}
 ```
 
 ## Custom Signals
@@ -185,7 +185,7 @@ Mongoz allows the custom signals to take place per your own design.
 Let us continue with the same example of the `User` document.
 
 ```python
-{!> ../docs_src/signals/receiver/document.py !}
+{!> ../../../docs_src/signals/receiver/document.py !}
 ```
 
 Now you want to have a custom signal called `on_verify` specifically tailored for your `User` needs
@@ -194,7 +194,7 @@ and logic.
 So define it, you can simply do:
 
 ```python hl_lines="17"
-{!> ../docs_src/signals/custom.py !}
+{!> ../../../docs_src/signals/custom.py !}
 ```
 
 Yes, this simple. You simply need to add a new signal `on_verify` to the document signals and the
@@ -207,7 +207,7 @@ Yes, this simple. You simply need to add a new signal `on_verify` to the documen
 Now you want to create a custom functionality to be listened in your new Signal.
 
 ```python hl_lines="21 30"
-{!> ../docs_src/signals/register.py !}
+{!> ../../../docs_src/signals/register.py !}
 ```
 
 Now not only you created the new receiver `trigger_notifications` but also connected it to the
@@ -221,7 +221,7 @@ custom enough for the needs of the business logic.
 For simplification, the example below will be a very simple logic.
 
 ```python hl_lines="17"
-{!> ../docs_src/signals/logic.py !}
+{!> ../../../docs_src/signals/logic.py !}
 ```
 
 As you can see, the `on_verify`, it is only triggered if the user is verified and not anywhere else.
@@ -231,5 +231,5 @@ As you can see, the `on_verify`, it is only triggered if the user is verified an
 The process of disconnecting the signal is exactly the [same as before](#disconnecting-receivers).
 
 ```python hl_lines="10"
-{!> ../docs_src/signals/disconnect.py !}
+{!> ../../../docs_src/signals/disconnect.py !}
 ```

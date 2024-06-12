@@ -4,18 +4,6 @@ database_uri = "mongodb://localhost:27017"
 registry = mongoz.Registry(database_uri)
 
 
-class MyRegistry(mongoz.Registry):
-    """
-    Add logic unique to your registry or override
-    existing functionality.
-    """
-
-    ...
-
-
-models = MyRegistry(database_uri)
-
-
 class User(mongoz.Document):
     """
     The User document to be created in the database as a table
@@ -28,3 +16,7 @@ class User(mongoz.Document):
     class Meta:
         registry = registry
         database = "my_db"
+
+
+# Make sure the document checks are run
+await registry.document_checks()

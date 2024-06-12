@@ -6,7 +6,7 @@ As you are probably aware, MongoDB is a NoSQL database, which means it doesn't h
 This also means that with documents and NoSQL, **there are no joins and foreign keys**.
 
 **Mongoz** implements those documents in a more friendly interface if you are still familiar with
-ORMs or even if you use something like [Mongoz][edgy]. No reason to overcomplicate, right?
+ORMs or even if you use something like [Edgy][edgy]. No reason to overcomplicate, right?
 
 ## Declaring documents
 
@@ -19,14 +19,14 @@ an instance of `Registry` from Mongoz.
 There are more parameters you can use and pass into the document such as [tablename](#metaclass) and
 a few more but more on this in this document.
 
-Since **Mongoz** took inspiration from the interface of [Mongoz][edgy], that also means that a [Meta](#the-meta-class)
+Since **Mongoz** took inspiration from the interface of [Edgy][edgy], that also means that a [Meta](#the-meta-class)
 class should be declared.
 
 Although this looks very simple, in fact **Mongoz** is doing a lot of work for you behind the
 scenes.
 
 ```python
-{!> ../docs_src/documents/declaring_models.py !}
+{!> ../../../docs_src/documents/declaring_models.py !}
 ```
 
 ### Embedded Documents
@@ -73,7 +73,7 @@ approaches.
 #### In a nutshell
 
 ```python
-{!> ../docs_src/documents/registry/nutshell.py !}
+{!> ../../../docs_src/documents/registry/nutshell.py !}
 ```
 
 As you can see, when declaring the `registry` and assigning it to `registry`, that same `registry` is
@@ -84,7 +84,7 @@ then used in the `Meta` of the document.
 Yes, you can also use the document inheritance to help you out with your documents and avoid repetition.
 
 ```python
-{!> ../docs_src/documents/registry/inheritance_no_repeat.py !}
+{!> ../../../docs_src/documents/registry/inheritance_no_repeat.py !}
 ```
 
 As you can see, the `User` and `Product` tables are inheriting from the `BaseDocument` where the
@@ -103,7 +103,7 @@ What if your class is abstract? Can you inherit the registry anyway?
 Of course! That doesn't change anything with the registry.
 
 ```python
-{!> ../docs_src/documents/registry/inheritance_abstract.py !}
+{!> ../../../docs_src/documents/registry/inheritance_abstract.py !}
 ```
 
 ### Table name
@@ -114,7 +114,7 @@ if a `collection` field in the `Meta` object is not declared, it will pluralise 
 #### Document without table name
 
 ```python
-{!> ../docs_src/documents/tablename/model_no_tablename.py !}
+{!> ../../../docs_src/documents/tablename/model_no_tablename.py !}
 ```
 
 As mentioned in the example, because a `collection` was not declared, **Mongoz** will pluralise
@@ -123,14 +123,14 @@ the python class name `User` and it will become `users` in your database.
 #### Document with a table name
 
 ```python
-{!> ../docs_src/documents/tablename/model_with_tablename.py !}
+{!> ../../../docs_src/documents/tablename/model_with_tablename.py !}
 ```
 
 Here the `collection` is being explicitly declared as `users`. Although it matches with a
 puralisation of the python class name, this could also be something else.
 
 ```python
-{!> ../docs_src/documents/tablename/model_diff_tn.py !}
+{!> ../../../docs_src/documents/tablename/model_diff_tn.py !}
 ```
 
 In this example, the `User` class will be represented by a `db_users` mapping into the database.
@@ -159,7 +159,7 @@ In this document we already mentioned abstract documents and how to use them but
 examples to be even clear.
 
 ```python
-{!> ../docs_src/documents/abstract/simple.py !}
+{!> ../../../docs_src/documents/abstract/simple.py !}
 ```
 
 This document itself does not do much alone. This simply creates a `BaseDocument` and declares the
@@ -173,7 +173,7 @@ case for these to be use in the first place.
 Let us see a more complex example and how to use it.
 
 ```python
-{!> ../docs_src/documents/abstract/common.py !}
+{!> ../../../docs_src/documents/abstract/common.py !}
 ```
 
 This is already quite a complex example where `User` and `Product` have both common functionality
@@ -233,19 +233,19 @@ The simplest and cleanest way of declaring an index with **Mongoz**. You declare
 the document field.
 
 ```python hl_lines="11"
-{!> ../docs_src/documents/indexes/simple.py !}
+{!> ../../../docs_src/documents/indexes/simple.py !}
 ```
 
 #### Index via Meta
 
 ```python hl_lines="17"
-{!> ../docs_src/documents/indexes/simple2.py !}
+{!> ../../../docs_src/documents/indexes/simple2.py !}
 ```
 
 #### Complex indexes
 
 ```python hl_lines="9 17-20"
-{!> ../docs_src/documents/indexes/complex_together.py !}
+{!> ../../../docs_src/documents/indexes/complex_together.py !}
 ```
 
 ### Index Operations
@@ -337,5 +337,66 @@ await User.drop_index("name")
 !!! Warning
     If you try to drop an index with a field name not declared in the document or not declared
     as Index, at least, a `InvalidKeyError` is raised.
+
+#### Document checks
+
+If you also want to make sure that you run the proper checks for the indexes, for example, an index was dropped
+from the document and you want to make sure that is reflected, you can also do it.
+
+The syntax is very clear ans simple:
+
+```python
+await MyDocument.check_indexes()
+```
+
+For example:
+
+```python
+await User.check_indexes()
+```
+
+This can be useful if you want to make sure that for every [registry](./registry.md), all the documents have the
+indexes checked before hand.
+
+[Read more](./registry.md#run-some-document-checks) about that in that section.
+
+
+#### Create indexes for multiple databases
+
+What if you have the same document in multiple databases (multi tenancy, for example) and you would like to reflect the
+indexes in all of them? Mongoz comes with that option as well.
+
+The database names must be passed as a list or tuple of strings.
+
+The syntax is as simlpe as this:
+
+```python
+await MyDocument.create_indexes_for_multiple_databases(["db_one", "db_two", "db_three"])
+```
+
+For example:
+
+```python
+await User.create_indexes_for_multiple_databases(["db_one", "db_two", "db_three"])
+```
+
+#### Drop indexes for multiple databases
+
+What if you have the same document in multiple databases (multi tenancy, for example) and you would like to drop the
+indexes in all of them? Mongoz comes with that option as well.
+
+The database names must be passed as a list or tuple of strings.
+
+The syntax is as simlpe as this:
+
+```python
+await MyDocument.drop_indexes_for_multiple_databases(["db_one", "db_two", "db_three"])
+```
+
+For example:
+
+```python
+await User.drop_indexes_for_multiple_databases(["db_one", "db_two", "db_three"])
+```
 
 [edgy]: https://edgy.tarsild.io

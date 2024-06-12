@@ -33,7 +33,7 @@ Let us get familar with queries.
 Let us assume you have the following `User` document defined.
 
 ```python
-{!> ../docs_src/queries/document.py !}
+{!> ../../../docs_src/queries/document.py !}
 ```
 
 As mentioned before, Mongoz allows to use two ways of querying. Via `manager` and via `queryset`.
@@ -991,7 +991,7 @@ Querying [embedded documents](./embedded-documents.md) is also easy and here the
 Let us see an example.
 
 ```python hl_lines="17"
-{!> ../docs_src/queries/embed.py !}
+{!> ../../../docs_src/queries/embed.py !}
 ```
 
 We can now create some instances of the `User`.

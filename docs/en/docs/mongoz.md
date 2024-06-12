@@ -101,7 +101,7 @@ The following is an example how to start with Mongoz and more details and exampl
 Use `ipython` to run the following from the console, since it supports `await`.
 
 ```python
-{!> ../docs_src/quickstart/quickstart.py !}
+{!> ../../../docs_src/quickstart/quickstart.py !}
 ```
 
 Now you can generate some documents and insert them into the database.
