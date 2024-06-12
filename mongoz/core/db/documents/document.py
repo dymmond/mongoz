@@ -121,6 +121,10 @@ class Document(DocumentRow):
         if not isinstance(database_names, (list, tuple)):
             raise MongozException(detail="Database names must be a list or tuple")
 
+        database_names = list(database_names)
+        if not cls.meta.autogenerate_index:
+            database_names.append(cls.meta.database.name)  # type: ignore
+
         for database_name in database_names:
             database = cls.meta.registry.get_database(database_name)  # type: ignore
             collection = database.get_collection(cls.meta.collection.name)  # type: ignore

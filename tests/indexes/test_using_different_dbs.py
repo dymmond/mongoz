@@ -27,7 +27,6 @@ class Movie(Document):
         registry = client
         database = "test_db"
         indexes = indexes
-        autogenerate_index = True
 
 
 async def test_model_using() -> None:
