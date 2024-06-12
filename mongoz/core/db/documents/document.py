@@ -42,10 +42,13 @@ class Document(DocumentRow):
         await self.signals.post_save.send(sender=self.__class__, instance=self)
         return self
 
-    async def update(self, **kwargs: Any) -> "Document":
+    async def update(
+        self, collection: Union[AsyncIOMotorCollection, None] = None, **kwargs: Any
+    ) -> "Document":
         """
         Updates a record on an instance level.
         """
+        collection = collection or self.meta.collection._collection  # type: ignore
         field_definitions = {
             name: (annotations, ...)
             for name, annotations in self.__annotations__.items()
@@ -66,7 +69,7 @@ class Document(DocumentRow):
             data.update(values)
 
             await self.signals.pre_update.send(sender=self.__class__, instance=self)
-            await self.meta.collection._collection.update_one({"_id": self.id}, {"$set": data})  # type: ignore
+            await collection.update_one({"_id": self.id}, {"$set": data})
             await self.signals.post_update.send(sender=self.__class__, instance=self)
 
             for k, v in data.items():
@@ -88,6 +91,15 @@ class Document(DocumentRow):
         for model, inserted_id in zip(models, results.inserted_ids, strict=True):
             model.id = inserted_id
         return models
+
+    @classmethod
+    def get_collection(
+        cls, collection: Union[AsyncIOMotorCollection, None] = None
+    ) -> AsyncIOMotorCollection:
+        """
+        Get the collection object associated with the document class.
+        """
+        return collection if collection is not None else cls.meta.collection._collection  # type: ignore
 
     @classmethod
     async def create_index(cls, name: str) -> str:
@@ -160,6 +172,44 @@ class Document(DocumentRow):
             await collection._collection.create_indexes(cls.meta.indexes)
 
     @classmethod
+    async def drop_indexes_for_multiple_databases(
+        cls, database_names: Union[List[str], Tuple[str]]
+    ) -> None:
+        """
+        Drops indexes for multiple databases.
+
+        Args:
+            database_names (Union[List[str], Tuple[str]]): List or tuple of database names.
+
+        Raises:
+            MongozException: If database_names is not a list or tuple.
+
+        Note:
+            This method drops indexes for multiple databases. It iterates over the provided
+            database names and retrieves the corresponding database and collection objects.
+            Then it calls the `drop_index` method on the collection object with the indexes
+            defined in the meta class of the document.
+
+        Example:
+            ```
+            Document.create_indexes_for_multiple_databases(["db1", "db2"])
+            ```
+        """
+        is_operation_allowed(cls)
+
+        if not isinstance(database_names, (list, tuple)):
+            raise MongozException(detail="Database names must be a list or tuple")
+
+        database_names = list(database_names)
+        if not cls.meta.autogenerate_index:
+            database_names.append(cls.meta.database.name)  # type: ignore
+
+        for database_name in database_names:
+            database = cls.meta.registry.get_database(database_name)  # type: ignore
+            collection = database.get_collection(cls.meta.collection.name)  # type: ignore
+            await cls.check_indexes(force_drop=True, collection=collection)
+
+    @classmethod
     async def list_indexes(cls) -> List[Dict[str, Any]]:
         """
         List all indexes in the collection.
@@ -181,7 +231,11 @@ class Document(DocumentRow):
         return collection_indexes
 
     @classmethod
-    async def check_indexes(cls) -> None:
+    async def check_indexes(
+        cls,
+        force_drop: bool = False,
+        collection: Union[AsyncIOMotorCollection, None] = None,
+    ) -> None:
         """
         Check the indexes defined in the Meta object and perform any possible drop operation.
 
@@ -198,7 +252,10 @@ class Document(DocumentRow):
         is_operation_allowed(cls)
 
         # Creates the indexes defined in the Meta object
-        await cls.create_indexes()
+        if not force_drop:
+            await cls.create_indexes()
+
+        collection = cls.get_collection(collection)
 
         # Get the names of indexes in the collection
         collection_indexes = {index["name"] for index in await cls.list_indexes()}
@@ -214,7 +271,7 @@ class Document(DocumentRow):
 
         # Drop the indexes that are present in the collection but not in the Meta object
         for name in symmetric_difference:
-            await cls.meta.collection._collection.drop_index(name)  # type: ignore
+            await collection.drop_index(name)
 
         # Check if the indexes defined in the Meta object are present in the collection
         # And perform any possible drop operation
@@ -225,47 +282,56 @@ class Document(DocumentRow):
                 cls.model_fields.get(name, None) is not None
                 and not cls.model_fields.get(name).index  # type: ignore
             ):
-                await cls.drop_index(name)
+                await cls.drop_index(name, collection)
 
-    async def delete(self) -> int:
+    async def delete(self, collection: Union[AsyncIOMotorCollection, None] = None) -> int:
         """Delete the document."""
         is_operation_allowed(self)
 
+        collection = collection or self.meta.collection._collection  # type: ignore
         await self.signals.pre_delete.send(sender=self.__class__, instance=self)
 
-        result = await self.meta.collection._collection.delete_one({"_id": self.id})  # type: ignore
-
+        result = await collection.delete_one({"_id": self.id})
         await self.signals.post_delete.send(sender=self.__class__, instance=self)
         return cast(int, result.deleted_count)
 
     @classmethod
-    async def drop_index(cls, name: str) -> str:
+    async def drop_index(
+        cls, name: str, collection: Union[AsyncIOMotorCollection, None] = None
+    ) -> str:
         """Drop single index from Meta indexes by name.
 
         Can raise `pymongo.errors.OperationFailure`.
         """
         is_operation_allowed(cls)
+        collection = cls.get_collection(collection)
 
         for index in cls.meta.indexes:
             if index.name == name:
-                await cls.meta.collection._collection.drop_index(name)  # type: ignore
+                await collection.drop_index(name)
                 return name
         raise InvalidKeyError(f"Unable to find index: {name}")
 
     @classmethod
-    async def drop_indexes(cls, force: bool = False) -> Union[List[str], None]:
+    async def drop_indexes(
+        cls, force: bool = False, collection: Union[AsyncIOMotorCollection, None] = None
+    ) -> Union[List[str], None]:
         """Drop all indexes defined for the collection.
 
         With `force=True`, even indexes not defined on the collection will be removed.
         """
         is_operation_allowed(cls)
 
+        collection = cls.get_collection(collection)
         if force:
-            return await cls.meta.collection._collection.drop_indexes()  # type: ignore
+            await collection.drop_indexes()
+            return None
         index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
         return index_names
 
-    async def save(self: "Document") -> "Document":
+    async def save(
+        self: "Document", collection: Union[AsyncIOMotorCollection, None] = None
+    ) -> "Document":
         """Save the document.
 
         This is equivalent of a single instance update.
@@ -283,13 +349,14 @@ class Document(DocumentRow):
             await movie.save()
         """
         is_operation_allowed(self)
+        collection = collection or self.meta.collection._collection  # type: ignore
 
         if not self.id:
             return await self.create()
 
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
-        await self.meta.collection._collection.update_one(  # type: ignore
+        await collection.update_one(
             {"_id": self.id}, {"$set": self.model_dump(exclude={"id", "_id"})}
         )
         for k, v in self.model_dump(exclude={"id"}).items():

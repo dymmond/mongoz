@@ -361,4 +361,42 @@ indexes checked before hand.
 [Read more](./registry.md#run-some-document-checks) about that in that section.
 
 
+#### Create indexes for multiple databases
+
+What if you have the same document in multiple databases (multi tenancy, for example) and you would like to reflect the
+indexes in all of them? Mongoz comes with that option as well.
+
+The database names must be passed as a list or tuple of strings.
+
+The syntax is as simlpe as this:
+
+```python
+await MyDocument.create_indexes_for_multiple_databases(["db_one", "db_two", "db_three"])
+```
+
+For example:
+
+```python
+await User.create_indexes_for_multiple_databases(["db_one", "db_two", "db_three"])
+```
+
+#### Drop indexes for multiple databases
+
+What if you have the same document in multiple databases (multi tenancy, for example) and you would like to drop the
+indexes in all of them? Mongoz comes with that option as well.
+
+The database names must be passed as a list or tuple of strings.
+
+The syntax is as simlpe as this:
+
+```python
+await MyDocument.drop_indexes_for_multiple_databases(["db_one", "db_two", "db_three"])
+```
+
+For example:
+
+```python
+await User.drop_indexes_for_multiple_databases(["db_one", "db_two", "db_three"])
+```
+
 [edgy]: https://edgy.tarsild.io

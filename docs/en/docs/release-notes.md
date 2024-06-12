@@ -1,5 +1,21 @@
 # Release Notes
 
+## 0.9.0
+
+### Added
+
+- `create_indexes_for_multiple_databases` allowing to iterate for each document
+the creating of the indexes in multiple databases.
+- [Registry document checks](./registry.md#run-some-document-checks) allowing to check beforehand all the
+index changes in a document.
+- [Model check indexes](./documents.md#document-checks) to do the same checks for the indexes but for each document.
+- [create_indexes_for_multiple_databases](./documents.md#create-indexes-for-multiple-databases).
+- [drop_indexes_for_multiple_databases](./documents.md#drop-indexes-for-multiple-databases).
+
+### Changed
+
+- Cleaned up logic to design indexes in the `metaclass`.
+
 ## 0.8.0
 
 ### Changed
