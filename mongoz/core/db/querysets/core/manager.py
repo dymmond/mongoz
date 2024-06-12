@@ -88,8 +88,8 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             - return the self instance.
         """
         manager: "Manager" = self.clone()
-        database = self.model_class.meta.registry.get_database(database_name)  # type: ignore
-        manager._collection = database.get_collection(self._collection.name)._collection
+        database = manager.model_class.meta.registry.get_database(database_name)
+        manager._collection = database.get_collection(manager._collection.name)._collection
         return manager
 
     def clone(self) -> Any:

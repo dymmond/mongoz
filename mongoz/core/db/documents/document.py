@@ -1,4 +1,4 @@
-from typing import Any, ClassVar, List, Mapping, Type, TypeVar, Union, cast
+from typing import Any, ClassVar, List, Mapping, Tuple, Type, TypeVar, Union, cast
 
 import bson
 import pydantic
@@ -10,7 +10,7 @@ from mongoz.core.connection.collections import Collection
 from mongoz.core.db.documents.document_row import DocumentRow
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.core.db.fields.base import MongozField
-from mongoz.exceptions import InvalidKeyError
+from mongoz.exceptions import InvalidKeyError, MongozException
 from mongoz.utils.mixins import is_operation_allowed
 
 T = TypeVar("T", bound="Document")
@@ -108,6 +108,23 @@ class Document(DocumentRow):
         is_operation_allowed(cls)
 
         return await cls.meta.collection._collection.create_indexes(cls.meta.indexes)  # type: ignore
+
+    @classmethod
+    async def create_indexes_for_multiple_databases(
+        cls, database_names: Union[List[str], Tuple[str]]
+    ) -> None:
+        """
+        Create indexes for multiple databases.
+        """
+        is_operation_allowed(cls)
+
+        if not isinstance(database_names, (list, tuple)):
+            raise MongozException(detail="Database names must be a list or tuple")
+
+        for database_name in database_names:
+            database = cls.meta.registry.get_database(database_name)  # type: ignore
+            collection = database.get_collection(cls.meta.collection.name)  # type: ignore
+            await collection._collection.create_indexes(cls.meta.indexes)
 
     async def delete(self) -> int:
         """Delete the document."""

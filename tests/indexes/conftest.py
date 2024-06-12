@@ -26,3 +26,5 @@ def event_loop() -> typing.Generator[asyncio.AbstractEventLoop, None, None]:
 async def test_database() -> typing.AsyncGenerator:
     yield
     await client.drop_database("test_db")
+    await client.drop_database("test_my_db")
+    await client.drop_database("test_second_db")
