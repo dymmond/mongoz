@@ -1,35 +1,28 @@
-# Signals
+# Sinais
 
-Sometimes you might want to *listen* to a document event upon the save, meaning, you want to do a
-specific action when something happens in the models.
+Por vezes, pode ser necessário *ouvir* um evento de documento ao salvar, ou seja, deseja-se realizar uma ação específica quando algo acontece nos modelos.
 
-Django for instance has this mechanism called `Signals` which can be very helpful for these cases
-and to perform extra operations once an action happens in your document.
+O Django, por exemplo, possui esse mecanismo chamado `Sinais`, que pode ser muito útil para esses casos e para realizar operações extras quando uma ação ocorre no documento.
 
-Other ORMs did a similar approach to this and a fantastic one was Ormar which took the Django approach
-to its own implementation.
+Outros ORMs adotaram uma abordagem semelhante a essa e uma excelente foi o Ormar, que adotou a abordagem do Django na sua própria implementação.
 
-Mongoz being the way it is designed, got the inspiration from both of these approaches and also
-supports the `Signal`.
+O Mongoz, sendo como é desenhado, inspirou-se em ambas as abordagens e também suporta o `Sinal`.
 
-## What are Signals
+## O que são Sinais
 
-Signals are a mechanism used to trigger specific actions upon a given type of event happens within
-the Mongoz models.
+Sinais são mecanismos usados para acionar ações específicas quando ocorre um determinado tipo de evento nos modelos do Mongoz.
 
-The same way Django approaches signals in terms of registration, Mongoz does it in the similar fashion.
+Da mesma forma que o Django aborda os sinais em termos de registro, o Mongoz faz isso de maneira semelhante.
 
-## Default signals
+## Sinais padrão
 
-Mongoz has default receivers for each document created within the ecosystem. Those can be already used
-out of the box by you at any time.
+O Mongoz possui receptores padrão para cada documento criado no ecossistema. Eles podem ser usados prontamente a qualquer momento.
 
-There are also [custom signals](#custom-signals) in case you want an "extra" besides the defaults
-provided.
+Também existem [sinais personalizados](#sinais-personalizados) caso queira algo "extra" além dos padrões fornecidos.
 
-### How to use them
+### Como usá-los
 
-The signals are inside the `mongoz.core.signals` and to import them, simply run:
+Os sinais estão dentro de `mongoz.core.signals` e para importá-los, basta executar:
 
 ``` python
 from mongoz.core.signals import (
@@ -44,8 +37,7 @@ from mongoz.core.signals import (
 
 #### pre_save
 
-The `pre_save` is used when a document is about to be saved and triggered on `Document.save()` and
-`Document.objects.create` functions.
+O `pre_save` é usado quando um documento está prestes a ser guardado e é acionado nas funções `Document.save()` e `Document.objects.create`.
 
 ```python
 pre_save(send: Type["Document"], instance: "Document")
@@ -53,9 +45,7 @@ pre_save(send: Type["Document"], instance: "Document")
 
 #### post_save
 
-The `post_save` is used after the document is already created and stored in the database, meaning,
-when an instance already exists after `save`. This signal is triggered on `Document.save()` and
-`Document.objects.create` functions.
+O `post_save` é usado após o documento já ter sido criado e guardado na base de dados, ou seja, quando uma instância já existe após o `save`. Esse sinal é acionado nas funções `Document.save()` e `Document.objects.create`.
 
 ```python
 post_save(send: Type["Document"], instance: "Document")
@@ -63,8 +53,7 @@ post_save(send: Type["Document"], instance: "Document")
 
 #### pre_update
 
-The `pre_update` is used when a document is about to receive the updates and triggered on `Document.update()`
-and `Document.objects.update` functions.
+O `pre_update` é usado quando um documento está prestes a receber as atualizações e é acionado nas funções `Document.update()` e `Document.objects.update`.
 
 ```python
 pre_update(send: Type["Document"], instance: "Document")
@@ -72,8 +61,7 @@ pre_update(send: Type["Document"], instance: "Document")
 
 #### post_update
 
-The `post_update` is used when a document **already performed the updates** and triggered on `Document.update()`
-and `Document.objects.update` functions.
+O `post_update` é usado quando um documento **já realizou as atualizações** e é acionado nas funções `Document.update()` e `Document.objects.update`.
 
 ```python
 post_update(send: Type["Document"], instance: "Document")
@@ -81,8 +69,7 @@ post_update(send: Type["Document"], instance: "Document")
 
 #### pre_delete
 
-The `pre_delete` is used when a document is about to be deleted and triggered on `Document.delete()`
-and `Document.objects.delete` functions.
+O `pre_delete` é usado quando um documento está prestes a ser excluído e é acionado nas funções `Document.delete()` e `Document.objects.delete`.
 
 ```python
 pre_delete(send: Type["Document"], instance: "Document")
@@ -90,145 +77,127 @@ pre_delete(send: Type["Document"], instance: "Document")
 
 #### post_delete
 
-The `post_update` is used when a document **is already deleted** and triggered on `Document.delete()`
-and `Document.objects.delete` functions.
+O `post_update` é usado quando um documento **já foi excluído** e é acionado nas funções `Document.delete()` e `Document.objects.delete`.
 
 ```python
 post_update(send: Type["Document"], instance: "Document")
 ```
 
-## Receiver
+## Receptor
 
-The receiver is the function or action that you want to perform upon a signal being triggered,
-in other words, **it is what is listening to a given event**.
+O receptor é a função ou ação que você deseja executar quando um sinal é acionado, noutras palavras, **é o que está a escutar um determinado evento**.
 
-Let us see an example. Given the following document.
+Vejamos um exemplo. Dado o seguinte documento.
 
 ```python
 {!> ../../../docs_src/signals/receiver/document.py !}
 ```
 
-You can set a trigger to send an email to the registered user upon the creation of the record by
-using the `post_save` signal. The reason for the `post_save` it it because the notification must
-be sent **after** the creation of the record and not before. If it was before, the `pre_save` would
-be the one to use.
+Pode definir um *trigger* para enviar um e-mail ao utilizador registrado após a criação do registro usando o sinal `post_save`. A razão para usar o `post_save` é porque a notificação deve ser enviada **após** a criação do registro e não antes. Se fosse antes, o `pre_save` seria o sinal a ser usado.
 
 ```python hl_lines="11-12"
 {!> ../../../docs_src/signals/receiver/post_save.py !}
 ```
 
-As you can see, the `post_save` decorator is pointing the `User` document, meaning, it is "listing"
-to events on that same document.
+Como pode ver, o decorador `post_save` está a apontar para o documento `User`, ou seja, está "a escutar" eventos nesse mesmo documento.
 
-This is called **receiver**.
+Isso é chamado de **receptor**.
 
-You can use any of the [default signals](#default-signals) available or even create your own
-[custom signal](#custom-signals).
+Pode usar qualquer um dos [sinais padrão](#sinais-padrão) disponíveis ou até mesmo criar seu próprio [sinal personalizado](#sinais-personalizados).
 
-### Requirements
+### Requisitos
 
-When defining your function or `receiver` it must have the following requirements:
+Ao definir a função ou `receptor`, ela deve atender aos seguintes requisitos:
 
-* Must be a **callable**.
-* Must have `sender` argument as first parameter which corresponds to the document of the sending object.
-* Must have ****kwargs** argument as parameter as each document can change at any given time.
-* Must be `async` because Mongoz document operations are awaited.
+* Deve ser um **callable**.
+* Deve ter o argumento `sender` como primeiro parâmetro, que corresponde ao documento do objeto de envio.
+* Deve ter o argumento `**kwargs` como parâmetro, pois cada documento pode mudar a qualquer momento.
+* Deve ser `async` porque as operações de documento do Mongoz são aguardadas.
 
-### Multiple receivers
+### Múltiplos receptores
 
-What if you want to use the same receiver but for multiple models? Let us now add an extra `Profile`
-document.
+E se você quiser usar o mesmo receptor para vários modelos? Vamos adicionar agora um documento adicional chamado `Profile`.
 
 ```python
 {!> ../../../docs_src/signals/receiver/multiple.py !}
 ```
 
-The way you define the receiver for both can simply be achieved like this:
+A maneira de definir o receptor para ambos pode ser facilmente alcançada da seguinte forma:
 
 ```python hl_lines="11"
 {!> ../../../docs_src/signals/receiver/post_multiple.py !}
 ```
 
-This way you can match and do any custom logic without the need of replicating yourself too much and
-keeping your code clean and consistent.
+Desta forma, pode corresponder e executar qualquer lógica personalizada sem precisar se repetir muito e mantendo seu código limpo e consistente.
 
-### Multiple receivers for the same document
+### Múltiplos receptores para o mesmo documento
 
-What if now you want to have more than one receiver for the same document? Practically you would put all
-in one place but you might want to do something else entirely and split those in multiple.
+E se agora quiser ter mais de um receptor para o mesmo documento? Na prática, colocaria todos num só lugar, mas talvez queira fazer algo completamente diferente e dividi-los em vários.
 
-You can easily achieve this like this:
+Pode facilmente fazer isso desta forma:
 
 ```python
 {!> ../../../docs_src/signals/receiver/multiple_receivers.py !}
 ```
 
-This will make sure that every receiver will execute the given defined action.
+Isto garantirá que cada receptor execute a ação definida.
 
+### Desconectando receptores
 
-### Disconnecting receivers
-
-If you wish to disconnect the receiver and stop it from running for a given document, you can also
-achieve this in a simple way.
+Se deseja desconectar o receptor e impedi-lo de ser executado para um determinado documento, também pode fazer isso de maneira simples.
 
 ```python hl_lines="20 23"
 {!> ../../../docs_src/signals/receiver/disconnect.py !}
 ```
 
-## Custom Signals
+## Sinais Personalizados
 
-This is where things get interesting. A lot of time you might want to have your own `Signal` and
-not relying only on the [default](#default-signals) ones and this perfectly natural and common.
+Aqui é onde as coisas ficam interessantes. Muitas vezes, você querer ter o seu próprio `Sinal` e não depender apenas dos [padrões](#sinais-padrão) fornecidos, e isso é perfeitamente natural e comum.
 
-Mongoz allows the custom signals to take place per your own design.
+O Mongoz permite que os sinais personalizados sejam usados de acordo com o seu próprio design.
 
-Let us continue with the same example of the `User` document.
+Vamos continuar com o mesmo exemplo do documento `User`.
 
 ```python
 {!> ../../../docs_src/signals/receiver/document.py !}
 ```
 
-Now you want to have a custom signal called `on_verify` specifically tailored for your `User` needs
-and logic.
+Agora deseja ter um sinal personalizado chamado `on_verify` especificamente adaptado às necessidades e lógica do seu `User`.
 
-So define it, you can simply do:
+Para defini-lo, pode simplesmente fazer:
 
 ```python hl_lines="17"
 {!> ../../../docs_src/signals/custom.py !}
 ```
 
-Yes, this simple. You simply need to add a new signal `on_verify` to the document signals and the
-`User` document from now on has a new signal ready to be used.
+Sim, é assim simples. Só precisa adicionar um novo sinal `on_verify` aos sinais do documento e, a partir de agora, o documento `User` terá um novo sinal pronto para ser usado.
 
-!!! Danger
-    Keep in mind **signals are class level type**, which means it will affect all of the derived
-    instances coming from it. Be mindful when creating a custom signal and its impacts.
+!!! Warning
+    Tenha em mente que **os sinais são do tipo nível de classe**, o que significa que afetarão todas as instâncias derivadas dele. Esteja atento ao criar um sinal personalizado e os seus impactos.
 
-Now you want to create a custom functionality to be listened in your new Signal.
+Agora deseja criar uma funcionalidade personalizada para ser ouvida no novo Sinal.
 
 ```python hl_lines="21 30"
 {!> ../../../docs_src/signals/register.py !}
 ```
 
-Now not only you created the new receiver `trigger_notifications` but also connected it to the
-the new `on_verify` signal.
+Agora, não apenas criou o novo receptor `trigger_notifications`, mas também o conectou ao novo sinal `on_verify`.
 
-### How to use it
+### Como usá-lo
 
-Now it is time to use the signal in a custom logic, after all it was created to make sure it is
-custom enough for the needs of the business logic.
+Agora é hora de usar o sinal numa lógica personalizada, afinal, ele foi criado para garantir que seja personalizado o suficiente para as necessidades da lógica de negócio.
 
-For simplification, the example below will be a very simple logic.
+Para simplificação, o exemplo abaixo será uma lógica muito simples.
 
 ```python hl_lines="17"
 {!> ../../../docs_src/signals/logic.py !}
 ```
 
-As you can see, the `on_verify`, it is only triggered if the user is verified and not anywhere else.
+Como pode ver, o `on_verify` é acionado apenas se o utilizador estiver verificado e não em nenhum outro lugar.
 
-### Disconnect the signal
+### Desconectar o sinal
 
-The process of disconnecting the signal is exactly the [same as before](#disconnecting-receivers).
+O processo de desconectar o sinal é exatamente o [mesmo que antes](#desconectando-receptores).
 
 ```python hl_lines="10"
 {!> ../../../docs_src/signals/disconnect.py !}

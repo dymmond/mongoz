@@ -1,60 +1,55 @@
-# Fields
+# Campos
 
-Fields are what is used within the [document](./documents.md) declaration (data types) and defines
-wich types are going to be generated in the database.
+Os campos são utilizados na declaração do [documento](./documents.md) (tipos de dados) e definem quais tipos serão criados no base de dados.
 
-Mongoz document declaration with typing is merely visual. The validations of the fields are not done by the typing of
-the attribute of the documents but from the mongoz fields.
+A declaração de documentos no Mongoz com tipagem é apenas visual. As validações dos campos não são feitas pela tipagem do atributo dos documentos, mas sim pelos campos do Mongoz.
 
-Rest assured that all the validations are done via Pydantic validation as usual, nothing changes.
+Tenha a certeza de que todas as validações são feitas por meio da validação do Pydantic, como de costume, nada muda.
 
-## Data types
+## Tipos de dados
 
-As **Mongoz** is a new approach on the top of Pydantic, the following keyword arguments are
-supported in **all field types**.
+Como o **Mongoz** é uma nova abordagem em cima do Pydantic, os seguintes argumentos de palavra-chave são suportados em **todos os tipos de campos**.
 
-* **default** - A value or a callable (function).
-* **index** - A boolean. Determine if a database index should be created.
-* **unique** - A boolean. Determines a unique constraint.
+* **default** - Um valor ou uma função.
+* **index** - Um booleano. Determina se um índice de base de dados deve ser criado.
+* **unique** - Um booleano. Determina uma restrição única.
 
-All the fields are required unless on the the following is set:
+Todos os campos são obrigatórios, a menos que um dos seguintes seja definido:
 
-* **null** - A boolean. Determine if a column allows null.
+* **null** - Um booleano. Determina se uma coluna permite nulo.
 
-    <sup>Set default to `None`</sup>
+    <sup>Defina o padrão como `None`</sup>
 
-All the values you can pass in any Pydantic [Field](https://docs.pydantic.dev/latest/concepts/fields/)
-are also 100% allowed within Mongoz fields.
+Todos os valores que pode passar em qualquer [Campo](https://docs.pydantic.dev/latest/concepts/fields/) do Pydantic também são 100% permitidos nos campos do Mongoz.
 
-### Importing fields
+### Importando campos
 
-You have a few ways of doing this and those are the following:
+Existem algumas maneiras de fazer isso e são as seguintes:
 
 ```python
 import mongoz
 ```
 
-From `mongoz` you can access all the available fields.
+A partir do `mongoz`, pode aceder a todos os campos disponíveis.
 
 ```python
 from mongoz.core.db import fields
 ```
 
-From `fields` you should be able to access the fields directly.
+A partir de `fields`, deve ser capaz de aceder aos campos diretamente.
 
 ```python
 from mongoz.core.db.fields import Integer
 ```
 
-You can import directly the desired field.
+Pode importar diretamente o campo desejado.
 
-All the fields have specific parameters beisdes the ones [mentioned in data types](#data-types).
-
+Todos os campos têm parâmetros específicos além dos mencionados em [tipos de dados](#tipos-de-dados).
 
 #### ObjectId
 
-This is a special field that extends the `bson.ObjectId` directly and adds some Pydantic typing
-to make sure it can still be serialized properly.
+Este é um campo especial que estende diretamente o `bson.ObjectId` e adiciona alguma tipagem do Pydantic
+para garantir que possa ser serializado corretamente.
 
 ```python
 import mongoz
@@ -62,7 +57,6 @@ import mongoz
 
 class MyDocument(mongoz.Document):
     an_id: ObjectId = mongoz.ObjectId()
-
 ```
 
 #### String
@@ -75,13 +69,12 @@ class MyDocument(mongoz.Document):
     description: str = mongoz.String(max_length=255)
     title: str = mongoz.String(max_length=50, min_length=200)
     ...
-
 ```
 
-##### Parameters:
+##### Parâmetros:
 
-* **max_length** - An integer indicating the total length of string.
-* **min_length** - An integer indicating the minimum length of string.
+* **max_length** - Um inteiro a indicar o comprimento total da string.
+* **min_length** - Um inteiro a indicar o comprimento mínimo da string.
 
 #### Integer
 
@@ -92,7 +85,6 @@ import mongoz
 class MyDocument(mongoz.Document):
     a_number: int = mongoz.Integer(default=0)
     another_number: int = mongoz.Integer(minimum=10)
-
 ```
 
 #### Double
@@ -103,18 +95,17 @@ import mongoz
 
 class MyDocument(mongoz.Document):
     price: float = mongoz.Double(null=True)
-
 ```
 
-Derives from the same as [Integer](#integer) and validates the decimal float.
+Deriva do mesmo que [Integer](#integer) e valida o número decimal de ponto flutuante.
 
-##### Parameters:
+##### Parâmetros:
 
-* **minimum** - An integer, float or decimal indicating the minimum.
-* **maximum** - An integer, float or decimal indicating the maximum.
-* **max_digits** - Maximum digits allowed.
-* **multiple_of** - An integer, float or decimal indicating the multiple of.
-* **decimal_places** - The total decimal places.
+* **minimum** - Um inteiro, float ou decimal a indicar o mínimo.
+* **maximum** - Um inteiro, float ou decimal a indicar o máximo.
+* **max_digits** - Máximo de dígitos permitidos.
+* **multiple_of** - Um inteiro, float ou decimal a indicar o múltiplo de.
+* **decimal_places** - O total de casas decimais.
 
 #### Decimal
 
@@ -124,16 +115,15 @@ import mongoz
 
 class MyDocument(mongoz.Document):
     price: decimal.Decimal = mongoz.Decimal(max_digits=5, decimal_places=2, null=True)
-
 ```
 
-##### Parameters
+##### Parâmetros
 
-* **minimum** - An integer indicating the minimum.
-* **maximum** - An integer indicating the maximum.
-* **max_digits** - An integer indicating the total maximum digits.
-* **decimal_places** - An integer indicating the total decimal places.
-* **multiple_of** - An integer, float or decimal indicating the multiple of.
+* **minimum** - Um inteiro a indicar o mínimo.
+* **maximum** - Um inteiro a indicar o máximo.
+* **max_digits** - Um inteiro a indicar o total máximo de dígitos.
+* **decimal_places** - Um inteiro a indicar o total de casas decimais.
+* **multiple_of** - Um inteiro, float ou decimal a indicar o múltiplo de.
 
 #### Boolean
 
@@ -143,7 +133,7 @@ import mongoz
 
 class MyDocument(mongoz.Document):
     is_active: bool = mongoz.Boolean(default=True)
-    is_completed: bool = mongoz.Boolean(default=False)
+    is_complete: bool = mongoz.Boolean(default=False)
 ```
 
 #### DateTime
@@ -157,10 +147,10 @@ class MyDocument(mongoz.Document):
     created_at: datetime.datetime = mongoz.DateTime(default=datetime.datetime.now)
 ```
 
-##### Parameters
+##### Parâmetros
 
-* **auto_now** - A boolean indicating the `auto_now` enabled.
-* **auto_now_add** - A boolean indicating the `auto_now_add` enabled.
+* **auto_now** - Um booleano a indicar se o `auto_now` está "on".
+* **auto_now_add** - Um booleano a indicar se o `auto_now_add` está "on".
 
 
 #### Date
@@ -173,13 +163,12 @@ import mongoz
 class MyDocument(mongoz.Document):
     created_at: datetime.date = mongoz.Date(default=datetime.date.today)
     ...
-
 ```
 
-##### Parameters
+##### Parâmetros
 
-* **auto_now** - A boolean indicating the `auto_now` enabled.
-* **auto_now_add** - A boolean indicating the `auto_now_add` enabled.
+* **auto_now** - Um booleano a indicar se o `auto_now` está "on".
+* **auto_now_add** - Um booleano a indicar se o `auto_now_add` está "on".
 
 #### Time
 
@@ -205,10 +194,9 @@ import mongoz
 
 class MyDocument(mongoz.Document):
     data: Dict[str, Any] = mongoz.Object(default={})
-
 ```
 
-An object representation to be stored, for instance a `JSON`.
+Uma representação do objeto a ser guardado, por exemplo, um `JSON`.
 
 #### UUID
 
@@ -221,12 +209,12 @@ class MyDocument(mongoz.Document):
     uuid: UUID = fields.UUID()
 ```
 
-Derives from the same as [String](#string) and validates the value of an UUID.
+Deriva do mesmo que [String](#string) e valida o valor de um UUID.
 
 #### Array
 
-This is a special Mongoz field that declares and defines an `Array` (list) of a given type.
-For example, if you want to store a list of strings or any other type **but not mixed**.
+Este é um campo especial do Mongoz que declara e define um `Array` (lista) de um determinado tipo.
+Por exemplo, se deseja guardar uma lista de strings ou qualquer outro tipo, **mas não misturado**.
 
 ```python
 import mongoz
@@ -236,17 +224,17 @@ class MyDocument(mongoz.Document):
     tags: List[str] = fields.Array(str)
 ```
 
-This can be particularly useful if you want to specify exactly which type you want to store and
-nothig else.
+Isto pode ser particularmente útil se deseja especificar exactamente qual tipo deseja guardar e
+nada mais.
 
-##### Parameters
+##### Parâmetros
 
-* **type_of** - The specific type to store, example `str`.
+* **type_of** - O tipo específico a ser guardado, por exemplo, `str`.
 
 #### ArrayList
 
-This is another special Mongoz field that declares and defines an `ArrayList` (list) of any type.
-For example, if you want to store a list of strings, integers or any other type and **it can be mixed**.
+Este é outro campo especial do Mongoz que declara e define um `ArrayList` (lista) de qualquer tipo.
+Por exemplo, se deseja guardar uma lista de strings, inteiros ou qualquer outro tipo e **pode ser misturado**.
 
 ```python
 import mongoz
@@ -256,12 +244,12 @@ class MyDocument(mongoz.Document):
     tags: List[Union[str, int, float]] = fields.ArrayList()
 ```
 
-This can be particularly useful if you want to specify exactly which type you want to store and
-nothig else.
+Isto pode ser particularmente útil se deseja especificar exactamente qual tipo deseja guardar e
+nada mais.
 
 #### Embed
 
-This is the field where the [EmbeddedDocuments](./embedded-documents.md) are declared.
+Este é o campo onde os [Documentos Incorporados](./embedded-documents.md) são declarados.
 
 ```python
 import mongoz
@@ -274,7 +262,7 @@ class MyDocument(mongoz.Document):
     award: Award = fields.Embed(Award)
 ```
 
-##### Parameters
+##### Parâmetros
 
-* **document** - The specific embedded document type. If the `document` is not of the type
-`mongoz.EmbeddedDocument`, a `FieldDefinitionError` is raised.
+* **document** - O tipo específico de documento incorporado. Se o `document` não for do tipo
+`mongoz.EmbeddedDocument`, será lançado um `FieldDefinitionError`.

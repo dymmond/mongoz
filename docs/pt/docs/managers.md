@@ -1,54 +1,51 @@
 # Managers
 
-The managers are a great tool that **Mongoz** offers. Heavily inspired by [Edgy](https://edgy.tarsild.io), the managers
-allow you to build unique tailored queries ready to be used by your documents.
+Os gestores são uma ótima ferramenta que o **Mongoz** oferece. Fortemente inspirados pelo [Edgy](https://edgy.tarsild.io), os gestores permitem que construa pesquisas personalizadas prontas para serem usadas pelos documentos.
 
-**Mongoz** by default uses the the manager called `objects` which it makes it simple to understand.
+O **Mongoz** por defeito usa o gestor chamado `objects`, o que torna simples de perceber.
 
-Let us see an example.
+Vamos ver um exemplo.
 
 ```python
 {!> ../../../docs_src/managers/simple.py !}
 ```
 
-When querying the `User` table, the `objects` (manager) is the default and **should** be always
-presented when doing it so.
+Ao consultar a tabela `User`, o `objects` (gestor) é o padrão e **deve** estar sempre presente ao fazê-lo.
 
 !!! Danger
-    This is only applied to the `manager` side of Mongoz, for example, when using
-    `Document.objects....`. **When using `Document.query...` it will not work**.
+    Isto aplica-se apenas ao lado do `manager` do Mongoz, por exemplo, ao usar `Document.objects....`. **Ao usar `Document.query...` isto não funcionará**.
 
-### Custom manager
+### Gestor personalizado
 
-It is also possible to have your own custom managers and to do it so, you **should inherit**
-the **QuerySetManager** class and override the `get_queryset()`.
+Também é possível ter os próprios gestores personalizados e para fazer isso, **deve herdar**
+a classe **QuerySetManager** e substituir o `get_queryset()`.
 
-For those familiar with Django managers, the principle is exactly the same. 😀
+Para aqueles familiarizados com os gestores do Django, o princípio é exatamente o mesmo. 😀
 
-**The managers must be type annotated ClassVar** or an error be raised.
+**Os gestores devem ser anotados como ClassVar** ou um erro será lançado.
 
 ```python
 {!> ../../../docs_src/managers/example.py !}
 ```
 
-Let us now create new manager and use it with our previous example.
+Agora vamos criar um novo gestor e usá-lo com nosso exemplo anterior.
 
 ```python
 {!> ../../../docs_src/managers/custom.py !}
 ```
 
-These managers can be as complex as you like with as many filters as you desire. What you need is
-simply override the `get_queryset()` and add it to your documents.
+Estes gestores podem ser tão complexos quanto desejar, com quantos filtros desejar. O que precisa fazer é
+simplesmente substituir o `get_queryset()` e adicioná-lo aos seus documentos.
 
-### Override the default manager
+### Substituir o gestor padrão
 
-Overriding the default manager is also possible by creating the custom manager and overriding
-the `objects` manager.
+Também é possível substituir o gestor padrão criando o gestor personalizado e substituindo
+o gestor `objects`.
 
 ```python
 {!> ../../../docs_src/managers/override.py !}
 ```
 
 !!! Warning
-    Be careful when overriding the default manager as you might not get all the results from the
-    `.all()` if you don't filter properly.
+    Tenha cuidado ao substituir o gestor padrão, pois pode não obter todos os resultados do
+    `.all()` se não filtrar correctamente.
