@@ -1,16 +1,16 @@
-# Exceptions
+# Excepções
 
-All **Mongoz** custom exceptions derive from the base `MongozException`.
+Todas as exceções personalizadas do **Mongoz** derivam da base `MongozException`.
 
 ## DocumentNotFound
 
-Raised when querying a document instance and it does not exist.
+Lançada quando uma instância de documento é pesquisado e não existe.
 
 ```python
 from mongoz.exceptions import DocumentNotFound
 ```
 
-Or simply:
+Ou simplesmente:
 
 ```python
 from mongoz import DocumentNotFound
@@ -18,13 +18,13 @@ from mongoz import DocumentNotFound
 
 ## MultipleDocumentsReturned
 
-Raised when querying a document and returns multiple results for the given query result.
+Lançada quando uma consulta a um documento retorna vários resultados para o resultado da pequisa fornecida.
 
 ```python
 from mongoz.exceptions import MultipleDocumentsReturned
 ```
 
-Or simply:
+Ou simplesmente:
 
 ```python
 from mongoz import MultipleDocumentsReturned
@@ -32,7 +32,7 @@ from mongoz import MultipleDocumentsReturned
 
 ## AbstractDocumentError
 
-Raised when an abstract document `abstract=True` is trying to be saved.
+Lançada quando um documento abstrato `abstract=True` está a tentar ser guardado.
 
 ```python
 from mongoz.exceptions import AbstractDocumentError
@@ -40,13 +40,13 @@ from mongoz.exceptions import AbstractDocumentError
 
 ## ImproperlyConfigured
 
-Raised when misconfiguration in the models and metaclass is passed.
+Lançada quando há uma má configuração nos documentos e metaclasses.
 
 ```python
 from mongoz.exceptions import ImproperlyConfigured
 ```
 
-Or simply:
+Ou simplesmente:
 
 ```python
 from mongoz import ImproperlyConfigured
@@ -54,7 +54,7 @@ from mongoz import ImproperlyConfigured
 
 ## IndexError
 
-Raised when there is a misconfiguration with the indexes.
+Lançada quando há uma má configuração nos índices.
 
 ```python
 from mongoz.exceptions import IndexError
@@ -62,7 +62,7 @@ from mongoz.exceptions import IndexError
 
 ## FieldDefinitionError
 
-Raised when there is a misconfiguration with the definition of the fields.
+Lançada quando há uma má configuração na definição dos campos.
 
 ```python
 from mongoz.exceptions import FieldDefinitionError
@@ -70,7 +70,7 @@ from mongoz.exceptions import FieldDefinitionError
 
 ## SignalError
 
-Raised when there is a misconfiguration with the document signals.
+Lançada quando há uma má configuração nos sinais do documento.
 
 ```python
 from mongoz.exceptions import SignalError

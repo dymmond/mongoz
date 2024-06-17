@@ -1,57 +1,50 @@
-# Registry
+# Registo
 
-When using the **Mongoz**, you must use the **Registry** object to tell exactly where the
-database is going to be.
+Ao utilizar o **Mongoz**, é necessário utilizar o objeto **Registo** para indicar exatamente onde a base de dados será escrita.
 
-Imagine the registry as a mapping between your documents and the database where is going to be written.
+Imagine o registo como um mapeamento entre os seus documentos e a base de dados onde serão escritos.
 
-And is just that, nothing else and very simple but effective object.
+E é apenas isso, nada mais, um objeto muito simples mas eficaz.
 
-The registry is also the object that you might want to use when generating migrations using
-Alembic.
+O registo também é o objeto que pode ser utilizado ao gerar migrações utilizando o Alembic.
 
 ```python hl_lines="19"
 {!> ../../../docs_src/registry/model.py !}
 ```
 
-## Parameters
+## Parâmetros
 
-* **url** - The database URL to connect to.
+* **url** - O URL da base de dados para se conectar.
 
     ```python
-    from mongoz import Registry
+    from mongoz import Registo
 
-    registry = Registry(url="mongodb://localhost:27017")
+    registo = Registo(url="mongodb://localhost:27017")
     ```
 
-## Custom registry
+## Registo personalizado
 
-Can you have your own custom Registry? Yes, of course! You simply need to subclass the `Registry`
-class and continue from there like any other python class.
+É possível ter o seu próprio Registo personalizado? Sim, claro! Basta criar uma subclasse da classe `Registry` e continuar a partir daí, como qualquer outra classe Python.
 
 ```python
 {!> ../../../docs_src/registry/custom_registry.py !}
 ```
 
-## Run some document checks
+## Executar algumas verificações de documentos
 
-Sometimes you might want to make sure that all the documents have the indexes up to date beforehand. This
-can be particularly useful if you already have a document and some indexes or were updated, added or removed. This
-functionality runs those checks for all the documents of the given registry.
+Por vezes, pode ser útil garantir que todos os documentos têm os índices atualizados antecipadamente. Isso pode ser especialmente útil se já tiver um documento e alguns índices foram atualizados, adicionados ou removidos. Esta funcionalidade executa essas verificações para todos os documentos do registo fornecido.
 
 ```python
 {!> ../../../docs_src/registry/document_checks.py !}
 ```
 
-### Using within a framework
+### Utilização num framework
 
-This functionality can be useful to be also plugged if you use, for example, an ASGI Framework such as Starlette,
-[Lilya](https://lilya.dev) or [Esmerald](https://esmerald.dev).
+Esta funcionalidade também pode ser útil se estiver a utilizar, por exemplo, uma framework ASGI como o Starlette, [Lilya](https://lilya.dev) ou [Esmerald](https://esmerald.dev).
 
-These frameworks handle the event lifecycle for you and this is where you want to make sure these checks are run beforehand.
+Estas frameworks tratam do ciclo de vida do evento para si e é aqui que deseja garantir que essas verificações são executadas antecipadamente.
 
-Since Mongoz is from the same team as [Lilya](https://lilya.dev) and [Esmerald](https://esmerald.dev), let us see how it
-would look like with Esmerald.
+Como o Mongoz é da mesma equipa que o [Lilya](https://lilya.dev) e o [Esmerald](https://esmerald.dev), vamos ver como ficaria com o Esmerald.
 
 ```python
 {!> ../../../docs_src/registry/asgi_fw.py !}

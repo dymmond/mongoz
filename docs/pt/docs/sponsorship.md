@@ -1,36 +1,33 @@
-# Help MongoZ
+# Ajude
 
-Do you like **MongoZ** and would like to help MongoZ, other user and the author?
+Gosta do **Mongoz** e gostaria de ajudar Mongoz, outros utilizadores e o autor?
 
-## ⭐ Star **MongoZ** on GitHub
+## ⭐ Adicione uma estrela ao **Mongoz** no GitHub
 
-Giving a star to MongoZ is very simple and helps promoting the work across the developers around the world.
+Dar uma estrela ao Mongoz é muito simples e ajuda a promover o trabalho entre os programadores de todo o mundo.
 
-The button is located at the top right.
+O botão está localizado no canto superior direito.
 
 [https://github.com/dymmond/mongoz](https://github.com/dymmond/mongoz).
 
-This will help spreading the word about the tool and how helpful has been.
+Isto ajudará a divulgar a ferramenta e o quão útil tem sido.
 
-## 👀 Follow the GitHub repo
+## 👀 Siga o repositório do GitHub
 
-Following the GitHub repo will allow you to "watch" for any new release of MongoZ and be always up to date.
+Seguir o repositório do GitHub permitirá que "observe" qualquer nova versão do Mongoz e esteja sempre atualizado.
 
-You can click on "***watch***" and select "***custom***" -> "***Releases***"or any other you may find particular
-interesting to you.
+Você pode clicar em "***watch***" e seleccionar "***custom***" -> "***Releases***" ou qualquer outro que você ache interessante.
 
-## 💬 Join the official MongoZ discord channel
+## 💬 Junte-se ao canal oficial do Mongoz no Discord
 
-Our official chat is on discord, we find it very useful and free for people to discuss issues, helping and contributing
-in a more organised manner.
+O nosso chat oficial está no Discord, achamos que é muito útil e gratuito para as pessoas discutirem problemas, ajudarem e contribuírem de forma mais organizada.
 
-<a href="https://discord.gg/eMrM9sWWvu" target="_blank">MongoZ discord channel</a>. Join us!
+<a href="https://discord.gg/eMrM9sWWvu" target="_blank">Canal do Mongoz no Discord</a>. Junte-se a nós! 🗸
 
-## 🔥 Sponsor the author
+## 🔥 Patrocine o autor
 
-The author built this framework with all of his heart and dedication and will continue to do it so but that also
-requires time and resources and when they are limited, the process still gets there but takes a bit longer.
+O autor construiu esta framework com todo o seu coração e dedicação e continuará a fazê-lo, mas isso também requer tempo e recursos e quando eles são limitados, o processo ainda acontece, mas leva um pouco mais de tempo.
 
-You can financially help and support the author though [GitHub sponsors](https://github.com/sponsors/tarsil)
+Pode ajudar financeiramente e apoiar o autor através dos [patrocinadores do GitHub](https://github.com/sponsors/tarsil)
 
-He can afterwards go for a coffee☕, on him, to say thanks🙏.
+Ele pode mais tarde tomar um café☕, por conta dele, para agradecer🙏.

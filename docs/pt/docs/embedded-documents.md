@@ -1,18 +1,17 @@
-# Embedded documents
+# Documentos incorporados
 
-Embedded documents are document to be embedded in `mongoz.Document`. The difference between one and
-the other is that the `EmbeddedDocument` are not inserted separately and do not have a separate
-`_id`.
+Documentos incorporados são documentos que são incorporados no `mongoz.Document`. A diferença entre um e
+outro é que o `EmbeddedDocument` não é inserido separadamente e não possui um `_id` separado.
 
-To define an `EmbeddedDocument` you should inherit from `mongoz.EmbeddedDocument` and define the
-[fields](./fields.md) in the way you would define for any other `mongoz.Document`.
+Para definir um `EmbeddedDocument`, deve herdar de `mongoz.EmbeddedDocument` e definir os
+[campos](./fields.md) da mesma forma que definiria para qualquer outro `mongoz.Document`.
 
 ```python hl_lines="4 10 14-15 19 23 28 30-31"
 {!> ../../../docs_src/documents/embed.py !}
 ```
 
-As you can see, the `EmbeddedDocument` is not a standlone document itself but part of the
-[document](./documents.md) when declaring.
+Como pode ver, o `EmbeddedDocument` não é um documento independente em si, mas parte do
+[documento](./documents.md) ao declarar.
 
-An `EmbeddedDocument` canm be used inside another and therefore creating a nested declaration
-when saving the results.
+Um `EmbeddedDocument` pode ser usado dentro de outro e, portanto, criar uma declaração *nested*
+ao guardar os resultados.

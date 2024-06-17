@@ -1,48 +1,37 @@
-# Settings
+# Definições
 
-Who never had that feeling that sometimes haing some database settings would be nice? Well, since
-Mongoz is from the same author of [Esmerald][esmerald] and since [Esmerald][esmerald] is [settings][esmerald_settings] oriented, why not apply
-the same principle but in a simpler manner but to Mongoz?
+Quem nunca teve aquela sensação de que às vezes seria bom ter algumas configurações de base de dados? Bem, como o Mongoz é do mesmo autor do [Esmerald][esmerald] e como o [Esmerald][esmerald] é orientado a [configurações][esmerald_settings], por que não aplicar o mesmo princípio, mas de maneira mais simples, ao Mongoz?
 
-This is exactly what happened.
+Foi exatamente isso que aconteceu.
 
-## Mongoz Settings Module
+## Módulo de Configurações do Mongoz
 
-The way of using the settings object within a Mongoz use of the ORM is via:
+A forma de usar o objeto de configurações no ORM do Mongoz é através de:
 
-* **MONGOZ_SETTINGS_MODULE** environment variable.
+* **MONGOZ_SETTINGS_MODULE** variável de ambiente.
 
-All the settings are **[Pydantic BaseSettings](https://pypi.org/project/pydantic-settings/)** objects which makes it easier to use and override
-when needed.
+Todas as configurações são objetos **[Pydantic BaseSettings](https://pypi.org/project/pydantic-settings/)**, o que torna mais fácil de usar e substituir quando necessário.
 
 ### MONGOZ_SETTINGS_MODULE
 
-Mongoz by default uses is looking for a `MONGOZ_SETTINGS_MODULE` environment variable to run and
-apply the given settings to your instance.
+Por padrão, o Mongoz procura por uma variável de ambiente `MONGOZ_SETTINGS_MODULE` para executar e aplicar as configurações fornecidas à sua instância.
 
-If no `MONGOZ_SETTINGS_MODULE` is found, Mongoz then uses its own internal settings which are
-widely applied across the system.
+Se nenhuma `MONGOZ_SETTINGS_MODULE` for encontrada, o Mongoz usa as suas próprias configurações internas, que são amplamente aplicadas em todo o sistema.
 
-#### Custom settings
+#### Configurações personalizadas
 
-When creating your own custom settings class, you should inherit from `MongozSettings` which is
-the class responsible for all internal settings of Mongoz and those can be extended and overriden
-with ease.
+Ao criar sua própria classe de configurações personalizadas, deve herdar de `MongozSettings`, que é a classe responsável por todas as configurações internas do Mongoz e que podem ser estendidas e substituídas com facilidade.
 
-Something like this:
+Algo como isto:
 
 ```python title="myproject/configs/settings.py"
 {!> ../../../docs_src/settings/custom_settings.py !}
 ```
 
-Super simple right? Yes and that is the intention. Mongoz does not have a lot of settings but
-has some which are used across the codebase and those can be overriden easily.
+Super simples, certo? Sim, e essa é a intenção. O Mongoz não tem muitas configurações, mas tem algumas que são usadas em todo o código e que podem ser facilmente substituídas.
 
 !!! Danger
-    Be careful when overriding the settings as you might break functionality. It is your own risk
-    doing it.
-
-
+    Tenha cuidado ao substituir as configurações, pois pode quebrar a funcionalidade. É por sua conta e risco.
 
 [esmerald_settings]: https://esmerald.dev/application/settings/
 [esmerald]: https://esmerald.dev/
