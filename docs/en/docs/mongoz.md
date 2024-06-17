@@ -39,7 +39,7 @@ MongoZ is also inspired by the great work of [Aminalee](https://aminalaee.dev/mo
 MongoX.
 
 So why a MongoZ if there is a MongoX? Well, MongoZ is from the same author of [Esmerald][esmerald],
-[Saffier][saffier], [Mongoz][mongoz] and many other tools out there and they all follow a specific need
+[Saffier][saffier], and many other tools out there and they all follow a specific need
 and pattern of development.
 
 Mongox implements really well some operations with MongoDB but for use cases where [Signals](./signals.md),
