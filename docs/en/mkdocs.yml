@@ -6,96 +6,96 @@ theme:
   custom_dir: ../en/overrides
   language: en
   palette:
-  - scheme: default
-    primary: blue grey
-    accent: red
-    media: '(prefers-color-scheme: light)'
-    toggle:
-      icon: material/lightbulb
-      name: Switch to dark mode
-  - scheme: slate
-    media: '(prefers-color-scheme: dark)'
-    primary: blue grey
-    accent: red
-    toggle:
-      icon: material/lightbulb-outline
-      name: Switch to light mode
+    - scheme: default
+      primary: blue grey
+      accent: red
+      media: "(prefers-color-scheme: light)"
+      toggle:
+        icon: material/lightbulb
+        name: Switch to dark mode
+    - scheme: slate
+      media: "(prefers-color-scheme: dark)"
+      primary: blue grey
+      accent: red
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to light mode
   favicon: statics/images/favicon.ico
   logo: statics/images/white.png
   features:
-  - search.suggest
-  - search.highlight
-  - content.tabs.link
-  - content.code.copy
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
 repo_name: dymmond/mongoz
 repo_url: https://github.com/dymmond/mongoz
-edit_uri: ''
+edit_uri: ""
 plugins:
-- search
-- meta-descriptions:
-    export_csv: false
-    quiet: false
-    enable_checks: false
-    min_length: 50
-    max_length: 160
-    trim: false
-- mkdocstrings:
-    handlers:
-      python:
-        options:
-          extensions:
-          - griffe_typingdoc
-          show_root_heading: true
-          show_if_no_docstring: true
-          preload_modules:
-          - httpx
-          - a2wsgi
-          inherited_members: true
-          members_order: source
-          separate_signature: true
-          unwrap_annotated: true
-          filters:
-          - '!^_'
-          merge_init_into_class: true
-          docstring_section_style: spacy
-          signature_crossrefs: true
-          show_symbol_type_heading: true
-          show_symbol_type_toc: true
+  - search
+  - meta-descriptions:
+      export_csv: false
+      quiet: false
+      enable_checks: false
+      min_length: 50
+      max_length: 160
+      trim: false
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            extensions:
+              - griffe_typingdoc
+            show_root_heading: true
+            show_if_no_docstring: true
+            preload_modules:
+              - httpx
+              - a2wsgi
+            inherited_members: true
+            members_order: source
+            separate_signature: true
+            unwrap_annotated: true
+            filters:
+              - "!^_"
+            merge_init_into_class: true
+            docstring_section_style: spacy
+            signature_crossrefs: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
 nav:
-- mongoz.md
-- documents.md
-- embedded-documents.md
-- fields.md
-- queries.md
-- managers.md
-- signals.md
-- settings.md
-- registry.md
-- exceptions.md
-- tips-and-tricks.md
-- contributing.md
-- sponsorship.md
-- release-notes.md
+  - index.md
+  - documents.md
+  - embedded-documents.md
+  - fields.md
+  - queries.md
+  - managers.md
+  - signals.md
+  - settings.md
+  - registry.md
+  - exceptions.md
+  - tips-and-tricks.md
+  - contributing.md
+  - sponsorship.md
+  - release-notes.md
 markdown_extensions:
-- attr_list
-- toc:
-    permalink: true
-- markdown.extensions.codehilite:
-    guess_lang: false
-- mdx_include:
-    base_path: docs
-- admonition
-- codehilite
-- extra
-- pymdownx.superfences
-- pymdownx.tabbed:
-    alternate_style: true
-- md_in_html
+  - attr_list
+  - toc:
+      permalink: true
+  - markdown.extensions.codehilite:
+      guess_lang: false
+  - mdx_include:
+      base_path: docs
+  - admonition
+  - codehilite
+  - extra
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - md_in_html
 extra:
   alternate:
-  - link: /
-    name: en - English
-  - link: /pt/
-    name: pt - português
+    - link: /
+      name: en - English
+    - link: /pt/
+      name: pt - português
 hooks:
-- ../../scripts/hooks.py
+  - ../../scripts/hooks.py
