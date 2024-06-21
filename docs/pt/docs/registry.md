@@ -38,7 +38,7 @@ Por vezes, pode ser útil garantir que todos os documentos têm os índices atua
 {!> ../../../docs_src/registry/document_checks.py !}
 ```
 
-### Utilização num framework
+### Utilização numa framework
 
 Esta funcionalidade também pode ser útil se estiver a utilizar, por exemplo, uma framework ASGI como o Starlette, [Lilya](https://lilya.dev) ou [Esmerald](https://esmerald.dev).
 

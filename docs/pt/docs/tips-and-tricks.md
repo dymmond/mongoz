@@ -1,32 +1,27 @@
-# Tips and tricks
+# Truques e Dicas
 
-This part is dedicated to some code organisation within your application.
+Esta parte é dedicada à organização de código dentro da aplicação.
 
-The examples are more focused on the [Esmerald](https://esmerald.dev) as the author is the
-same but again, you can do the same in your favourite framework.
+Os exemplos estão mais focados no [Esmerald](https://esmerald.dev) já que o autor é o mesmo, mas novamente, pode fazer o mesmo na sua framework preferida.
 
-## Placing your connection in a centralised place
+## Colocar a sua conecção num local centralizado
 
-This is probably what you would like to do in your application since you don't want to declare
-over and over again the same variables.
+Provavelmente isto é o que gostaria de fazer na sua aplicação, uma vez que não quer declarar repetidamente as mesmas variáveis.
 
-The main reason for that is the fact that every time you declare a [registry](./registry.md),
-in fact you are generating a new object and this is not great if you need to access
-the documents used with the main registry, right?
+A principal razão para isto é o facto de que cada vez que se declara um [registo](./registry.md), na verdade está a criar um novo objeto e isso não é ideal se precisar de aceder aos documentos utilizados no registo principal, certo?
 
-### Place the connection details inside a global settings file
+### Colocar os detalhes da conecçâo dentro de um ficheiro de configurações global
 
-This is probably the easiest way to place the connection details and particulary for Esmerald since
-it comes with a simple and easy way of accesing the settings anywhere in the code.
+Esta é provavelmente a forma mais fácil de colocar os detalhes da conecção, especialmente para o Esmerald, já que possui uma maneira simples e fácil de acessar as configurações em qualquer parte do código.
 
-Something simple like this:
+Algo simples como isto:
 
 ```python hl_lines="18-25"
 {!> ../../../docs_src/tips/settings.py !}
 ```
 
-As you can see, now you have the `db_connection` in one place and easy to access from anywhere in
-your code. In the case of Esmerald:
+Como pode ver, agora tem a `db_connection` num único local e de fácil acesso em qualquer parte do
+seu código. No caso do Esmerald:
 
 ```python hl_lines="3"
 from esmerald.conf import settings
@@ -34,38 +29,34 @@ from esmerald.conf import settings
 registry = settings.db_connection
 ```
 
-**But is this enough?** No.
+**Mas isso é suficiente?** Não.
 
-As mentioned before, when assigning or creating a variable, python itself generates a new object
-with a different `id` which can differ from each time you need to import the settings into the
-needed places.
+Como mencionado anteriormente, ao atribuir ou criar uma variável, o próprio Python gera um novo objeto com um `id` diferente,
+que pode ser diferente a cada vez que precisa importar as configurações nos locais necessários.
 
-We won't talk about this pythonic trick as there is plenty of documentation on the web and better
-suited for that same purpose.
+Não vamos falar sobre este truque, visto que há muita documentação online e mais adequada para este mesmo propósito.
 
-How do we solve this issue? Enters [lru_cache](#the-lru-cache).
+Como resolvemos este problema? Entra em cena o [lru_cache](#a-lru-cache).
 
-## The LRU cache
+## A LRU cache
 
-LRU extends for **least recently used**.
+LRU extends significa **least recently used**.
 
-A very common technique that aims to help caching certain pieces of functionality within your
-codebase and making sure you **do not generate** extra objects and this is exactly what we need.
+Uma técnica muito comum que visa ajudar a fazer cache de certas partes de funcionalidade dentro do código e garantir
+que **não cria** objetos extras, e é exatamente isso que precisamos.
 
-Use the example above, let us now create a new file called `utils.py` where we will be applying
-the `lru_cache` technique for our `db_connection`.
+Usando o exemplo acima, vamos agora criar um novo ficheiro chamado `utils.py`, onde aplicaremos a técnica `lru_cache` para a nossa `db_connection`.
 
 ```python title="utils.py" hl_lines="6"
 {!> ../../../docs_src/tips/lru.py !}
 ```
 
-This will make sure that from now on you will always use the same connection and registry within
-your appliction by importing the `get_db_connection()` anywhere is needed.
+Isto garantirá que a partir de agora irá usar sempre a mesma conecção e registro dentro da aplicação, importando o `get_db_connection()` sempre que for necessário.
 
-## Pratical example
+## Exemplo prático
 
-For this example we will have the following structure (we won't be use using all of the files).
-We won't be creating views as this is not the purpose of the example.
+Para este exemplo, teremos a seguinte estrutura (não iremos usar todos os ficheiros).
+Não iremos criar *views* visto que este não é o propósito do exemplo.
 
 ```shell
 .
@@ -98,49 +89,45 @@ We won't be creating views as this is not the purpose of the example.
     │   └── test_app.py
     └── urls.py
 ```
+Esta estrutura é gerada utilizando as
+[directivas Esmerald](https://esmerald.dev/directives/directives/)
 
-This structure is generated by using the
-[Esmerald directives](https://esmerald.dev/directives/directives/)
+### As configurações
 
-### The settings
-
-As mentioned before we will have a settings file with database connection properties assembled.
+Como mencionado anteriormente, teremos um ficheiro de configurações com as propriedades de ligação à base de dados montadas.
 
 ```python title="my_project/configs/settings.py" hl_lines="18-19"
 {!> ../../../docs_src/tips/settings.py !}
 ```
 
-### The utils
+### Os utilitários
 
-Now we create the `utils.py` where we appy the [LRU](#the-lru-cache) technique.
+Agora criamos o `utils.py` onde aplicamos a técnica [LRU](#a-lru-cache).
 
 ```python title="myproject/utils.py" hl_lines="6"
 {!> ../../../docs_src/tips/lru.py !}
 ```
 
-### The documents
+### Os documentos
 
-We can now start creating our [documents](./documents.md) and making sure we keep them always in the
-same [registry](./registry.md)
-
+Agora podemos começar a criar os nossos [documentos](./documents.md) e garantir que os mantemos sempre no mesmo [registo](./registry.md).
 
 ```python title="myproject/apps/accounts/documents.py" hl_lines="7 12-14"
 {!> ../../../docs_src/tips/models.py !}
 ```
 
-Here applied the [inheritance](./documents.md#with-inheritance) to make it clean and more readable in
-case we want even more documents.
+Aqui aplicamos a [herança](./documents.md#com-herança) para torná-lo mais limpo e legível
+caso queiramos ainda mais documentos.
 
-As you could also notice, we are importing the `get_db_connection()` previously created. This is
-now what we will be using everywhere.
+Como também pode notar, estamos a importar o `get_db_connection()` previamente criado. Agora é
+o que usaremos em todos os lugares.
 
-## Notes
+## Notas
 
-The above [example](#pratical-example) shows how you could take leverage of a centralised place
-to manage your connections and then use it across your application keeping your code always clean
-not redundant and beautiful.
+O [exemplo](#exemplo-prático) acima mostra como pode aproveitar local centralizado para gerir suas conecções e usá-las em toda a aplicação,
+mantendo o código sempre limpo, não redundante e bonito.
 
-This example is applied to any of your favourite frameworks and you can use as many and different
-techniques as the ones you see fit for your own purposes.
+Este exemplo pode ser aplicado a qualquer uma das frameworks preferidas e pode usar tantas técnicas diferentes
+quanto achar adequado para o seu propósito.
 
-**Mongoz is framework agnostic**.
+**Mongoz é independente de qualquer framework**.

@@ -123,7 +123,7 @@ $ hatch run docs:serve -p <PORT-NUMBER>
 
 Desta forma, pode editar os ficheiros da documentação/fonte e ver as alterações em tempo real.
 
-!!! dica
+!!! tip
     Alternativamente, pode executar os mesmos passos que o script faz manualmente.
 
     Acesse à directoria do idioma. Para a documentação principal em inglês, a localização é `docs/en/`:
@@ -186,7 +186,7 @@ Vamos supor que quer traduzir uma página para um idioma que já possui traduç�
 
 No caso do espanhol, o código de duas letras é `es`. Portanto, a directoria para as traduções em espanhol está localizada em `docs/es/`.
 
-!!! dica
+!!! tip
     A língua principal ("oficial") é o Inglês, localizado em `docs/en/`.
 
 Agora execute o servidor em tempo real para a documentação em espanhol:
@@ -203,7 +203,7 @@ $ hatch run docs:serve_lang es
 !!! tip
     Alternativamente, você pode executar os mesmos passos que o script faz manualmente.
 
-    Acesse a directoria do idioma, para as traduções em espanhol está em `docs/es/`:
+    Aceda à directoria do idioma, para as traduções em espanhol está em `docs/es/`:
 
     ```console
     $ cd docs/es/
@@ -220,18 +220,18 @@ Agora pode aceder a <a href="http://127.0.0.1:8000" class="external-link" target
 
 Vai verificar que cada idioma tem todas as páginas. No entanto, algumas páginas não estão traduzidas e têm uma caixa de informação no topo, sobre a tradução em falta.
 
-Agora, suponhamos que deseja adicionar uma tradução para a secção [Routing](routing.md){.internal-link target=_blank}.
+Agora, suponhamos que deseja adicionar uma tradução para a secção [Campos](fields.md){.internal-link target=_blank}.
 
 * Copie o ficheiro em:
 
 ```
-docs/en/docs/routing/routing.md
+docs/en/docs/fields.md
 ```
 
 * Cole-o exatamente no mesmo local, mas para o idioma que deseja traduzir, por exemplo:
 
 ```
-docs/es/docs/routing/routing.md
+docs/es/docs/fields.md
 ```
 
 !!! tip

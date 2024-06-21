@@ -1203,7 +1203,7 @@ users = await User.query(Q.lte(User.id, 20)).all()
 ## Blocking Queries
 
 What happens if you want to use Mongoz with a blocking operation? So by blocking means `sync`.
-For instance, Flask does not support natively `async` and Mongoz is an async agnotic ORM and you
+For instance, Flask does not support natively `async` and Mongoz is an async agnotic ODM and you
 probably would like to take advantage of Mongoz but you want without doing a lot of magic behind.
 
 Well, Mongoz also supports the `run_sync` functionality that allows you to run the queries in
