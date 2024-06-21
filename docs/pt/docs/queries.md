@@ -1,45 +1,37 @@
 # Queries
 
-Making queries is a must when using an ODM and being able to make complex queries is even better
-when allowed.
+Fazer pesquisas é essencial para utilizar um ODM e poder fazer pesquisas complexas é ainda melhor quando assim o é permitido.
 
-MongoDB is known for its performance when querying a database and it is very fast.
+O MongoDB é conhecido pela sua performance ao pesquisas uma base de dados e é muito rápido nisso.
 
-When making queries in a [document][document], the ODM allow two different possible ways of querying.
-One is using its internal **manager** and the second its internal **queryset**.
+Ao fazer pesquisas num [documento][document], o ODM permite duas maneiras diferentes de pesquisa. Uma é utilizando o **manager** interno e a segunda é utilizando o **queryset**.
 
-In reality, the `manager` and `queryset` are very similar but for internal purposes it was decided
-to call both in this way to be clear in the way the queries can be done.
+Na realidade, o `manager` e o `queryset` são muito parecidos, mas para fins internos, foi decidido chamá-los desta maneira para deixar claro como as pesquisas podem ser feitas.
 
-If you haven't yet seen the [documents][document] section, now would be a great time to have a look
-and get yourself acquainted .
+Se ainda não viu a seção de [documentos][document], agora seria uma ótima altura para dar uma vista de olhos e se familiarizar.
 
-For the purpose of this documentation, we will be showing how to query using both the `manager` and
-the `queryset`.
+Para fins desta documentação, mostraremos como fazer pesquisas utilizando tanto o `manager` quanto o `queryset`.
 
-Both queryset and manager work really well also when combibed. In the end is up to the developer
-to decide which one it prefers better.
+Tanto o queryset quanto o manager funcionam muito bem quando combinados. No final, cabe ao programador decidir qual prefere.
 
 ## Manager and QuerySet
 
-When making queries within Mongoz, this return or an object if you want only one result or a
-`queryset`/`manager` which is the internal representation of the results.
+Quando se faz pesquisas dentro do Mongoz, isto retorna um objeto se deseja apenas um resultado ou um `queryset`/`manager` que é a representação interna de varios resultados.
 
-If you are familiar with Django querysets, this is **almost** the same and by almost is because
-mongoz restricts loosely queryset variable assignments.
+Se está familiarizado com as querysets do Django, isto é **quase** a mesma coisa e por quase é porque o mongoz restringe as atribuições de variáveis da queryset de forma mais livre.
 
-Let us get familar with queries.
+Vamos nos familiarizar com as pesquisas.
 
-Let us assume you have the following `User` document defined.
+Vamos supor que tenha o seguinte documento `User` definido.
 
 ```python
 {!> ../../../docs_src/queries/document.py !}
 ```
 
-As mentioned before, Mongoz allows to use two ways of querying. Via `manager` and via `queryset`.
-Both allow chain calls, for instance, `sort()` with a `limit()` combined.
+Como mencionado anteriormente, o Mongoz permite usar duas formas de pesquisa. Através do `manager` e do `queryset`.
+Ambos permitem chamadas encadeadas, por exemplo, `sort()` com um `limit()` combinado.
 
-For instance, let us create a user.
+Por exemplo, vamos criar um utilizador.
 
 === "Manager"
 
@@ -59,13 +51,12 @@ For instance, let us create a user.
     ).create()
     ```
 
-As you can see, the **manager** uses the `objects` to access the operations and the `queryset` does
-it in a different way.
+Como pode verificar, o **manager** utiliza `objects` para aceder às operações e o `queryset` faz de forma diferente.
 
-For those familiar with Django, the `manager` follows the same lines.
+Para aqueles familiarizados com o Django, o `manager` segue a mesma linha.
 
-Let us now query the database to obtain a simple record but filtering it by `email` and `first_name`.
-We want this to return a list since we are using a `filter`.
+Agora vamos fazer uma pesquisa à base de dados para obter um registro simples, filtrando-o por `email` e `first_name`.
+Queremos que isto retorne uma lista, já que estamos a utilizar um `filter`.
 
 === "Manager"
 
@@ -83,52 +74,49 @@ We want this to return a list since we are using a `filter`.
     ).all()
     ```
 
-Quite simple right? Well yes, although preferably we would recommend the use of the `manager` for
-almost everything you can do with Mongoz, sometimes using the `queryset` can be also useful if
-you like different syntaxes. This syntax was inspired by Mongox.
+Bastante simples, certo? Bem sim, embora preferencialmente recomendemos o uso do `manager` para quase tudo o que pode fazer com o Mongoz,
+às vezes usar o `queryset` também pode ser útil se gosta de sintaxes diferentes. Esta sintaxe foi inspirada no Mongox.
 
-## Returning managers/querysets
+## Retornando managers/querysets
 
-There are many operations you can do with the managers/querysets and then you can also leverage those
-for your use cases.
+Existem muitas operações que pode fazer com os managers/querysets e depois também pode aproveitar essas mesmas para seus casos de uso.
 
-The following operators return `managers`/`querysets` which means you can combine different
-operators at the same time.
+Os seguintes operadores retornam `managers`/`querysets`, o que significa que você pode combinar diferentes operadores ao mesmo tempo.
 
-This also means you can nest multiple different and same types. For example:
+Isso também significa que você pode aninhar vários tipos diferentes e iguais. Por exemplo:
 
 ```python
 await User.objects.filter(...).sort(...).filter(...).limit(2)
 ```
 
-Every single operation that returns managers and querysets allows combined/nested calls.
+Todas as operações que retornam managers e querysets permitem chamadas combinadas/aninhadas.
 
 ### Filter
 
-The `filter` is unique to the `manager` and it does not exist in this way in the `queryset`.
-The `queryset` version is the [Query](#query).
+O `filtro` é exclusivo do `manager` e não existe desta forma no `queryset`.
+A versão do `queryset` é a [Query](#query).
 
 #### Django-style
 
-These filters are the same **Django-style** lookups.
+Estes filtros são as mesmas pesquisas no estilo **Django**.
 
 ```python
 users = await User.objects.filter(is_active=True, email__icontains="gmail")
 ```
 
-The same special operators are also automatically added on every column.
+Os mesmos operadores especiais também são adicionados automaticamente em cada coluna.
 
-* **in** - The `IN` operator.
-* **not_in** - The opposide of `in`, meaning, all the records that are not in the condition.
-* **contains** - Filter instances that contains a specific value.
-* **icontains** - Filter instances that contains a specific value but case-insensitive.
-* **lt** - Filter instances having values `Less Than`.
-* **lte** - Filter instances having values `Less Than Equal`.
-* **gt** - Filter instances having values `Greater Than`.
-* **gte** - Filter instances having values `Greater Than Equal`.
-* **asc** - Filter instances by ascending order where `_asc=True`.
-* **desc** - Filter instances by descending order where `_desc=True`.
-* **neq** - Filter instances by not equal to condition.
+* **in** - O operador `IN`.
+* **not_in** - O oposto de `in`, ou seja, todos os registos que não estão na condição.
+* **contains** - Filtrar instâncias que contêm um valor específico.
+* **icontains** - Filtrar instâncias que contêm um valor específico, sem distinguir maiúsculas de minúsculas.
+* **lt** - Filtrar instâncias com valores "Menor Que".
+* **lte** - Filtrar instâncias com valores "Menor or Igual Que".
+* **gt** - Filtrar instâncias com valores "Maior Que".
+* **gte** - Filtrar instâncias com valores "Maior ou Iugal Que".
+* **asc** - Filtrar instâncias por ordem ascendente quando `_asc=True`.
+* **desc** - Filtrar instâncias por ordem descendente quando `_desc=True`.
+* **neq** - Filtrar instâncias por não ser igual à condição.
 
 ##### Example
 
@@ -141,15 +129,15 @@ users = await User.objects.filter(id__lte=3)
 users = await User.objects.filter(id__lt=2)
 users = await User.objects.filter(id__gte=4)
 users = await User.objects.filter(id__asc=True)
-users = await User.objects.filter(id__asc=False) # same as desc True
+users = await User.objects.filter(id__asc=False) # mesmo que desc True
 users = await User.objects.filter(id__desc=True)
-users = await User.objects.filter(id__desc=False) # same as asc True
-users = await User.objects.filter(id__neq=1) # same as asc True
+users = await User.objects.filter(id__desc=False) # mesmo que asc True
+users = await User.objects.filter(id__neq=1) # memso que asc True
 ```
 
 ### Using
 
-Change the database while querying, only need to supply the database name in order to change the database.
+Alterar a base de dados durante a consulta, apenas precisa fornecer o nome para alterar a base de dados de destino.
 
 === "Manager"
 
@@ -159,22 +147,21 @@ Change the database while querying, only need to supply the database name in ord
 
 ### Query
 
-The `query` is what is used by the `queryset` instead of the `manager`. In other words, the `query`
-is for the queryset what `filter` is for the `manager`.
+A `query` é o que é usado pelo `queryset` em vez do `manager`. Noutras palavras, a `query` é para o `queryset` o que o `filter` é para o `manager`.
 
-An example query would be:
+Um exemplo de query seria:
 
 ```python
 users = await User.query(User.email == "mongoz@mongoz.com").query(User.id > 1).all()
 ```
 
-Or alternatively you can use dictionaries.
+Ou, alternativamente, pode usar dicionários.
 
 ```python
 user = await User.query({"first_name": "Mongoz"}).all()
 ```
 
-Or you can use the `User` fields instead of dictionaries.
+Ou pode usar os campos do `User` em vez de dicionários.
 
 ```python
 user = await User.query({User.first_name: "Mongoz"}).all()
@@ -182,7 +169,7 @@ user = await User.query({User.first_name: "Mongoz"}).all()
 
 ### Limit
 
-Limiting the number of results.
+Limitar o número de resultados.
 
 === "Manager"
 
@@ -202,7 +189,7 @@ Limiting the number of results.
 
 ### Skip
 
-Skip a certain number of documents.
+Saltar (ignorar) um certo número de documentos.
 
 === "Manager"
 
@@ -218,10 +205,9 @@ Skip a certain number of documents.
 
 ### Raw
 
-Executing raw queries directly. This allows to have some sort of power over some more complicated
-queries you might find.
+Executar pesquisas em "bruto" diretamente. Isto permite ter algum tipo de controlo sobre pesquisas mais complicadas que pode encontrar.
 
-#### Simple and nested raw queries
+#### Consultas simples e aninhadas em bruto
 
 === "Manager"
 
@@ -247,9 +233,9 @@ queries you might find.
     users = await Movie.query({"name": "mongo"}).raw({"email": "mongoz@mongoz.com"})
     ```
 
-#### Complex with MongoDB specific syntax
+#### Complexo com sintaxe específica do MongoDB
 
-What if you want to level up and add extras?
+E se quiser evoluir e adicionar extras?
 
 === "Manager"
 
@@ -277,8 +263,7 @@ What if you want to level up and add extras?
 
 ### Sort
 
-Sort the values based on keys. The sort like every single returning manager/queryset, allows
-nested calls.
+Ordenar os valores com base nas chaves. A ordenação, assim como qualquer retorno do manager/queryset, permite chamadas aninhadas.
 
 === "Manager"
 
@@ -310,21 +295,20 @@ nested calls.
     )
     ```
 
-The [Q](#the-q-operator) operator allows some combinations as well if you opt for that same syntax.
+O operador [Q](#o-operador-q) também permite algumas combinações se optar por esta mesma sintaxe.
 
-Now, can you combine the syntax of the sort from the `queryset` with the syntax of the `manager`
-in the sort? **Yes you can**. An example would be something like this:
+Agora, é possível combinar a sintaxe do sort do `queryset` com a sintaxe do sort do `manager`? **Sim, é possível**. Um exemplo seria algo como isto:
 
 ```python
 users = await User.objects.sort(Q.desc(User.name)).sort(Q.asc(User.email)).all()
 ```
 
 !!! Danger
-    The syntax from the `queryset` is allowed inside the `manager` **but not the other way around**.
+    A sintaxe do `queryset` é permitida dentro do `manager`, **mas não o contrário**.
 
 ### None
 
-If you only need to return an empty manager or queryset.
+Se apenas precisar retornar um manager ou queryset vazio.
 
 === "Manager"
 
@@ -340,12 +324,11 @@ If you only need to return an empty manager or queryset.
 
 ## Returning results
 
-These are the operations that return results instead of *managers* or *querysets*. Which means
-you cannot nest them.
+Estas são as operações que retornam resultados em vez de *managers* ou *querysets*. O que significa que não é possível aninhá-las.
 
 ### All
 
-Returns all the instances.
+Retorna todas as intâncias-
 
 === "Manager"
 
@@ -363,9 +346,9 @@ Returns all the instances.
 
 ### Save
 
-This is a classic operation that is very useful depending on which operations you need to perform.
-Used to save an existing object in the database. Slighly different from the [update](#update) and
-simpler to read.
+Esta é uma operação clássica que é muito útil dependendo das operações que precisa realizar.
+Usado para guardar um objeto existente na base de dados. Um pouco diferente do [update](#update) e
+mais simples de ler.
 
 === "Manager"
 
@@ -389,9 +372,8 @@ simpler to read.
     await user.save()
     ```
 
-Now a more unique, yet possible scenario with a save. Imagine you need to create an exact copy
-of an object and store it in the database. These cases are more common than you think but this is
-for example purposes only.
+Agora, um cenário mais único, mas possível, com um save. Imagine que precisa criar uma cópia exata de um objeto e guardá-lo na base de dados.
+Estes casos são mais comuns do que imagina, mas este exemplo é apenas para fins ilustrativos.
 
 === "Manager"
 
@@ -423,7 +405,7 @@ for example purposes only.
 
 ### Delete
 
-Used to delete an instance.
+Usado para eliminar uma instância.
 
 === "Manager"
 
@@ -437,7 +419,7 @@ Used to delete an instance.
     await Movie.query({User.email: "foo@bar.com"}).delete()
     ```
 
-Or directly in the instance.
+Ou diretamente na instância.
 
 === "Manager"
 
@@ -457,7 +439,7 @@ Or directly in the instance.
 
 ### Update
 
-You can update document instances by calling this operator.
+Pode atualizar instâncias de documentos chamando este operador.
 
 === "Manager"
 
@@ -475,7 +457,7 @@ You can update document instances by calling this operator.
     await user.update(email="bar@foo.com")
     ```
 
-There is also the possibility of updating all the records based on a specific search.
+Também existe a possibilidade de atualizar todos os registos com base numa pesquisa específica.
 
 === "Manager"
 
@@ -493,7 +475,7 @@ There is also the possibility of updating all the records based on a specific se
 
 ### Get
 
-Obtains a single record from the database.
+Obtém um único registo da base de dados.
 
 === "Manager"
 
@@ -507,7 +489,7 @@ Obtains a single record from the database.
     user = await User.query(User.email == "foo@bar.com").query(User.name == "Mongoz").get()
     ```
 
-You can mix the queryset returns with this operator as well.
+Também é possível combinar os resultados do queryset com este operador.
 
 === "Manager"
 
@@ -523,7 +505,7 @@ You can mix the queryset returns with this operator as well.
 
 ### First
 
-When you need to return the very first result from a queryset.
+Quando precisar retornar o primeiro resultado de um queryset.
 
 === "Manager"
 
@@ -537,7 +519,7 @@ When you need to return the very first result from a queryset.
     user = await User.query().first()
     ```
 
-You can also apply filters when needed.
+Também é possível aplicar filtros quando necessário.
 
 === "Manager"
 
@@ -553,7 +535,7 @@ You can also apply filters when needed.
 
 ### Last
 
-When you need to return the last result from a queryset.
+Quando precisar retornar o último resultado de um queryset.
 
 === "Manager"
 
@@ -567,7 +549,7 @@ When you need to return the last result from a queryset.
     user = await User.query().last()
     ```
 
-You can also apply filters when needed.
+Também é possível aplicar filtros quando necessário.
 
 === "Manager"
 
@@ -583,7 +565,7 @@ You can also apply filters when needed.
 
 ### Count
 
-Returns an integer with the total of records.
+Retorna um número inteiro com o total de registos.
 
 === "Manager"
 
@@ -599,7 +581,7 @@ Returns an integer with the total of records.
 
 ### Exclude
 
-The `exclude()` is used when you want to filter results by excluding instances.
+O `exclude()` é usado quando deseja filtrar os resultados excluindo instâncias.
 
 === "Manager"
 
@@ -613,11 +595,11 @@ The `exclude()` is used when you want to filter results by excluding instances.
     users = await User.query(Q.not_(User.is_active, False)).all()
     ```
 
-    With the queryset we simply call the [Not](#not) operator.
+    Com o queryset, simplesmente chamamos o operador [Not](#not).
 
 ### Values
 
-Returns the model results in a dictionary like format.
+Retorna os resultados do modelo num formato de dicionário.
 
 === "Manager"
 
@@ -679,17 +661,17 @@ Returns the model results in a dictionary like format.
     ]
     ```
 
-The `values()` can also be combined with `filter`, `only` as per usual.
+O `values()` também pode ser combinado com `filter`, `only` como de costume.
 
-**Parameters**:
+**Parâmetros**:
 
-* **fields** - Fields of values to return.
-* **exclude** - Fields to exclude from the return.
-* **exclude_none** - Boolean flag indicating if the fields with `None` should be excluded.
+* **fields** - Campos a retornar.
+* **exclude** - Campos a excluir do retorno.
+* **exclude_none** - Sinalizador booleano indicando se os campos com `None` devem ser excluídos.
 
 ### Values list
 
-Returns the model results in a tuple like format.
+Retorna os resultados do modelo nm formato de tuplo.
 
 === "Manager"
 
@@ -763,19 +745,18 @@ Returns the model results in a tuple like format.
     ]
     ```
 
-The `values_list()` can also be combined with `filter`, `only` as per usual.
+O método `values_list()` também pode ser combinado com `filter`, `only` como de costume.
 
-**Parameters**:
+**Parâmetros**:
 
-* **fields** - Fields of values to return.
-* **exclude** - Fields to exclude from the return.
-* **exclude_none** - Boolean flag indicating if the fields with `None` should be excluded.
-* **flat** - Boolean flag indicating the results should be flattened.
-
+* **fields** - Campos a retornar.
+* **exclude** - Campos a excluir do retorno.
+* **exclude_none** - Sinalizador booleano indicando se os campos com `None` devem ser excluídos.
+* **flat** - Sinalizador booleano indicando se os resultados devem ser achatados.
 
 ### Only
 
-Returns the results containing **only** the fields in the query and nothing else.
+Retorna os resultados contendo **apenas** os campos na pesquisa e nada mais.
 
 === "Manager"
 
@@ -794,11 +775,11 @@ Returns the results containing **only** the fields in the query and nothing else
     ```
 
 !!! Warning
-    You can only use `only()` or `defer()` but not both combined or a `FieldDefinitionError` is raised.
+    Só pode utilizar `only()` ou `defer()`, mas não ambos combinados, caso contrário, será lançado um `FieldDefinitionError`.
 
 ### Defer
 
-Returns the results containing all the fields **but the ones you want to exclude**.
+Retorna os resultados contendo todos os campos **excepto aqueles que deseja excluir**.
 
 === "Manager"
 
@@ -817,13 +798,11 @@ Returns the results containing all the fields **but the ones you want to exclude
     ```
 
 !!! Warning
-    You can only use `only()` or `defer()` but not both combined or a `FieldDefinitionError` is raised.
-
+    Só pode utilizar `only()` ou `defer()`, mas não ambos combinados, caso contrário, será lançado um `FieldDefinitionError`.
 
 ### Get or none
 
-When querying a document and do not want to raise a [DocumentNotFound](./exceptions.md#documentnotfound) and
-instead returns a `None`.
+Ao pesquisar um documento e não desejar obter um [DocumentNotFound](./exceptions.md#documentnotfound) e, em vez disso, retornar `None`.
 
 === "Manager"
 
@@ -839,7 +818,7 @@ instead returns a `None`.
 
 ### Where
 
-Apply raw string queries or the `where` clause.
+Aplicar pesquisas de strings em bruto ou a cláusula `where`.
 
 === "Manager"
 
@@ -855,7 +834,7 @@ Apply raw string queries or the `where` clause.
 
 ### Distinct values
 
-Filter by distinct values and return a list of those same values.
+Filtrar por valores distintos e retornar uma lista desses mesmos valores.
 
 === "Manager"
 
@@ -871,7 +850,7 @@ Filter by distinct values and return a list of those same values.
 
 ### Get document by id
 
-Get a document by the `_id`. This functionality accepts the parameter `id` as string or `bson.ObjectId`.
+Obter um documento pelo `_id`. Esta funcionalidade aceita o parâmetro `id` como uma string ou `bson.ObjectId`.
 
 === "Manager"
 
@@ -893,12 +872,11 @@ Get a document by the `_id`. This functionality accepts the parameter `id` as st
     user = await User.query().get_document_by_id(user.id)
     ```
 
-## Useful methods
+## Métodos úteis
 
 ### Get or create
 
-When you need get an existing document instance from the matching query. If exists, returns or creates
-a new one in case of not existing.
+Quando precisar obter uma instância existente de um documento a partir de uma consulta correspondente. Se existir, retorna ou cria uma nova caso não exista.
 
 === "Manager"
 
@@ -916,12 +894,11 @@ a new one in case of not existing.
     )
     ```
 
-This will query the `User` document with the `email` as the lookup key. If it doesn't exist, then it
-will use that value with the `defaults` provided to create a new instance.
+Isto irá pesquisar o documento `User` com o `email` como chave de pesquisa. Se não existir, então irá utilizar esse valor com os `defaults` fornecidos para criar uma nova instância.
 
 ### Bulk create
 
-When you need to create many instances in one go, or `in bulk`.
+Quando precisar criar várias instâncias de uma só vez, ou `em massa`.
 
 === "Manager"
 
@@ -947,7 +924,7 @@ When you need to create many instances in one go, or `in bulk`.
 
 ### Bulk update
 
-When you need to update many instances in one go, or `in bulk`.
+Quando precisar atualizar várias instâncias de uma só vez, ou `em massa`.
 
 === "Manager"
 
@@ -979,22 +956,22 @@ When you need to update many instances in one go, or `in bulk`.
     await User.query().bulk_update(is_active=False)
     ```
 
-## Note
+## Nota
 
-When applying the functions that returns values directly and not managers or querysets,
-**you can still apply the operators such as `filter`, `skip`, `sort`...**
+Quando aplicar as funções que retornam valores diretamente e não managers ou querysets,
+**ainda é possível aplicar os operadores como `filter`, `skip`, `sort`...**
 
-## Querying Embedded documents
+## Consultar documentos incorporados
 
-Querying [embedded documents](./embedded-documents.md) is also easy and here the `queryset` is very powerful in doing it so.
+Consultar [documentos incorporados](./embedded-documents.md) também é fácil e aqui o `queryset` é muito poderoso para fazê-lo.
 
-Let us see an example.
+Vamos ver um exemplo.
 
 ```python hl_lines="17"
 {!> ../../../docs_src/queries/embed.py !}
 ```
 
-We can now create some instances of the `User`.
+Agora podemos criar algumas instâncias do `User`.
 
 === "Manager"
 
@@ -1018,7 +995,7 @@ We can now create some instances of the `User`.
     ).create()
     ```
 
-This will create the following document in the database:
+Isto irá criar o seguinte documento na base de dados:
 
 ```json
 {
@@ -1027,56 +1004,53 @@ This will create the following document in the database:
 },
 ```
 
-You can now query the user by embedded document field.
+Agora é possível pesquisar o utilizador pelo campo do documento incorporado.
 
 ```python
 await User.query(User.user_type.level == "admin").get()
 ```
 
-This is the equivalent to the following filter:
+Este é o equivalente ao seguinte filtro:
 
 ```json
 {"access_level.level": "admin" }
 ```
 
-You can also use the complete embedded document.
+Também pode utilizar o documento incorporado completo.
 
 ```python
 await User.query(User.user_type == level).get()
 ```
 
-This is the equivalent to the following filter:
+Este é o equivalente ao seguinte filtro:
 
 ```json
 {"access_level": {"level": "admin"} }
 ```
 
 !!! Warning
-    For the [Embedded Documents](./embedded-documents.md) type of query, using the manager it won't
-    work. **You should use the `queryset` type of approach for the query**.
+    Para o tipo de pesquisa [Documentos Incorporados](./embedded-documents.md), usando o manager não irá funcionar.
+    **Deve-se usar a abordagem do tipo `queryset` para a pesquisa**.
 
-## The Q operator
+## O operador Q
 
-This operator was inspired by `Mongox` and extended for Mongoz needs. The credit for the initial
-design of the `Q` operator goes to `Mongox`.
+Este operador foi inspirado pelo `Mongox` e estendido para as necessidades do Mongoz. O crédito pelo design inicial do operador `Q` vai para o `Mongox`.
 
-The `Q` class contains some useful and quite handy methods to be used in the queries.
+A classe `Q` contém alguns métodos úteis e bastante práticos para serem usados nas pesquisas.
 
 ```python
 from mongoz import Q, Order
 ```
 
-The `Q` operator is mainly used in the `queryset` and not so much in the `manager` and the main
-reason for this is because the `manager` internally manipulates the `Q` operator for you
-automatically. Pretty cool, hein?
+O operador `Q` é principalmente usado no `queryset` e não tanto no `manager`, e a principal razão para isso é porque o `manager` manipula internamente o operador `Q` automaticamente. Bem porreiro, não é?
 
-In order to create, for example a `sort` query, you would usually do this:
+Para criar, por exemplo, uma pesquisa de `sort`, normalmente faria assim:
 
 ```python
 users = await User.query().sort(User.email, Order.DESCENDING).all()
 ```
 
-Where does the `Q` operator enters here? Well, you can see it as a shortcut for your queries.
+Onde é que o operador `Q` entra aqui? Bem, pode ser visto como um atalho para as suas pesquisas.
 
 ### Ascending
 
@@ -1092,7 +1066,7 @@ users = await User.query().sort(Q.desc(User.email)).all()
 
 ### In
 
-The `in` operator.
+O operados `in`.
 
 ```python
 users = await User.query(Q.in_(User.id, [1, 2, 3, 4])).all()
@@ -1100,7 +1074,7 @@ users = await User.query(Q.in_(User.id, [1, 2, 3, 4])).all()
 
 ### Not In
 
-The `not_in` operator.
+O operador `not_in`.
 
 ```python
 users = await User.query(Q.not_in(User.id, [1, 2, 3, 4])).all()
@@ -1144,25 +1118,25 @@ users = await User.query(Q.contains(User.email, "foo")).all()
 users = await User.query(Q.icontains(User.email, "foo")).all()
 ```
 
-### Pattern
+### Padrão
 
-Applies some `$regex` patterns.
+Aplica alguns padrões `$regex`.
 
 ```python
 users = await User.query(Q.pattern(User.email, r"\w+ foo \w+")).all()
 ```
 
-### Equals
+### Igual
 
-The `equals` operator.
+O operador `equals`.
 
 ```python
 users = await User.query(Q.eq(User.email, "foo@bar.com")).all()
 ```
 
-### Not Equals
+### Diferente
 
-The `not equals` operator.
+O operador `not equals`.
 
 ```python
 users = await User.query(Q.neq(User.email, "foo@bar.com")).all()
@@ -1170,58 +1144,58 @@ users = await User.query(Q.neq(User.email, "foo@bar.com")).all()
 
 ### Where
 
-Applying the mongo `where` operator.
+Aplicando o operador `where` do MongoDB.
 
 ```python
 users = await User.query(Q.where(User.email, "foo@bar.com")).all()
 ```
 
-### Greater Than
+### Maior do que
 
 ```python
 users = await User.query(Q.gt(User.id, 1)).all()
 ```
 
-### Greater Than Equal
+### Maior ou Igual que
 
 ```python
 users = await User.query(Q.gte(User.id, 1)).all()
 ```
 
-### Less Than
+### Menor do que
 
 ```python
 users = await User.query(Q.lt(User.id, 20)).all()
 ```
 
-### Less Than Equal
+### Menor ou Igual que
 
 ```python
 users = await User.query(Q.lte(User.id, 20)).all()
 ```
 
-## Blocking Queries
+## Queries *blocking*
 
-What happens if you want to use Mongoz with a blocking operation? So by blocking means `sync`.
-For instance, Flask does not support natively `async` and Mongoz is an async agnotic ODM and you
-probably would like to take advantage of Mongoz but you want without doing a lot of magic behind.
+O que acontece se você quiser usar o Mongoz com uma operação *blocking*? Por *blocking*, entende-se "síncrono".
+Por exemplo, o Flask não suporta nativamente operações "assíncronas" e o Mongoz é um ODM assíncrono agnóstico e
+provavelmente gostaria de aproveitar o Mongoz, mas sem fazer muita magia nos bastidores.
 
-Well, Mongoz also supports the `run_sync` functionality that allows you to run the queries in
-*blocking* mode with ease!
+Bem, o Mongoz também suporta a funcionalidade `run_sync` que permite executar as consultas em modo
+*blocking* com facilidade!
 
-### How to use
+### Como utilizar
 
-You simply need to use the `run_sync` functionality from Mongoz and make it happen almost immediatly.
+Simplesmente precisa utilizar a funcionalidade `run_sync` do Mongoz e torná-la quase imediata.
 
 ```python
 from mongoz import run_sync
 ```
 
-All the available functionalities of Mongoz run within this wrapper without extra syntax.
+Todas as funcionalidades disponíveis do Mongoz são executadas dentro deste invólucro sem sintaxe extra.
 
-Let us see some examples.
+Vejamos alguns exemplos.
 
-**Async mode**
+**Modo async**
 
 ```python
 await User.objects.all()
@@ -1229,7 +1203,7 @@ await User.objects.filter(name__icontains="example")
 await User.objects.create(name="Mongoz")
 ```
 
-**With run_sync**
+**Com run_sync**
 
 ```python
 from mongoz import run_sync

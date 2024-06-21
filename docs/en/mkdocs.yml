@@ -62,20 +62,20 @@ plugins:
           show_symbol_type_heading: true
           show_symbol_type_toc: true
 nav:
-- Mongoz: mongoz.md
-- Documents: documents.md
-- Embedded Documents: embedded-documents.md
-- Fields: fields.md
-- Queries: queries.md
-- Managers: managers.md
-- Signals: signals.md
-- Settings: settings.md
-- Registry: registry.md
-- Exceptions: exceptions.md
-- Tips and Tricks: tips-and-tricks.md
-- Contributing: contributing.md
-- Sponsorship: sponsorship.md
-- Release Notes: release-notes.md
+- mongoz.md
+- documents.md
+- embedded-documents.md
+- fields.md
+- queries.md
+- managers.md
+- signals.md
+- settings.md
+- registry.md
+- exceptions.md
+- tips-and-tricks.md
+- contributing.md
+- sponsorship.md
+- release-notes.md
 markdown_extensions:
 - attr_list
 - toc:
@@ -95,5 +95,7 @@ extra:
   alternate:
   - link: /
     name: en - English
+  - link: /pt/
+    name: pt - português
 hooks:
 - ../../scripts/hooks.py
