@@ -1,5 +1,15 @@
 # Release Notes
 
+## 0.10.0
+
+### Added
+
+- Translations to Portuguese.
+
+### Fixed
+
+- Regression when specifying the `collection` name in the `Meta` class of a document.
+
 ## 0.9.0
 
 ### Added
