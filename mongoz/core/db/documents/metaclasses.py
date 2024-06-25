@@ -287,7 +287,10 @@ class BaseModelMeta(ModelMetaclass):
         if getattr(meta, "collection", None) is None:
             collection_name = f"{name.lower()}s"
         else:
-            collection_name = meta.collection.name
+            if not isinstance(meta.collection, str):
+                collection_name = meta.collection.name
+            else:
+                collection_name = meta.collection
 
         # Assert the databse is also specified
         if getattr(meta, "database", None) is None:
