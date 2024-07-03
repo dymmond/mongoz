@@ -12,7 +12,7 @@ pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]
 
 
-class Movie(Document):
+class Archive(Document):
     name: str = mongoz.String()
     price: Decimal = mongoz.Decimal(max_digits=5, decimal_places=2, null=True)
 
@@ -23,20 +23,20 @@ class Movie(Document):
 
 @pytest.fixture(scope="function", autouse=True)
 async def prepare_database() -> AsyncGenerator:
-    await Movie.objects.delete()
+    await Archive.objects.delete()
     yield
-    await Movie.objects.delete()
+    await Archive.objects.delete()
 
 
 async def test_decimal_128() -> None:
-    await Movie.objects.create(name="Batman", price=22.246)
+    await Archive.objects.create(name="Batman", price=22.246)
 
-    movie = await Movie.objects.last()
-    assert float(str(movie.price)) == 22.246
+    arch = await Archive.objects.last()
+    assert float(str(arch.price)) == 22.246
 
 
 async def test_decimal_128_two() -> None:
-    await Movie.objects.create(name="Batman", price="22.246")
+    await Archive.objects.create(name="Batman", price="22.246")
 
-    movie = await Movie.objects.last()
-    assert float(str(movie.price)) == 22.246
+    arch = await Archive.objects.last()
+    assert float(str(arch.price)) == 22.246

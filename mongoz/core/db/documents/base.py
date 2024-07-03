@@ -168,15 +168,17 @@ class MongozBaseModel(BaseMongoz):
         Returns:
             Dict[str, Any]: The converted dictionary.
         """
+
         if not model_dump_dict:
             return model_dump_dict
 
-        for key, value in list(model_dump_dict.items()):
+        for key, value in model_dump_dict.items():
             if isinstance(value, dict):
                 self.convert_decimal(value)
             elif isinstance(value, list):
                 for item in value:
-                    self.convert_decimal(item)
+                    if isinstance(item, (dict, list)):
+                        self.convert_decimal(item)
             elif isinstance(value, Decimal):
                 model_dump_dict[key] = Decimal128(str(value))
         return model_dump_dict
