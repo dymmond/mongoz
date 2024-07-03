@@ -42,7 +42,7 @@ dependencies = [
     "motor>=3.3.1",
     "dymmond-settings>=1.0.4",
     "orjson>=3.9.5",
-    "pydantic>=2.5.3,<3.0.0",
+    "pydantic>=2.8.0,<3.0.0",
 ]
 keywords = ["mongoz", "odm", "nosql", "mongodb"]
 

@@ -517,7 +517,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
         if field_definitions:
             pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
-                __model_name=manager.model_class.__name__,
+                manager.model_class.__name__,
                 __config__=manager.model_class.model_config,
                 **field_definitions,
             )

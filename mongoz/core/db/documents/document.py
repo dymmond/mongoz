@@ -57,7 +57,7 @@ class Document(DocumentRow):
 
         if field_definitions:
             pydantic_model: Type[BaseModel] = pydantic.create_model(
-                __model_name=self.__class__.__name__,
+                self.__class__.__name__,
                 __config__=self.model_config,
                 **field_definitions,
             )

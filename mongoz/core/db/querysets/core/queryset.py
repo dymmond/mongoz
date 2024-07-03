@@ -286,7 +286,7 @@ class QuerySet(BaseQuerySet[T]):
 
         if field_definitions:
             pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
-                __model_name=self.model_class.__name__,
+                self.model_class.__name__,
                 __config__=self.model_class.model_config,
                 **field_definitions,
             )
