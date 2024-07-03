@@ -127,6 +127,9 @@ class MyDocument(mongoz.Document):
 
 ```
 
+This operation will return the `bson.Decimal128` type which can be cast as string, float of any
+normal type including `to_decimal()` to cast as a native `decimal.Decimal` field.
+
 ##### Parameters
 
 * **minimum** - An integer indicating the minimum.
