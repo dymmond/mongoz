@@ -1,9 +1,11 @@
 import copy
+from decimal import Decimal
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Mapping, Type, Union
 
 import bson
 import pydantic
+from bson.decimal128 import Decimal128
 from pydantic import BaseModel, ConfigDict
 from pydantic_core._pydantic_core import SchemaValidator as SchemaValidator
 
@@ -156,6 +158,29 @@ class MongozBaseModel(BaseMongoz):
     __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]
     id: Union[ObjectId, None] = pydantic.Field(alias="_id")
 
+    def convert_decimal(self, model_dump_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Recursively converts Decimal values in the model_dump_dict to Decimal128.
+
+        Args:
+            model_dump_dict (Dict[str, Any]): The dictionary to convert.
+
+        Returns:
+            Dict[str, Any]: The converted dictionary.
+        """
+        if not model_dump_dict:
+            return model_dump_dict
+
+        for key, value in list(model_dump_dict.items()):
+            if isinstance(value, dict):
+                self.convert_decimal(value)
+            elif isinstance(value, list):
+                for item in value:
+                    self.convert_decimal(item)
+            elif isinstance(value, Decimal):
+                model_dump_dict[key] = Decimal128(str(value))
+        return model_dump_dict
+
     def model_dump(self, show_id: bool = False, **kwargs: Any) -> Dict[str, Any]:
         """
         Args:
@@ -164,4 +189,5 @@ class MongozBaseModel(BaseMongoz):
         model = super().model_dump(**kwargs)
         if "id" not in model and show_id:
             model = {**{"id": self.id}, **model}
-        return model
+        model_dump = self.convert_decimal(model)
+        return model_dump

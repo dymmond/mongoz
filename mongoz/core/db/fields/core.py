@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generator, List, Optional, Set,
 
 import bson
 import pydantic
+from bson.decimal128 import Decimal128
 from pydantic import EmailStr
 from pydantic._internal._schema_generation_shared import (
     GetJsonSchemaHandler as GetJsonSchemaHandler,
@@ -188,7 +189,7 @@ class Double(Number, float):
 
 
 class Decimal(Number, decimal.Decimal):
-    _type = decimal.Decimal
+    _type = Union[decimal.Decimal, Decimal128]
 
     def __new__(  # type: ignore
         cls,
