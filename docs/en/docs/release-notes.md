@@ -1,5 +1,13 @@
 # Release Notes
 
+## 0.10.2
+
+This was missed from the version 0.10.1
+
+### Changed
+
+- Update internals of embedded documents to allow arbitraty types.
+
 ## 0.10.1
 
 ### Fix
