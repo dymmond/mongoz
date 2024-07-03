@@ -117,6 +117,8 @@ class MyDocument(mongoz.Document):
     price: decimal.Decimal = mongoz.Decimal(max_digits=5, decimal_places=2, null=True)
 ```
 
+Esta operação retornará o tipo `bson.Decimal128`, que pode ser convertido para string, float ou qualquer tipo normal, incluindo `to_decimal()` para converter para um campo nativo `decimal.Decimal`.
+
 ##### Parâmetros
 
 * **minimum** - Um inteiro a indicar o mínimo.
