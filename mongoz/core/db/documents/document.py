@@ -389,4 +389,5 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
     Graphical representation of an Embedded document.
     """
 
+    model_config: ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(arbitrary_types_allowed=True)
     __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]
