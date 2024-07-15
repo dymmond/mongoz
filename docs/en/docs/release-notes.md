@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.10.3
+
+### Fix
+
+- Convert decimal to Decimal128 was causing issues for insert lists.
+
 ## 0.10.2
 
 This was missed from the version 0.10.1
