@@ -177,7 +177,7 @@ class MongozBaseModel(BaseMongoz):
                 self.convert_decimal(value)
             elif isinstance(value, list):
                 for item in value:
-                    if isinstance(item, (dict, list)):
+                    if isinstance(item, dict):
                         self.convert_decimal(item)
             elif isinstance(value, Decimal):
                 model_dump_dict[key] = Decimal128(str(value))
