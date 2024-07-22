@@ -7,6 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from pydantic import BaseModel
 
 from mongoz.core.connection.collections import Collection
+from mongoz.core.db.documents._internal import ModelDump
 from mongoz.core.db.documents.document_row import DocumentRow
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.core.db.fields.base import MongozField
@@ -54,11 +55,10 @@ class Document(DocumentRow):
             for name, annotations in self.__annotations__.items()
             if name in kwargs
         }
-
         if field_definitions:
             pydantic_model: Type[BaseModel] = pydantic.create_model(
                 self.__class__.__name__,
-                __config__=self.model_config,
+                __base__=ModelDump,
                 **field_definitions,
             )
             model = pydantic_model.model_validate(kwargs)

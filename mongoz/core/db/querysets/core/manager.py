@@ -507,6 +507,8 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         """
         Updates many documents (bulk update)
         """
+        from mongoz.core.db.documents._internal import ModelDump
+
         manager: "Manager" = self.clone()
 
         field_definitions = {
@@ -518,7 +520,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         if field_definitions:
             pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
                 manager.model_class.__name__,
-                __config__=manager.model_class.model_config,
+                __base__=ModelDump,
                 **field_definitions,
             )
             model = pydantic_model.model_validate(kwargs)

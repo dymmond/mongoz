@@ -3,6 +3,7 @@ from typing import AsyncGenerator
 
 import pydantic
 import pytest
+from bson import Decimal128
 
 import mongoz
 from mongoz import Document
@@ -40,3 +41,28 @@ async def test_decimal_128_two() -> None:
 
     arch = await Archive.objects.last()
     assert float(str(arch.price)) == 22.246
+
+
+async def test_decimal_on_update() -> None:
+    await Archive.objects.create(name="Batman", price="22.246")
+
+    arch = await Archive.objects.last()
+
+    arch.price = Decimal("28")
+    await arch.save()
+
+    arch = await Archive.objects.last()
+
+    assert arch.price == Decimal128("28")
+
+    await arch.update(price=Decimal("30"))
+
+    arch = await Archive.objects.last()
+
+    assert arch.price == Decimal128("30")
+
+    await Archive.objects.filter().update(price=Decimal("40"))
+
+    arch = await Archive.objects.last()
+
+    assert arch.price == Decimal128("40")
