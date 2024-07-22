@@ -278,6 +278,8 @@ class QuerySet(BaseQuerySet[T]):
         return await self.update_many(**kwargs)
 
     async def update_many(self, **kwargs: Any) -> List[T]:
+        from mongoz.core.db.documents._internal import ModelDump
+
         field_definitions = {
             name: (annotations, ...)
             for name, annotations in self.model_class.__annotations__.items()
@@ -287,7 +289,7 @@ class QuerySet(BaseQuerySet[T]):
         if field_definitions:
             pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
                 self.model_class.__name__,
-                __config__=self.model_class.model_config,
+                __base__=ModelDump,
                 **field_definitions,
             )
             model = pydantic_model.model_validate(kwargs)
