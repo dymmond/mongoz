@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.10.4
+
+### Fix
+
+- Native `decimal.Decimal` internal convertion to `bson.decimal128.Decimal128` to updates.
+
 ## 0.10.3
 
 ### Fix

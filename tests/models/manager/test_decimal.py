@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import AsyncGenerator
 
+import bson
 import pydantic
 import pytest
 from bson import Decimal128
@@ -41,6 +42,19 @@ async def test_decimal_128_two() -> None:
 
     arch = await Archive.objects.last()
     assert float(str(arch.price)) == 22.246
+
+
+async def test_decimal_128_create_many() -> None:
+    archives = []
+    archive_names = ("The Dark Knight", "The Dark Knight Rises", "The Godfather")
+    for movie_name in archive_names:
+        archives.append(Archive(name=movie_name, price=Decimal("22.246")))
+
+    archives_db = await Archive.objects.create_many(archives)
+    for archive, archive_db in zip(archives, archives_db):
+        assert archive.name == archive_db.name
+        assert archive.price == archive_db.price
+        assert isinstance(archive.id, bson.ObjectId)
 
 
 async def test_decimal_on_update() -> None:
