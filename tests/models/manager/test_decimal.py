@@ -1,3 +1,4 @@
+import sys
 from decimal import Decimal
 from typing import AsyncGenerator
 
@@ -44,6 +45,7 @@ async def test_decimal_128_two() -> None:
     assert float(str(arch.price)) == 22.246
 
 
+@pytest.mark.skipif(sys.version_info < (3, 10), reason="zip() implementation refactored in 3.10+")
 async def test_decimal_128_create_many() -> None:
     archives = []
     archive_names = ("The Dark Knight", "The Dark Knight Rises", "The Godfather")
