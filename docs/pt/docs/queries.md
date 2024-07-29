@@ -872,6 +872,17 @@ Obter um documento pelo `_id`. Esta funcionalidade aceita o parâmetro `id` como
     user = await User.query().get_document_by_id(user.id)
     ```
 
+### Exists
+
+O `exists()` é utilizado quando deseja verificar se um registro existe na base de dados ou não.
+
+=== "Manager"
+
+    ```python
+    await User.objects.exists(email="example@example.com", is_active=False)
+    await User.objects.filter(email="example@example.com", is_active=False).exists()
+    ```
+
 ## Métodos úteis
 
 ### Get or create
