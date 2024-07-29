@@ -772,7 +772,6 @@ The `values_list()` can also be combined with `filter`, `only` as per usual.
 * **exclude_none** - Boolean flag indicating if the fields with `None` should be excluded.
 * **flat** - Boolean flag indicating the results should be flattened.
 
-
 ### Only
 
 Returns the results containing **only** the fields in the query and nothing else.
@@ -891,6 +890,17 @@ Get a document by the `_id`. This functionality accepts the parameter `id` as st
     ).create()
 
     user = await User.query().get_document_by_id(user.id)
+    ```
+
+### Exists
+
+The `exists()` is used when you want to check if a record exists in the DB or not.
+
+=== "Manager"
+
+    ```python
+    await User.objects.exists(email="example@example.com", is_active=False)
+    await User.objects.filter(email="example@example.com", is_active=False).exists()
     ```
 
 ## Useful methods

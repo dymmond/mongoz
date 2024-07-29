@@ -636,6 +636,18 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             __as_tuple__=True,
         )
 
+    async def exists(self, **kwargs: Any) -> bool:
+        """
+        Returns a boolean checking if the record exists.
+        """
+        manager: "Manager" = self.clone()
+        if kwargs:
+            result = await manager.filter(**kwargs)
+            return bool(len(result) > 0)
+
+        objects = await manager.limit(2).all()
+        return bool(len(objects) > 0)
+
     async def exclude(self, **kwargs: Any) -> List["Document"]:
         """
         Filters everything and excludes based on a specific condition.
