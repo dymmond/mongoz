@@ -136,8 +136,8 @@ dependencies = [
 
 [tool.hatch.envs.test.scripts]
 # needs docker services running
-test = "pytest {args}"
-test_man = "pytest {args} --disable-pytest-warnings -s -vv"
+test = "pytest {args} --disable-warnings"
+test_man = "pytest {args} --disable-pytest-warnings -s -vv --disable-warnings"
 coverage = "pytest --cov=asyncz --cov=tests --cov-report=term-missing:skip-covered --cov-report=html tests {args}"
 check_types = "mypy -p mongoz"
 

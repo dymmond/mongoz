@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.10.5
+
+### Added
+
+- [exists()](./queries.md#exists) allowing to query for a document existance in the database.
+
 ## 0.10.4
 
 ### Fix
