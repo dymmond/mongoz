@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, AsyncGenerator
 
 import pydantic
 import pytest
@@ -21,6 +21,13 @@ class Movie(Document):
     class Meta:
         registry = client
         database = "test_db"
+
+
+@pytest.fixture(scope="function", autouse=True)
+async def prepare_database() -> AsyncGenerator:
+    await Movie.objects.delete()
+    yield
+    await Movie.objects.delete()
 
 
 async def test_model_using_create() -> None:
