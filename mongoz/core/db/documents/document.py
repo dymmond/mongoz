@@ -92,7 +92,7 @@ class Document(DocumentRow):
 
         data = (model.model_dump(exclude={"id"}) for model in models)
         if isinstance(cls.meta.from_collection, AsyncIOMotorCollection):
-            results = await cls.meta.from_collection.insert_many(data)  # type: ignore
+            results = await cls.meta.from_collection.insert_many(data)
         else:
             results = await cls.meta.collection._collection.insert_many(data)  # type: ignore
         for model, inserted_id in zip(models, results.inserted_ids, strict=True):

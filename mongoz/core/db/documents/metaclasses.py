@@ -15,6 +15,7 @@ from typing import (
     no_type_check,
 )
 
+from motor.motor_asyncio import AsyncIOMotorCollection
 from pydantic._internal._model_construction import ModelMetaclass
 
 from mongoz.core.connection.collections import Collection
@@ -66,7 +67,7 @@ class MetaInfo:
         self.signals: Optional[Broadcaster] = {}  # type: ignore
         self.manager: "Manager" = getattr(meta, "manager", Manager())
         self.autogenerate_index: bool = getattr(meta, "autogenerate_index", False)
-        self.from_collection: bool = getattr(meta, "from_collection", None)
+        self.from_collection: Union[AsyncIOMotorCollection, None] = getattr(meta, "from_collection", None)
 
     def model_dump(self) -> Dict[Any, Any]:
         return {k: getattr(self, k, None) for k in self.__slots__}
