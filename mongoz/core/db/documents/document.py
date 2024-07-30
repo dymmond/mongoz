@@ -36,7 +36,7 @@ class Document(DocumentRow):
         if collection is not None:
             result = await collection.insert_one(data)
         else:
-            if isinstance(self.meta.from_collection, Collection):
+            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
                 result = await self.meta.from_collection._collection.insert_one(data)  # noqa
             elif isinstance(self.meta.collection, Collection):
                 result = await self.meta.collection._collection.insert_one(data)  # noqa
@@ -52,7 +52,7 @@ class Document(DocumentRow):
         Updates a record on an instance level.
         """
         if collection is None:
-            if isinstance(self.meta.from_collection, Collection):
+            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection
@@ -93,7 +93,10 @@ class Document(DocumentRow):
             raise TypeError(f"All models must be of type {cls.__name__}")
 
         data = (model.model_dump(exclude={"id"}) for model in models)
-        results = await cls.meta.collection._collection.insert_many(data)  # type: ignore
+        if isinstance(cls.meta.from_collection, AsyncIOMotorCollection):
+            results = await cls.meta.from_collection.insert_many(data)  # type: ignore
+        else:
+            results = await cls.meta.collection._collection.insert_many(data)
         for model, inserted_id in zip(models, results.inserted_ids, strict=True):
             model.id = inserted_id
         return models
@@ -295,7 +298,7 @@ class Document(DocumentRow):
         is_operation_allowed(self)
 
         if collection is None:
-            if isinstance(self.meta.from_collection, Collection):
+            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection
@@ -360,7 +363,7 @@ class Document(DocumentRow):
         """
         is_operation_allowed(self)
         if collection is None:
-            if isinstance(self.meta.from_collection, Collection):
+            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection
