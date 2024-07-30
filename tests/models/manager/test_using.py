@@ -25,9 +25,9 @@ class Movie(Document):
 
 @pytest.fixture(scope="function", autouse=True)
 async def prepare_database() -> AsyncGenerator:
-    await Movie.objects.delete()
+    await Movie.objects.using("test_my_db").delete()
     yield
-    await Movie.objects.delete()
+    await Movie.objects.using("test_my_db").delete()
 
 
 async def test_model_using_create() -> None:
