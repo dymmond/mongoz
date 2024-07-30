@@ -37,7 +37,7 @@ class Document(DocumentRow):
             result = await collection.insert_one(data)
         else:
             if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
-                result = await self.meta.from_collection._collection.insert_one(data)  # noqa
+                result = await self.meta.from_collection.insert_one(data)  # noqa
             elif isinstance(self.meta.collection, Collection):
                 result = await self.meta.collection._collection.insert_one(data)  # noqa
         self.id = result.inserted_id
@@ -55,7 +55,7 @@ class Document(DocumentRow):
             if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
-                collection = self.meta.collection
+                collection = self.meta.collection._collection
         field_definitions = {
             name: (annotations, ...)
             for name, annotations in self.__annotations__.items()
@@ -301,7 +301,7 @@ class Document(DocumentRow):
             if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
-                collection = self.meta.collection
+                collection = self.meta.collection._collection
         await self.signals.pre_delete.send(sender=self.__class__, instance=self)
 
         result = await collection.delete_one({"_id": self.id})
@@ -366,7 +366,7 @@ class Document(DocumentRow):
             if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
-                collection = self.meta.collection
+                collection = self.meta.collection._collection
 
         if not self.id:
             return await self.create()
