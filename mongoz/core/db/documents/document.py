@@ -36,7 +36,9 @@ class Document(DocumentRow):
         if collection is not None:
             result = await collection.insert_one(data)
         else:
-            if isinstance(self.meta.collection, Collection):
+            if isinstance(self.meta.from_collection, Collection):
+                result = await self.meta.from_collection._collection.insert_one(data)  # noqa
+            elif isinstance(self.meta.collection, Collection):
                 result = await self.meta.collection._collection.insert_one(data)  # noqa
         self.id = result.inserted_id
 
@@ -49,7 +51,11 @@ class Document(DocumentRow):
         """
         Updates a record on an instance level.
         """
-        collection = collection or self.meta.collection._collection  # type: ignore
+        if collection is None:
+            if isinstance(self.meta.from_collection, Collection):
+                collection = self.meta.from_collection
+            elif isinstance(self.meta.collection, Collection):
+                collection = self.meta.collection
         field_definitions = {
             name: (annotations, ...)
             for name, annotations in self.__annotations__.items()
@@ -288,7 +294,11 @@ class Document(DocumentRow):
         """Delete the document."""
         is_operation_allowed(self)
 
-        collection = collection or self.meta.collection._collection  # type: ignore
+        if collection is None:
+            if isinstance(self.meta.from_collection, Collection):
+                collection = self.meta.from_collection
+            elif isinstance(self.meta.collection, Collection):
+                collection = self.meta.collection
         await self.signals.pre_delete.send(sender=self.__class__, instance=self)
 
         result = await collection.delete_one({"_id": self.id})
@@ -349,7 +359,11 @@ class Document(DocumentRow):
             await movie.save()
         """
         is_operation_allowed(self)
-        collection = collection or self.meta.collection._collection  # type: ignore
+        if collection is None:
+            if isinstance(self.meta.from_collection, Collection):
+                collection = self.meta.from_collection
+            elif isinstance(self.meta.collection, Collection):
+                collection = self.meta.collection
 
         if not self.id:
             return await self.create()

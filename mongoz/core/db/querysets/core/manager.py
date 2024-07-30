@@ -364,6 +364,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 only_fields=manager._only_fields,
                 is_defer_fields=is_defer_fields,
                 defer_fields=manager._defer_fields,
+                from_collection=manager._collection
             )
             async for document in cursor
         ]

@@ -47,6 +47,7 @@ class MetaInfo:
         "database",
         "manager",
         "autogenerate_index",
+        "from_collection"
     )
 
     def __init__(self, meta: Any = None, **kwargs: Any) -> None:
