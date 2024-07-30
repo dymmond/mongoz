@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any, Dict, Sequence, Type, Union, cast
 
 from motor.motor_asyncio import AsyncIOMotorCollection
+
 from mongoz.core.db.documents.base import MongozBaseModel
 
 if TYPE_CHECKING:  # pragma: no cover
