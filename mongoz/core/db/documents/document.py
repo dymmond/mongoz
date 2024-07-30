@@ -36,9 +36,7 @@ class Document(DocumentRow):
         if collection is not None:
             result = await collection.insert_one(data)
         else:
-            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
-                result = await self.meta.from_collection.insert_one(data)  # noqa
-            elif isinstance(self.meta.collection, Collection):
+            if isinstance(self.meta.collection, Collection):
                 result = await self.meta.collection._collection.insert_one(data)  # noqa
         self.id = result.inserted_id
 
