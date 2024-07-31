@@ -88,7 +88,7 @@ async def test_model_save() -> None:
     movie = await Movie.objects.using("test_my_db").get()
     assert movie.name == "Harshali"
 
-    movie.name == "Harshali Zode"
+    movie.name = "Harshali Zode"
     await movie.save()
 
     movie = await Movie.objects.using("test_my_db").get()
