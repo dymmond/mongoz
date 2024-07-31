@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, Any, Dict, Sequence, Type, Union, cast
 
+from motor.motor_asyncio import AsyncIOMotorCollection
+
 from mongoz.core.db.documents.base import MongozBaseModel
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -19,6 +21,7 @@ class DocumentRow(MongozBaseModel):
         is_defer_fields: bool = False,
         only_fields: Union[Sequence[str], None] = None,
         defer_fields: Union[Sequence[str], None] = None,
+        from_collection:  Union[AsyncIOMotorCollection, None] = None
     ) -> Union[Type["Document"], None]:
         """
         Class method to convert a dictionary row result into a Document row type.
@@ -55,6 +58,7 @@ class DocumentRow(MongozBaseModel):
                     item[column] = value
 
         model = cast("Type[Document]", cls(**item))  # type: ignore
+        model.Meta.from_collection = from_collection
         return model
 
     @classmethod

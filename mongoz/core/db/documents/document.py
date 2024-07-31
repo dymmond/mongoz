@@ -49,7 +49,11 @@ class Document(DocumentRow):
         """
         Updates a record on an instance level.
         """
-        collection = collection or self.meta.collection._collection  # type: ignore
+        if collection is None:
+            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
+                collection = self.meta.from_collection
+            elif isinstance(self.meta.collection, Collection):
+                collection = self.meta.collection._collection
         field_definitions = {
             name: (annotations, ...)
             for name, annotations in self.__annotations__.items()
@@ -69,7 +73,7 @@ class Document(DocumentRow):
             data.update(values)
 
             await self.signals.pre_update.send(sender=self.__class__, instance=self)
-            await collection.update_one({"_id": self.id}, {"$set": data})
+            await collection.update_one({"_id": self.id}, {"$set": data})  # type: ignore
             await self.signals.post_update.send(sender=self.__class__, instance=self)
 
             for k, v in data.items():
@@ -87,7 +91,10 @@ class Document(DocumentRow):
             raise TypeError(f"All models must be of type {cls.__name__}")
 
         data = (model.model_dump(exclude={"id"}) for model in models)
-        results = await cls.meta.collection._collection.insert_many(data)  # type: ignore
+        if isinstance(cls.meta.from_collection, AsyncIOMotorCollection):
+            results = await cls.meta.from_collection.insert_many(data)
+        else:
+            results = await cls.meta.collection._collection.insert_many(data)  # type: ignore
         for model, inserted_id in zip(models, results.inserted_ids, strict=True):
             model.id = inserted_id
         return models
@@ -288,10 +295,14 @@ class Document(DocumentRow):
         """Delete the document."""
         is_operation_allowed(self)
 
-        collection = collection or self.meta.collection._collection  # type: ignore
+        if collection is None:
+            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
+                collection = self.meta.from_collection
+            elif isinstance(self.meta.collection, Collection):
+                collection = self.meta.collection._collection
         await self.signals.pre_delete.send(sender=self.__class__, instance=self)
 
-        result = await collection.delete_one({"_id": self.id})
+        result = await collection.delete_one({"_id": self.id})  # type: ignore
         await self.signals.post_delete.send(sender=self.__class__, instance=self)
         return cast(int, result.deleted_count)
 
@@ -349,14 +360,18 @@ class Document(DocumentRow):
             await movie.save()
         """
         is_operation_allowed(self)
-        collection = collection or self.meta.collection._collection  # type: ignore
+        if collection is None:
+            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
+                collection = self.meta.from_collection
+            elif isinstance(self.meta.collection, Collection):
+                collection = self.meta.collection._collection
 
         if not self.id:
             return await self.create()
 
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
-        await collection.update_one(
+        await collection.update_one(  # type: ignore
             {"_id": self.id}, {"$set": self.model_dump(exclude={"id", "_id"})}
         )
         for k, v in self.model_dump(exclude={"id"}).items():
