@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.10.6
+
+### Added
+
+- Support for multi-tenancy on a document level.
+
 ## 0.10.5
 
 ### Added
