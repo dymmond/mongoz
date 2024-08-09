@@ -398,7 +398,7 @@ class BaseModelMeta(ModelMetaclass):
             new_class.__proxy_document__.model_rebuild(force=True)
             meta.registry.documents[new_class.__name__] = new_class
 
-        # new_class.model_rebuild(force=True)
+        new_class.model_rebuild(force=True)
 
         # Build the indexes
         if not meta.abstract and meta.indexes and meta.autogenerate_index:

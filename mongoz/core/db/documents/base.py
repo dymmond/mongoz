@@ -54,10 +54,6 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         else:
             self.extract_default_values_from_field()
 
-    @classmethod
-    def __pydantic_init_subclass__(cls: "BaseMongoz") -> None:
-        cls.model_rebuild(force=True)
-
     def extract_default_values_from_field(
         self, is_proxy: bool = False, **kwargs: Any
     ) -> Union[Dict[str, Any], None]:
