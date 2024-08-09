@@ -48,7 +48,7 @@ class MetaInfo:
         "database",
         "manager",
         "autogenerate_index",
-        "from_collection"
+        "from_collection",
     )
 
     def __init__(self, meta: Any = None, **kwargs: Any) -> None:
@@ -67,7 +67,9 @@ class MetaInfo:
         self.signals: Optional[Broadcaster] = {}  # type: ignore
         self.manager: "Manager" = getattr(meta, "manager", Manager())
         self.autogenerate_index: bool = getattr(meta, "autogenerate_index", False)
-        self.from_collection: Union[AsyncIOMotorCollection, None] = getattr(meta, "from_collection", None)
+        self.from_collection: Union[AsyncIOMotorCollection, None] = getattr(
+            meta, "from_collection", None
+        )
 
     def model_dump(self) -> Dict[Any, Any]:
         return {k: getattr(self, k, None) for k in self.__slots__}
@@ -188,6 +190,28 @@ def _register_document_signals(model_class: Type["Document"]) -> None:
     model_class.meta.signals = signals
 
 
+def handle_annotations(
+    bases: Tuple[Type, ...], base_annotations: Dict[str, Any], attrs: Any
+) -> Dict[str, Any]:
+    """
+    Handles and copies some of the annotations for
+    initialiasation.
+    """
+    for base in bases:
+        if hasattr(base, "__init_annotations__") and base.__init_annotations__:
+            base_annotations.update(base.__init_annotations__)
+        elif hasattr(base, "__annotations__") and base.__annotations__:
+            base_annotations.update(base.__annotations__)
+
+    annotations: Dict[str, Any] = (
+        copy.copy(attrs["__init_annotations__"])
+        if "__init_annotations__" in attrs
+        else copy.copy(attrs["__annotations__"])
+    )
+    annotations.update(base_annotations)
+    return annotations
+
+
 class BaseModelMeta(ModelMetaclass):
     __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]] = {}
 
@@ -198,11 +222,11 @@ class BaseModelMeta(ModelMetaclass):
         id_attribute: str = "id"
         id_attribute_alias: str = "_id"
         registry: Any = None
+        base_annotations: Dict[str, Any] = {}
 
         # Extract the custom Mongoz Fields in a pydantic format.
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
         cls.__mongoz_fields__ = model_fields
-        super().__new__(cls, name, bases, attrs)
 
         # Searching for fields "Field" in the class hierarchy.
         def __search_for_fields(base: Type, attrs: Any) -> None:
@@ -255,6 +279,12 @@ class BaseModelMeta(ModelMetaclass):
             meta.abstract = True
 
         model_class = super().__new__
+
+        # Handle annotations
+        annotations: Dict[str, Any] = handle_annotations(bases, base_annotations, attrs)
+
+        # Ensure the initialization is only performed for subclasses of Model
+        attrs["__init_annotations__"] = annotations
 
         # Ensure the initialization is only performed for subclasses of Document
         parents = [parent for parent in bases if isinstance(parent, BaseModelMeta)]
@@ -402,6 +432,10 @@ class BaseModelMeta(ModelMetaclass):
         if not meta.abstract and meta.indexes and meta.autogenerate_index:
             if not new_class.is_proxy_document:
                 run_sync(new_class.create_indexes())
+
+        # Protect the model namespaces to avoid UserWarnings on overriding the fields.
+        document_namespace = f"{new_class.__name__.lower()}_model_"
+        new_class.model_config["protected_namespaces"] = (document_namespace,)
         return new_class
 
     @property

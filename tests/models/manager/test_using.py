@@ -1,4 +1,4 @@
-from typing import List, Optional, AsyncGenerator
+from typing import AsyncGenerator, List, Optional
 
 import pydantic
 import pytest
