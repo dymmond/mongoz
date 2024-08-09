@@ -190,6 +190,28 @@ def _register_document_signals(model_class: Type["Document"]) -> None:
     model_class.meta.signals = signals
 
 
+def handle_annotations(
+    bases: Tuple[Type, ...], base_annotations: Dict[str, Any], attrs: Any
+) -> Dict[str, Any]:
+    """
+    Handles and copies some of the annotations for
+    initialiasation.
+    """
+    for base in bases:
+        if hasattr(base, "__init_annotations__") and base.__init_annotations__:
+            base_annotations.update(base.__init_annotations__)
+        elif hasattr(base, "__annotations__") and base.__annotations__:
+            base_annotations.update(base.__annotations__)
+
+    annotations: Dict[str, Any] = (
+        copy.copy(attrs["__init_annotations__"])
+        if "__init_annotations__" in attrs
+        else copy.copy(attrs["__annotations__"])
+    )
+    annotations.update(base_annotations)
+    return annotations
+
+
 class BaseModelMeta(ModelMetaclass):
     __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]] = {}
 
@@ -200,11 +222,11 @@ class BaseModelMeta(ModelMetaclass):
         id_attribute: str = "id"
         id_attribute_alias: str = "_id"
         registry: Any = None
+        base_annotations: Dict[str, Any] = {}
 
         # Extract the custom Mongoz Fields in a pydantic format.
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
         cls.__mongoz_fields__ = model_fields
-        super().__new__(cls, name, bases, attrs)
 
         # Searching for fields "Field" in the class hierarchy.
         def __search_for_fields(base: Type, attrs: Any) -> None:
@@ -257,6 +279,12 @@ class BaseModelMeta(ModelMetaclass):
             meta.abstract = True
 
         model_class = super().__new__
+
+        # Handle annotations
+        annotations: Dict[str, Any] = handle_annotations(bases, base_annotations, attrs)
+
+        # Ensure the initialization is only performed for subclasses of Model
+        attrs["__init_annotations__"] = annotations
 
         # Ensure the initialization is only performed for subclasses of Document
         parents = [parent for parent in bases if isinstance(parent, BaseModelMeta)]
