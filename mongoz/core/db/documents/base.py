@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     from mongoz import Document
     from mongoz.core.signals import Broadcaster
 
+mongoz_setattr = object.__setattr__
+
 
 class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     """
@@ -51,6 +53,10 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
             self.__dict__ = values  # type: ignore
         else:
             self.extract_default_values_from_field()
+
+    @classmethod
+    def __pydantic_init_subclass__(cls: "BaseMongoz") -> None:
+        cls.model_rebuild(force=True)
 
     def extract_default_values_from_field(
         self, is_proxy: bool = False, **kwargs: Any
