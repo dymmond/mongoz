@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     from mongoz import Document
     from mongoz.core.signals import Broadcaster
 
+mongoz_setattr = object.__setattr__
+
 
 class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     """
