@@ -161,7 +161,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                     lookup_operator in settings.filter_operators
                 ), f"`{lookup_operator}` is not a valid lookup operator. Valid operators: {settings.stringified_operators}"
 
-                # For "eq", "neq", "contains", "where", "pattern"
+                # For "eq", "neq", "contains", "where", "pattern", "startswith", "endswith", "istartswith", "iendswith"
                 if lookup_operator in VALUE_EQUALITY:
                     operator = self.get_operator(lookup_operator)
                     expression = operator(field_name, value)  # type: ignore
