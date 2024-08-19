@@ -76,6 +76,22 @@ class Equality:
         name = key if isinstance(key, str) else key._name
         raise FieldDefinitionError(f"The {name} field is not of type str")
 
+    @classmethod
+    def startswith(cls, key: Any, value: str) -> Expression:
+        return Expression(key=key, operator=ExpressionOperator.STARTSWITH, value=value)
+
+    @classmethod
+    def endswith(cls, key: Any, value: str) -> Expression:
+        return Expression(key=key, operator=ExpressionOperator.ENDSWITH, value=value)
+
+    @classmethod
+    def istartswith(cls, key: Any, value: str) -> Expression:
+        return Expression(key=key, operator=ExpressionOperator.ISTARTSWITH, value=value)
+
+    @classmethod
+    def iendswith(cls, key: Any, value: str) -> Expression:
+        return Expression(key=key, operator=ExpressionOperator.IENDSWITH, value=value)
+
 
 class Comparison:
     """
