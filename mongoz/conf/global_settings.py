@@ -33,6 +33,10 @@ class MongozSettings(Settings):
         "asc": "asc",
         "desc": "desc",
         "not": "not_",
+        "startswith": "startswith",
+        "istartswith": "istartswith",
+        "endswith": "endswith",
+        "iendswith": "iendswith"
     }
 
     def get_operator(self, name: str) -> "Expression":
