@@ -1,5 +1,16 @@
 # Release Notes
 
+## 0.10.7
+
+### Added
+
+- Support for `startswith`, `endswith`, `istartswith` and `iendswith` filters.
+
+### Changed
+
+- Internal metaclasses checks for annotations.
+- Code cleaning and organisations.
+
 ## 0.10.6
 
 ### Added
