@@ -3,7 +3,7 @@ import typing
 from typing import TYPE_CHECKING, Any, Dict, List, Union, cast
 
 from mongoz.core.db.datastructures import Order
-
+from mongoz.utils.enums import ExpressionOperator
 if TYPE_CHECKING:  # pragma: no cover
     from mongoz.core.db.fields.base import MongozField
 
