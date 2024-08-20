@@ -3,7 +3,7 @@ import typing
 from typing import TYPE_CHECKING, Any, Dict, List, Union, cast
 
 from mongoz.core.db.datastructures import Order
-
+from mongoz.utils.enums import ExpressionOperator
 if TYPE_CHECKING:  # pragma: no cover
     from mongoz.core.db.fields.base import MongozField
 
@@ -35,6 +35,18 @@ class Expression:
             return v
 
     def compile(self) -> Dict[str, Dict[str, Any]]:
+        if self.operator == ExpressionOperator.STARTSWITH:
+            regex_value = f"^{self.compiled_value}"
+            return {self.key: {"$regex": regex_value}}
+        elif self.operator == ExpressionOperator.ENDSWITH:
+            regex_value = f"{self.compiled_value}$"
+            return {self.key: {"$regex": regex_value}}
+        elif self.operator == ExpressionOperator.ISTARTSWITH:
+            regex_value = f"^{self.compiled_value}"
+            return {self.key: {"$regex": regex_value, "$options": "i"}}
+        elif self.operator == ExpressionOperator.IENDSWITH:
+            regex_value = f"{self.compiled_value}$"
+            return {self.key: {"$regex": regex_value, "$options": "i"}}
         if not self.options:
             return {self.key: {self.operator: self.compiled_value}}
         return {self.key: {self.operator: self.compiled_value, "$options": self.options}}

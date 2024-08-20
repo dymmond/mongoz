@@ -28,6 +28,10 @@ class ExpressionOperator(str, Enum):
     NOR = "$nor"
     NOT = "$not"
     EXISTS = "$exists"
+    STARTSWITH = "startswith"
+    ENDSWITH = "endswith"
+    ISTARTSWITH = "istartswith"
+    IENDSWITH = "iendswith"
 
     def __str__(self) -> str:
         return self.value

@@ -101,7 +101,33 @@ async def test_model_query_builder() -> None:
         await Movie.objects.filter(name="Casablanca").filter(year=1942).get()
         == await Movie.objects.filter(name="Casablanca", year=1942).get()
     )
+    movies = await Movie.objects.filter(name__startswith="The").all()
+    assert len(movies) == 1
+    assert movies[0].name == "The Two Towers"
 
+    movies = await Movie.objects.filter(name__startswith="Cas").all()
+    assert len(movies) == 1
+    assert movies[0].name == "Casablanca"
+
+    movies = await Movie.objects.filter(name__endswith="fall").all()
+    assert len(movies) == 1
+    assert movies[0].name == "Downfall"
+
+    movies = await Movie.objects.filter(name__istartswith="THE").all()
+    assert len(movies) == 1
+    assert movies[0].name.lower() == "the Two Towers".lower()
+
+    movies = await Movie.objects.filter(name__istartswith="CASA").all()
+    assert len(movies) == 1
+    assert movies[0].name.lower() == "Casablanca".lower()
+
+    movies = await Movie.objects.filter(name__iendswith="FALL").all()
+    assert len(movies) == 1
+    assert movies[0].name.lower() == "downfall".lower()
+
+    movies = await Movie.objects.filter(name__iendswith="wind").all()
+    assert len(movies) == 1
+    assert movies[0].name.lower() == "gone with the Wind".lower()
 
 async def test_query_builder_in_list():
     await Movie.objects.create(name="Downfall", year=2004)
