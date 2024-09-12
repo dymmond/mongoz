@@ -1,5 +1,12 @@
 # Release Notes
 
+## 0.10.8
+
+### Added
+
+- Support for [NullableObjectId](./fields.md#nullableobjectid) allowing special object ids to
+be declared in the document and null.
+
 ## 0.10.7
 
 ### Added
