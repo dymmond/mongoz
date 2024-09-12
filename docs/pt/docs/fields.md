@@ -59,6 +59,33 @@ class MyDocument(mongoz.Document):
     an_id: ObjectId = mongoz.ObjectId()
 ```
 
+#### NullableObjectId
+
+Este é outro campo especial que estende o `bson.ObjectId` e, ao contrário do [ObjectId](#objectid),
+este permite especificar campos nulos e não nulos visto que deriva do FieldFactory do Mongoz.
+
+Por defeito, é definido como `null=True` e pode ser especificado como `null=False`, se necessário.
+
+**Por defeito**
+
+```python
+import mongoz
+
+
+class MyDocument(mongoz.Document):
+    an_id: ObjectId = mongoz.NullableObjectId()
+```
+
+**Null False**
+
+```python
+import mongoz
+
+
+class MyDocument(mongoz.Document):
+    an_id: ObjectId = mongoz.NullableObjectId(null=False)
+```
+
 #### String
 
 ```python

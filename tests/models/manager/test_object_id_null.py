@@ -15,7 +15,7 @@ pydantic_version = pydantic.__version__[:3]
 class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
-    producer_id: mongoz.ObjectId = mongoz.NullableObjectId(null=True)
+    producer_id: mongoz.ObjectId = mongoz.NullableObjectId()
 
     class Meta:
         registry = client
