@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 
 mongoz_setattr = object.__setattr__
 
+DOCUMENT_KEYS = {"id", "_id", "pk"}
+
 
 class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     """
@@ -70,7 +72,6 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
             if key not in self.meta.fields:
                 if not hasattr(self, key):
                     raise ValueError(f"Invalid keyword {key} for class {self.__class__.__name__}")
-
             # For non values. Example: bool
             if value is not None:
                 # Checks if the default is a callable and executes it.

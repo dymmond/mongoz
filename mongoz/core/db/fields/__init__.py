@@ -13,6 +13,7 @@ from .core import (
     Email,
     Embed,
     Integer,
+    NullableObjectId,
     Object,
     ObjectId,
     String,
@@ -38,4 +39,5 @@ __all__ = [
     "Time",
     "UUID",
     "Embed",
+    "NullableObjectId",
 ]

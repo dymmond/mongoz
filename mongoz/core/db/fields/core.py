@@ -116,6 +116,21 @@ class ObjectId(bson.ObjectId):
         return general_plain_validator_function(cls._validate)
 
 
+class NullableObjectId(FieldFactory, ObjectId):
+    _type = ObjectId
+
+    def __new__(  # type: ignore
+        cls,
+        null: bool = True,
+        **kwargs: Any,
+    ) -> BaseField:
+        kwargs = {
+            **kwargs,
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
+        }
+        return super().__new__(cls, **kwargs)
+
+
 class String(FieldFactory, str):
     """String field representation that constructs the Field class and populates the values"""
 
