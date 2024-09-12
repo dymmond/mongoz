@@ -39,6 +39,7 @@ def populate_pydantic_default_values(attrs: Dict) -> Tuple[Dict, Dict]:
 
     potential_fields.update(get_model_fields(attrs))
     for field_name, field in potential_fields.items():
+        model_fields[field_name] = field
         field.name = field_name
 
         default_type = field.field_type if not field.null else Union[field.field_type, None]
@@ -46,6 +47,6 @@ def populate_pydantic_default_values(attrs: Dict) -> Tuple[Dict, Dict]:
             field.__original_type__ if field.field_type != field.__original_type__ else None
         )
         field.annotation = overwrite_type or default_type
-        model_fields[field_name] = field
         attrs["__annotations__"][field_name] = overwrite_type or default_type
+
     return attrs, model_fields
