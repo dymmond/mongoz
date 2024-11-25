@@ -5,7 +5,6 @@
 ### Changed
 
 - Remove support for Python 3.11.
-- Add support for Python 3.13
 
 ## 0.10.8
 
