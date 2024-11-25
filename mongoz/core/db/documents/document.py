@@ -81,7 +81,8 @@ class Document(DocumentRow):
         return self
 
     @classmethod
-    async def create_many(cls: Type["Document"], models: List["Document"]) -> List["Document"]:
+    async def create_many(cls: Type["Document"], models: List["Document"],
+                          collection: Union[Collection, AsyncIOMotorCollection, None] = None) -> List["Document"]:
         """
         Insert many documents
         """
@@ -91,8 +92,10 @@ class Document(DocumentRow):
             raise TypeError(f"All models must be of type {cls.__name__}")
 
         data = (model.model_dump(exclude={"id"}) for model in models)
-        if isinstance(cls.meta.from_collection, AsyncIOMotorCollection):
-            results = await cls.meta.from_collection.insert_many(data)
+        if isinstance(collection, Collection):
+            results = await collection._collection.insert_many(data)
+        elif isinstance(collection, AsyncIOMotorCollection):
+            results = await collection.insert_many(data)
         else:
             results = await cls.meta.collection._collection.insert_many(data)  # type: ignore
         for model, inserted_id in zip(models, results.inserted_ids, strict=True):
@@ -109,7 +112,7 @@ class Document(DocumentRow):
         return collection if collection is not None else cls.meta.collection._collection  # type: ignore
 
     @classmethod
-    async def create_index(cls, name: str) -> str:
+    async def create_index(cls, name: str, collection: Union[Collection, AsyncIOMotorCollection, None] = None) -> str:
         """
         Creates an index from the list of indexes of the Meta object.
         """
@@ -117,12 +120,17 @@ class Document(DocumentRow):
 
         for index in cls.meta.indexes:
             if index.name == name:
-                await cls.meta.collection._collection.create_indexes([index])  # type: ignore
+                if isinstance(collection, Collection):
+                    await collection._collection.create_indexes([index])
+                elif isinstance(collection, AsyncIOMotorCollection):
+                    await collection.create_indexes([index])
+                else:
+                    await cls.meta.collection._collection.create_indexes([index])  # type: ignore
                 return index.name
         raise InvalidKeyError(f"Unable to find index: {name}")
 
     @classmethod
-    async def create_indexes(cls) -> List[str]:
+    async def create_indexes(cls, collection: Union[Collection, AsyncIOMotorCollection, None] = None) -> List[str]:
         """
         Create indexes defined for the collection or drop for existing ones.
 
@@ -135,7 +143,12 @@ class Document(DocumentRow):
 
         """
         is_operation_allowed(cls)
-        return await cls.meta.collection._collection.create_indexes(cls.meta.indexes)  # type: ignore
+        if isinstance(collection, Collection):
+            return await collection._collection.create_indexes(cls.meta.indexes) # noqa
+        elif isinstance(collection, AsyncIOMotorCollection):
+            return await collection.create_indexes(cls.meta.indexes)
+        else:
+            return await cls.meta.collection._collection.create_indexes(cls.meta.indexes)  # type: ignore
 
     @classmethod
     async def create_indexes_for_multiple_databases(
@@ -335,8 +348,12 @@ class Document(DocumentRow):
 
         collection = cls.get_collection(collection)
         if force:
-            await collection.drop_indexes()
-            return None
+            if isinstance(collection, Collection):
+                return await collection._collection.drop_indexes()
+            elif isinstance(collection, AsyncIOMotorCollection):
+                return await collection.drop_indexes()
+            else:
+                return await cls.meta.collection._collection.drop_indexes()  # type: ignore
         index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
         return index_names
 
