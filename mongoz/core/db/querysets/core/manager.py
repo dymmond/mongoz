@@ -543,7 +543,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         Creates many documents (bulk create).
         """
         manager: "Manager" = self.clone()
-        return await manager.model_class.create_many(models=models)  # type: ignore
+        return await manager.model_class.create_many(models=models, collection=manager._collection)  # type: ignore
 
     async def bulk_create(self, models: List["Document"]) -> List["Document"]:
         """
