@@ -66,7 +66,7 @@ async def test_drops_indexes() -> None:
 
 async def test_drops_indexes_different_db() -> None:
     collection = AnotherMovie.objects.using("another_test_db")._collection
-    await AnotherMovie.drop_indexes(force=True, collection=True)
+    await AnotherMovie.drop_indexes(force=True, collection=collection)
     await AnotherMovie.objects.using("another_test_db").delete()
     await AnotherMovie.create_indexes(collection=collection)
     await AnotherMovie.objects.using("another_test_db").create(
