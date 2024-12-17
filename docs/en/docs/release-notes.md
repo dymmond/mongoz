@@ -1,5 +1,11 @@
 # Release Notes
 
+## Unreleased
+
+### Changed
+
+- Remove support for Python 3.11.
+
 ## 0.10.8
 
 ### Added
