@@ -65,12 +65,12 @@ async def test_drops_indexes() -> None:
 
 
 async def test_drops_indexes_different_db() -> None:
-    await AnotherMovie.objects.using("another_test_db").delete()
     collection = AnotherMovie.objects.using("another_test_db")._collection
+    await AnotherMovie.drop_indexes(force=True, collection=True)
+    await AnotherMovie.objects.using("another_test_db").delete()
     await AnotherMovie.create_indexes(collection=collection)
     await AnotherMovie.objects.using("another_test_db").create(
         name="Mongoz", email="mongoz@mongoz.com", year=2023)
-
     total_indexes = await AnotherMovie.list_indexes(collection=collection)
 
     assert len(total_indexes) == 3
