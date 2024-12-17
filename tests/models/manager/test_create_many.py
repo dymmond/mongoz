@@ -70,6 +70,41 @@ async def test_model_create_many() -> None:
 
 
 @pytest.mark.skipif(sys.version_info < (3, 10), reason="zip() implementation refactored in 3.10+")
+async def test_model_create_many_different_db() -> None:
+    db = "another_test_db"
+    await Movie.objects.using(db).delete()
+    movies = []
+    movie_names = ("The Dark Knight", "The Dark Knight Rises", "The Godfather")
+    for movie_name in movie_names:
+        movies.append(Movie(name=movie_name, year=random.randint(1970, 2020)))
+
+    movies_db = await Movie.objects.using(db).create_many(movies)
+    for movie, movie_db in zip(movies, movies_db):
+        assert movie.name == movie_db.name
+        assert movie.year == movie_db.year
+        assert isinstance(movie.id, bson.ObjectId)
+
+    default_db_movies = await Movie.objects.all()
+    runtime_db_movies = await Movie.objects.using(db).all()
+
+    assert len(default_db_movies) == 0
+    assert len(runtime_db_movies) == len(movie_names)
+
+    class Book(Document):
+        name: str = mongoz.String()
+        year: int = mongoz.Integer()
+
+        class Meta:
+            indexes = indexes
+            database = "test_db"
+
+    with pytest.raises(TypeError):
+        book = Book(name="The Book", year=1972)
+        movie = Movie(name="Inception", year=2010)
+        await Movie.objects.using(db).create_many([book, movie])  # type: ignore
+
+
+@pytest.mark.skipif(sys.version_info < (3, 10), reason="zip() implementation refactored in 3.10+")
 async def test_model_bulk_create() -> None:
     movies = []
     movie_names = ("The Dark Knight", "The Dark Knight Rises", "The Godfather")

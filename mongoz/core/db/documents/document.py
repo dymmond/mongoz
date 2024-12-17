@@ -230,7 +230,7 @@ class Document(DocumentRow):
             await cls.check_indexes(force_drop=True, collection=collection)
 
     @classmethod
-    async def list_indexes(cls) -> List[Dict[str, Any]]:
+    async def list_indexes(cls, collection: Union[Collection, AsyncIOMotorCollection, None] = None) -> List[Dict[str, Any]]:
         """
         List all indexes in the collection.
 
@@ -245,8 +245,14 @@ class Document(DocumentRow):
         is_operation_allowed(cls)
 
         collection_indexes = []
+        if isinstance(collection, Collection):
+            collection = collection._collection
+        elif isinstance(collection, AsyncIOMotorCollection):
+            pass
+        else:
+            collection = cls.meta.collection._collection  # type: ignore
 
-        async for index in cls.meta.collection._collection.list_indexes():  # type: ignore
+        async for index in collection.list_indexes():
             collection_indexes.append(index)
         return collection_indexes
 
@@ -349,9 +355,9 @@ class Document(DocumentRow):
         collection = cls.get_collection(collection)
         if force:
             if isinstance(collection, Collection):
-                return await collection._collection.drop_indexes()
+                return await collection._collection.drop_indexes()  # type: ignore
             elif isinstance(collection, AsyncIOMotorCollection):
-                return await collection.drop_indexes()
+                return await collection.drop_indexes()  # type: ignore
             else:
                 return await cls.meta.collection._collection.drop_indexes()  # type: ignore
         index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
