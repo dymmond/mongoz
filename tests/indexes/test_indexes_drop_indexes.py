@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
 import pytest
 
@@ -24,6 +24,16 @@ class AnotherMovie(Document):
         indexes = indexes
         database = "test_db"
         autogenerate_index = True
+
+
+@pytest.fixture(scope="function", autouse=True)
+async def prepare_database() -> AsyncGenerator:
+    collection = AnotherMovie.objects.using("another_test_db")._collection
+    await AnotherMovie.drop_indexes(force=True, collection=collection)
+    await AnotherMovie.objects.using("another_test_db").delete()
+    yield
+    await AnotherMovie.drop_indexes(force=True)
+    await AnotherMovie.objects.using("another_test_db").delete()
 
 
 async def test_drops_indexes() -> None:
@@ -66,8 +76,6 @@ async def test_drops_indexes() -> None:
 
 async def test_drops_indexes_different_db() -> None:
     collection = AnotherMovie.objects.using("another_test_db")._collection
-    await AnotherMovie.drop_indexes(force=True, collection=collection)
-    await AnotherMovie.objects.using("another_test_db").delete()
     await AnotherMovie.create_indexes(collection=collection)
     await AnotherMovie.objects.using("another_test_db").create(
         name="Mongoz", email="mongoz@mongoz.com", year=2023)
