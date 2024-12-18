@@ -33,13 +33,20 @@ class Movie(Document):
 
 @pytest.fixture(scope="function", autouse=True)
 async def prepare_database() -> AsyncGenerator:
+    collection = Movie.objects.using("another_test_db")._collection
     await Movie.drop_indexes(force=True)
     await Movie.objects.delete()
     await Movie.create_indexes()
+    await Movie.drop_indexes(force=True, collection=collection)
+    await Movie.objects.using("another_test_db").delete()
+    await Movie.create_indexes(collection=collection)
     yield
     await Movie.drop_indexes(force=True)
     await Movie.objects.delete()
     await Movie.create_indexes()
+    await Movie.drop_indexes(force=True, collection=collection)
+    await Movie.objects.using("another_test_db").delete()
+    await Movie.create_indexes(collection=collection)
 
 
 @pytest.mark.skipif(sys.version_info < (3, 10), reason="zip() implementation refactored in 3.10+")
@@ -72,7 +79,6 @@ async def test_model_create_many() -> None:
 @pytest.mark.skipif(sys.version_info < (3, 10), reason="zip() implementation refactored in 3.10+")
 async def test_model_create_many_different_db() -> None:
     db = "another_test_db"
-    await Movie.objects.using(db).delete()
     movies = []
     movie_names = ("The Dark Knight", "The Dark Knight Rises", "The Godfather")
     for movie_name in movie_names:
