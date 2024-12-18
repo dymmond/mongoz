@@ -26,14 +26,26 @@ class AnotherMovie(Document):
         autogenerate_index = True
 
 
+class Movie(Document):
+    name: str = mongoz.String()
+    email: str = mongoz.Email(index=True, unique=True)
+    year: int = mongoz.Integer()
+    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+
+    class Meta:
+        registry = client
+        database = "test_db"
+        autogenerate_index = True
+
+
 @pytest.fixture(scope="function", autouse=True)
 async def prepare_database() -> AsyncGenerator:
-    collection = AnotherMovie.objects.using("another_test_db")._collection
-    await AnotherMovie.drop_indexes(force=True, collection=collection)
-    await AnotherMovie.objects.using("another_test_db").delete()
+    collection = Movie.objects.using("another_test_db")._collection
+    await Movie.drop_indexes(force=True, collection=collection)
+    await Movie.objects.using("another_test_db").delete()
     yield
-    await AnotherMovie.drop_indexes(force=True)
-    await AnotherMovie.objects.using("another_test_db").delete()
+    await Movie.drop_indexes(force=True)
+    await Movie.objects.using("another_test_db").delete()
 
 
 async def test_drops_indexes() -> None:
@@ -75,10 +87,10 @@ async def test_drops_indexes() -> None:
 
 
 async def test_drops_indexes_different_db() -> None:
-    collection = AnotherMovie.objects.using("another_test_db")._collection
-    await AnotherMovie.create_indexes(collection=collection)
-    await AnotherMovie.objects.using("another_test_db").create(
+    collection = Movie.objects.using("another_test_db")._collection
+    await Movie.create_indexes(collection=collection)
+    await Movie.objects.using("another_test_db").create(
         name="Mongoz", email="mongoz@mongoz.com", year=2023)
-    total_indexes = await AnotherMovie.list_indexes(collection=collection)
+    total_indexes = await Movie.list_indexes(collection=collection)
 
-    assert len(total_indexes) == 3
+    assert len(total_indexes) == 2
