@@ -1,10 +1,14 @@
 # Release Notes
 
-## Unreleased
+## 0.11.0
+
+### Added
+
+- Multi-tenancy for the handling indexes
 
 ### Changed
 
-- Remove support for Python 3.11.
+- Remove support for Python 3.8.
 
 ## 0.10.8
 
