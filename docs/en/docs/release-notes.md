@@ -9,6 +9,7 @@
 ### Changed
 
 - Remove support for Python 3.8.
+- Moved to BSD-3 License to be compliant with the remaining ecosystem.
 
 ## 0.10.8
 
