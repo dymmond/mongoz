@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.11.1
+
+### Fix
+
+- Running the `.filter(...)` lookups using the ID by parsing to the proper format.
+
 ## 0.11.0
 
 ### Added
