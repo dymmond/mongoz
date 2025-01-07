@@ -155,7 +155,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             if "__" in key:
                 parts = key.split("__")
                 lookup_operator = parts[-1]
-                field_name = parts[-2]
+                field_name = self._find_and_replace_id(parts[-2])
 
                 assert (
                     lookup_operator in settings.filter_operators
