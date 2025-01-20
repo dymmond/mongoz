@@ -131,8 +131,9 @@ The same special operators are also automatically added on every column.
 * **neq** - Filter instances by not equal to condition.
 * **startswith** - Filter instances that start with a specific value.
 * **endswith** - Filter instances that end with a specific value.
-* **istartswith** - Filter instances that start with a specific value, case-insensitive. 
+* **istartswith** - Filter instances that start with a specific value, case-insensitive.
 * **iendswith** - Filter instances that end with a specific value, case-insensitive.
+* **date** - Filter instances by date.
 
 ##### Example
 
@@ -153,6 +154,7 @@ users = await User.objects.filter(name__startswith="foo")
 users = await User.objects.filter(name__istartswith="foo")
 users = await User.objects.filter(name__endswith="foo")
 users = await User.objects.filter(name__iendswith="foo")
+users = await User.objects.filter(updated_at__date=date.today())
 ```
 
 ### Using
