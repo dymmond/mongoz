@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,9 +27,16 @@ from mongoz.core.db.querysets.core.constants import (
     ORDER_EQUALITY,
     VALUE_EQUALITY,
 )
-from mongoz.core.db.querysets.core.protocols import AwaitableQuery, MongozDocument
+from mongoz.core.db.querysets.core.protocols import (
+    AwaitableQuery,
+    MongozDocument,
+)
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
-from mongoz.exceptions import DocumentNotFound, FieldDefinitionError, MultipleDocumentsReturned
+from mongoz.exceptions import (
+    DocumentNotFound,
+    FieldDefinitionError,
+    MultipleDocumentsReturned,
+)
 from mongoz.protocols.queryset import QuerySetProtocol
 from mongoz.utils.enums import OrderEnum
 
@@ -88,8 +96,12 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             - return the self instance.
         """
         manager: "Manager" = self.clone()
-        database = manager.model_class.meta.registry.get_database(database_name)
-        manager._collection = database.get_collection(manager._collection.name)._collection
+        database = manager.model_class.meta.registry.get_database(
+            database_name
+        )
+        manager._collection = database.get_collection(
+            manager._collection.name
+        )._collection
         return manager
 
     def clone(self) -> Any:
@@ -107,7 +119,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
     def validate_only_and_defer(self) -> None:
         if self._only_fields and self._defer_fields:
-            raise FieldDefinitionError("You cannot use .only() and .defer() at the same time.")
+            raise FieldDefinitionError(
+                "You cannot use .only() and .defer() at the same time."
+            )
 
     def get_operator(self, name: str) -> Expression:
         """
@@ -123,7 +137,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             return cast(str, self.model_class.id.pydantic_field.alias)  # type: ignore
         return key
 
-    def filter_only_and_defer(self, *fields: Sequence[str], is_only: bool = False) -> "Manager":
+    def filter_only_and_defer(
+        self, *fields: Sequence[str], is_only: bool = False
+    ) -> "Manager":
         """
         Validates if should be defer or only and checks it out
         """
@@ -190,9 +206,15 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                         and value
                     ):
                         asc_or_desc = lookup_operator
-                    elif lookup_operator == OrderEnum.ASCENDING and value is False:
+                    elif (
+                        lookup_operator == OrderEnum.ASCENDING
+                        and value is False
+                    ):
                         asc_or_desc = OrderEnum.DESCENDING
-                    elif lookup_operator == OrderEnum.DESCENDING and value is False:
+                    elif (
+                        lookup_operator == OrderEnum.DESCENDING
+                        and value is False
+                    ):
                         asc_or_desc = OrderEnum.ASCENDING
                     else:
                         asc_or_desc = OrderEnum.ASCENDING
@@ -206,6 +228,17 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 elif lookup_operator in GREATNESS_EQUALITY:
                     operator = self.get_operator(lookup_operator)
                     expression = operator(field_name, value)  # type: ignore
+
+                # For "date"
+                elif lookup_operator == "date":
+                    operator = self.get_operator("gte")
+                    from_datetime = datetime.combine(
+                        value, datetime.min.time()
+                    )
+                    expression1 = operator(field_name, from_datetime)  # type: ignore
+                    clauses.append(expression1)
+                    operator = self.get_operator("lt")
+                    expression = operator(field_name, from_datetime + timedelta(days=1))  # type: ignore
 
                 # Add expression to the clauses
                 clauses.append(expression)
@@ -249,7 +282,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         """
         manager: "Manager" = self.clone()
         for value in values:
-            assert isinstance(value, (dict, Expression)), "Invalid argument to Raw"
+            assert isinstance(
+                value, (dict, Expression)
+            ), "Invalid argument to Raw"
             if isinstance(value, dict):
                 query_expressions = Expression.unpack(value)
                 manager._filter.extend(query_expressions)
@@ -290,7 +325,10 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         return manager
 
     def sort(
-        self, key: Union[Any, None] = None, direction: Union[Order, None] = None, **kwargs: Any
+        self,
+        key: Union[Any, None] = None,
+        direction: Union[Order, None] = None,
+        **kwargs: Any,
     ) -> "Manager[T]":
         """Sort by (key, direction) or [(key, direction)]."""
         manager: "Manager" = self.clone()
@@ -364,7 +402,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 only_fields=manager._only_fields,
                 is_defer_fields=is_defer_fields,
                 defer_fields=manager._defer_fields,
-                from_collection=manager._collection
+                from_collection=manager._collection,
             )
             async for document in cursor
         ]
@@ -378,14 +416,18 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager: "Manager" = self.clone()
 
         filter_query = Expression.compile_many(manager._filter)
-        return cast(int, await manager._collection.count_documents(filter_query))
+        return cast(
+            int, await manager._collection.count_documents(filter_query)
+        )
 
     async def create(self, **kwargs: Any) -> "Document":
         """
         Creates a mongo db document.
         """
         manager: "Manager" = self.clone()
-        instance = await manager.model_class(**kwargs).create(manager._collection)
+        instance = await manager.model_class(**kwargs).create(
+            manager._collection
+        )
         return cast("Document", instance)
 
     async def delete(self) -> int:
@@ -448,14 +490,19 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             raise MultipleDocumentsReturned()
         return cast(T, objects[0])
 
-    async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
+    async def get_or_create(
+        self, defaults: Union[Dict[str, Any], None] = None
+    ) -> T:
         manager: "Manager" = self.clone()
         if not defaults:
             defaults = {}
 
-        data = {expression.key: expression.value for expression in manager._filter}
+        data = {
+            expression.key: expression.value for expression in manager._filter
+        }
         defaults = {
-            (key if isinstance(key, str) else key._name): value for key, value in defaults.items()
+            (key if isinstance(key, str) else key._name): value
+            for key, value in defaults.items()
         }
 
         try:
@@ -528,12 +575,21 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             values = model.model_dump()
 
             filter_query = Expression.compile_many(manager._filter)
-            await manager._collection.update_many(filter_query, {"$set": values})
+            await manager._collection.update_many(
+                filter_query, {"$set": values}
+            )
 
             _filter = [
-                expression for expression in manager._filter if expression.key not in values
+                expression
+                for expression in manager._filter
+                if expression.key not in values
             ]
-            _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
+            _filter.extend(
+                [
+                    Expression(key, "$eq", value)
+                    for key, value in values.items()
+                ]
+            )
 
             manager._filter = _filter
         return await manager._all()
@@ -556,7 +612,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager: "Manager" = self.clone()
         return await manager.update_many(**kwargs)
 
-    async def get_document_by_id(self, id: Union[str, bson.ObjectId]) -> "Document":
+    async def get_document_by_id(
+        self, id: Union[str, bson.ObjectId]
+    ) -> "Document":
         """
         Gets a document by the id
         """

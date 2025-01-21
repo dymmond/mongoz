@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from typing import AsyncGenerator, List, Optional
 
 import pydantic
@@ -21,6 +22,7 @@ class Movie(Document):
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
     uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    released_at: datetime = mongoz.DateTime(null=True)
 
     class Meta:
         registry = client
@@ -40,7 +42,9 @@ async def prepare_database() -> AsyncGenerator:
 
 
 async def test_model_query_builder() -> None:
-    await Movie.objects.create(name="Downfall", year=2004)
+    await Movie.objects.create(
+        name="Downfall", year=2004, released_at=datetime.now()
+    )
     await Movie.objects.create(name="The Two Towers", year=2002)
     await Movie.objects.create(name="Casablanca", year=1942)
     await Movie.objects.create(name="Gone with the wind", year=1939)
@@ -69,7 +73,9 @@ async def test_model_query_builder() -> None:
     assert movie.name == "Downfall"
     assert movie.year == 2004
 
-    movie = await Movie.objects.filter(name="Casablanca").filter(year=1942).get()
+    movie = (
+        await Movie.objects.filter(name="Casablanca").filter(year=1942).get()
+    )
     assert movie.name == "Casablanca"
     assert movie.year == 1942
 
@@ -81,7 +87,9 @@ async def test_model_query_builder() -> None:
     assert movie.name == "Casablanca"
     assert movie.year == 1942
 
-    movie = await Movie.objects.filter(year__gt=2000).filter(year__lt=2003).get()
+    movie = (
+        await Movie.objects.filter(year__gt=2000).filter(year__lt=2003).get()
+    )
     assert movie.name == "The Two Towers"
     assert movie.year == 2002
 
@@ -129,6 +137,12 @@ async def test_model_query_builder() -> None:
     assert len(movies) == 1
     assert movies[0].name.lower() == "gone with the Wind".lower()
 
+    movies = await Movie.objects.filter(released_at__date=date.today())
+    assert len(movies) == 1
+    assert movies[0].name == "Downfall"
+    assert movies[0].year == 2004
+
+
 async def test_query_builder_in_list():
     await Movie.objects.create(name="Downfall", year=2004)
     await Movie.objects.create(name="The Two Towers", year=2002)
@@ -142,7 +156,9 @@ async def test_query_builder_in_list():
     assert len(movies) == 2
 
 
-@pytest.mark.parametrize("values", [{2002, 2004}, {"year": 2002}], ids=["as-set", "as-dict"])
+@pytest.mark.parametrize(
+    "values", [{2002, 2004}, {"year": 2002}], ids=["as-set", "as-dict"]
+)
 async def test_query_builder_in_list_raise_assertation_error(values):
     await Movie.objects.create(name="Downfall", year=2004)
     await Movie.objects.create(name="The Two Towers", year=2002)
