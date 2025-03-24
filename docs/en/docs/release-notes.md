@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.11.2
+
+### Added
+
+- Add the date operator to query on date-time field.
+
 ## 0.11.1
 
 ### Fix
