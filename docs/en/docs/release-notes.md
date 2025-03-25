@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.11.3
+
+### Added
+
+- ChoiceField allowing to pass tuples as optional choices.
+
 ## 0.11.2
 
 ### Added
