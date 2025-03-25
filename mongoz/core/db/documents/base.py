@@ -108,8 +108,8 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                 if callable(value):
                     setattr(self, key, value())
                 else:
-                    field_obj = self.meta.fields[key]
-                    if field_obj.choices:
+                    field_obj = self.meta.fields.get(key)
+                    if field_obj and field_obj.choices:
                         is_matched = False
                         for option_key, option_value in field_obj.choices:
                             if isinstance(option_value, (list, tuple, set)):
