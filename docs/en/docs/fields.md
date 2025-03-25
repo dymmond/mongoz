@@ -100,7 +100,11 @@ import mongoz
 class MyDocument(mongoz.Document):
     description: str = mongoz.String(max_length=255)
     title: str = mongoz.String(max_length=50, min_length=200)
-    ...
+    doc_type: str = mongoz.String(choices=(
+            ("pdf", "Protable Document Format"),
+            ("txt", "Plain Text"),
+            ("csv", "Comma Seprated Values"),
+        ))
 
 ```
 
@@ -108,6 +112,7 @@ class MyDocument(mongoz.Document):
 
 * **max_length** - An integer indicating the total length of string.
 * **min_length** - An integer indicating the minimum length of string.
+* **choices** - An iterable containing (actual value, human readable name) tuples.
 
 #### Integer
 
