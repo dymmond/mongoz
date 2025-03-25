@@ -1,13 +1,21 @@
 import copy
-from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Mapping, Type, Union
+from functools import cached_property, partialmethod
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Dict,
+    List,
+    Mapping,
+    Type,
+    Union,
+)
 
 import bson
 import pydantic
 
 # from bson.decimal128 import Decimal128
 from pydantic import BaseModel, ConfigDict
-from pydantic_core._pydantic_core import SchemaValidator as SchemaValidator
 
 from mongoz.core.db.documents._internal import DescriptiveMeta, ModelDump
 from mongoz.core.db.documents.document_proxy import ProxyDocument
@@ -18,6 +26,7 @@ from mongoz.core.db.querysets.base import Manager, QuerySet
 from mongoz.core.db.querysets.expressions import Expression
 from mongoz.core.signals.signal import Signal
 from mongoz.core.utils.documents import generify_model_fields
+from mongoz.core.utils.hashable import make_hashable
 from mongoz.utils.mixins import is_operation_allowed
 
 if TYPE_CHECKING:
@@ -51,10 +60,28 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         if self.is_proxy_document:
-            values = self.extract_default_values_from_field(is_proxy=True, **data)
+            values = self.extract_default_values_from_field(
+                is_proxy=True, **data
+            )
             self.__dict__ = values  # type: ignore
         else:
             self.extract_default_values_from_field()
+
+    def _get_FIELD_display(self, field: Type["Document"]) -> str:
+        value = getattr(self, field.name)
+        choices_dict: Dict = dict(make_hashable(field.choices))
+        return choices_dict.get(make_hashable(value), value)
+
+    @classmethod
+    def get_field_display(cls) -> None:
+        for name, field in cls.model_fields.items():
+            if hasattr(field, "choices") and field.choices:
+                if "get_%s_display" % name not in cls.__dict__:
+                    setattr(
+                        cls,
+                        "get_%s_display" % name,
+                        partialmethod(cls._get_FIELD_display, field=field),
+                    )
 
     def extract_default_values_from_field(
         self, is_proxy: bool = False, **kwargs: Any
@@ -71,14 +98,41 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         for key, value in kwargs.items():
             if key not in self.meta.fields:
                 if not hasattr(self, key):
-                    raise ValueError(f"Invalid keyword {key} for class {self.__class__.__name__}")
+                    raise ValueError(
+                        f"Invalid keyword {key} for class "
+                        f"{self.__class__.__name__}"
+                    )
             # For non values. Example: bool
             if value is not None:
                 # Checks if the default is a callable and executes it.
                 if callable(value):
                     setattr(self, key, value())
                 else:
-                    setattr(self, key, value)
+                    field_obj = self.meta.fields.get(key)
+                    if field_obj and field_obj.choices:
+                        is_matched = False
+                        for option_key, option_value in field_obj.choices:
+                            if isinstance(option_value, (list, tuple, set)):
+                                # This is an optgroup, so look inside the
+                                # group for options.
+                                for (
+                                    optgroup_key,
+                                    _optgroup_value,
+                                ) in option_value:
+                                    if value == optgroup_key:
+                                        setattr(self, key, value)
+                                        continue
+                            elif value == option_key:
+                                setattr(self, key, value)
+                                is_matched = True
+                                break
+                        if is_matched is False:
+                            raise ValueError(
+                                f"Invalid choice for field '{key}'. Input "
+                                f"provided as '{value}'"
+                            )
+                    else:
+                        setattr(self, key, value)
                 continue
 
             # Validate the default fields
@@ -107,7 +161,9 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         if cls.__proxy_document__:
             return cls.__proxy_document__
 
-        fields = {key: copy.copy(field) for key, field in cls.meta.fields.items()}
+        fields = {
+            key: copy.copy(field) for key, field in cls.meta.fields.items()
+        }
         proxy_document = ProxyDocument(
             name=cls.__name__,
             module=cls.__module__,
@@ -131,7 +187,9 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
             return QuerySet(model_class=cls)
 
         for arg in values:
-            assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
+            assert isinstance(
+                arg, (dict, Expression)
+            ), "Invalid argument to Query"
             if isinstance(arg, dict):
                 query_expressions = Expression.unpack(arg)
                 filter_by.extend(query_expressions)
