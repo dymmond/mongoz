@@ -42,7 +42,6 @@ async def prepare_database() -> AsyncGenerator:
 
 
 async def test_model_create() -> None:
-    Movie.get_field_display()
     movie = await Movie.objects.create(
         name="Barbie", year=2023, movie_type="K"
     )

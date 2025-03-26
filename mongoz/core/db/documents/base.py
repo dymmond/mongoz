@@ -66,6 +66,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
             self.__dict__ = values  # type: ignore
         else:
             self.extract_default_values_from_field()
+        self.get_field_display()
 
     def _get_FIELD_display(self, field: Type["Document"]) -> str:
         value = getattr(self, field.name)
