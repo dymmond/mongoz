@@ -22,10 +22,14 @@ from mongoz.core.connection.collections import Collection
 from mongoz.core.connection.database import Database
 from mongoz.core.connection.registry import Registry
 from mongoz.core.db.datastructures import Index
+from mongoz.core.db.fields import ObjectId
 from mongoz.core.db.fields.base import BaseField, MongozField
 from mongoz.core.db.querysets.core.manager import Manager
 from mongoz.core.signals import Broadcaster, Signal
-from mongoz.core.utils.functional import extract_field_annotations_and_defaults, mongoz_setattr
+from mongoz.core.utils.functional import (
+    extract_field_annotations_and_defaults,
+    mongoz_setattr,
+)
 from mongoz.core.utils.sync import run_sync
 from mongoz.exceptions import ImproperlyConfigured, IndexError
 
@@ -54,19 +58,29 @@ class MetaInfo:
     def __init__(self, meta: Any = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.pk: Optional[BaseField] = None
-        self.id_attribute: Union[BaseField, str] = getattr(meta, "id_attribute", "")
+        self.id_attribute: Union[BaseField, str] = getattr(
+            meta, "id_attribute", ""
+        )
         self.abstract: bool = getattr(meta, "abstract", False)
         self.fields: Dict[str, BaseField] = {}
-        self.registry: Optional[Type[Registry]] = getattr(meta, "registry", None)
-        self.collection: Optional[Collection] = getattr(meta, "collection", None)
+        self.registry: Optional[Type[Registry]] = getattr(
+            meta, "registry", None
+        )
+        self.collection: Optional[Collection] = getattr(
+            meta, "collection", None
+        )
         self.parents: Any = getattr(meta, "parents", None) or []
-        self.indexes: List[Index] = cast(List[Index], getattr(meta, "indexes", None))
+        self.indexes: List[Index] = cast(
+            List[Index], getattr(meta, "indexes", None)
+        )
         self.database: Union["str", Database] = cast(
             Union["str", Database], getattr(meta, "database", None)
         )
         self.signals: Optional[Broadcaster] = {}  # type: ignore
         self.manager: "Manager" = getattr(meta, "manager", Manager())
-        self.autogenerate_index: bool = getattr(meta, "autogenerate_index", False)
+        self.autogenerate_index: bool = getattr(
+            meta, "autogenerate_index", False
+        )
         self.from_collection: Union[AsyncIOMotorCollection, None] = getattr(
             meta, "from_collection", None
         )
@@ -101,7 +115,9 @@ def _check_manager_for_bases(
                     attrs[key] = value.__class__()
 
 
-def _check_document_inherited_registry(bases: Tuple[Type, ...]) -> Type[Registry]:
+def _check_document_inherited_registry(
+    bases: Tuple[Type, ...]
+) -> Type[Registry]:
     """
     When a registry is missing from the Meta class, it should look up for the bases
     and obtain the first found registry.
@@ -262,7 +278,7 @@ class BaseModelMeta(ModelMetaclass):
             attrs = {**inherited_fields, **attrs}
 
         for key, value in attrs.items():
-            if isinstance(value, (BaseField)):
+            if isinstance(value, (BaseField, ObjectId)):
                 if getattr(meta_class, "abstract", None):
                     value = copy.copy(value)
                 fields[key] = value
@@ -281,18 +297,24 @@ class BaseModelMeta(ModelMetaclass):
         model_class = super().__new__
 
         # Handle annotations
-        annotations: Dict[str, Any] = handle_annotations(bases, base_annotations, attrs)
+        annotations: Dict[str, Any] = handle_annotations(
+            bases, base_annotations, attrs
+        )
 
         # Ensure the initialization is only performed for subclasses of Model
         attrs["__init_annotations__"] = annotations
 
         # Ensure the initialization is only performed for subclasses of Document
-        parents = [parent for parent in bases if isinstance(parent, BaseModelMeta)]
+        parents = [
+            parent for parent in bases if isinstance(parent, BaseModelMeta)
+        ]
         if not parents:
             return model_class(cls, name, bases, attrs)
 
         meta.parents = parents
-        new_class = cast("Type[Document]", model_class(cls, name, bases, attrs))
+        new_class = cast(
+            "Type[Document]", model_class(cls, name, bases, attrs)
+        )
 
         # Update the model_fields are updated to the latest
         new_class.model_fields.update(model_fields)
@@ -310,7 +332,10 @@ class BaseModelMeta(ModelMetaclass):
 
         # Handle the registry of models
         if getattr(meta, "registry", None) is None:
-            if hasattr(new_class, "__db_document__") and new_class.__db_document__:
+            if (
+                hasattr(new_class, "__db_document__")
+                and new_class.__db_document__
+            ):
                 meta.registry = _check_document_inherited_registry(bases)
             else:
                 return new_class
@@ -327,7 +352,9 @@ class BaseModelMeta(ModelMetaclass):
 
         # Assert the databse is also specified
         if getattr(meta, "database", None) is None:
-            meta.database = _check_document_inherited_database(bases, registry=meta.registry)
+            meta.database = _check_document_inherited_database(
+                bases, registry=meta.registry
+            )
         else:
             if isinstance(meta.database, str):
                 meta.database = meta.registry.get_database(meta.database)
@@ -346,7 +373,9 @@ class BaseModelMeta(ModelMetaclass):
                 )
             else:
                 if not all(isinstance(value, Index) for value in indexes):
-                    raise ValueError("Meta.indexes must be a list of Index types.")
+                    raise ValueError(
+                        "Meta.indexes must be a list of Index types."
+                    )
 
                 # Extend existing indexes.
                 indexes.extend(_check_document_inherited_indexes(bases))
@@ -368,7 +397,9 @@ class BaseModelMeta(ModelMetaclass):
                 field.alias = field_name
             elif field_name == id_attribute:
                 field.alias = id_attribute_alias
-            new_field = MongozField(pydantic_field=field, model_class=field.annotation)
+            new_field = MongozField(
+                pydantic_field=field, model_class=field.annotation
+            )
             mongoz_fields[field_name] = new_field
 
         # For inherited fields
@@ -388,7 +419,10 @@ class BaseModelMeta(ModelMetaclass):
                     or hasattr(field, "unique")
                     and field.unique
                 ):
-                    index_data = {"unique": field.unique, "sparse": field.sparse}
+                    index_data = {
+                        "unique": field.unique,
+                        "sparse": field.sparse,
+                    }
                     _index = Index(name, **index_data)
 
                 if _index is not None:
@@ -420,7 +454,9 @@ class BaseModelMeta(ModelMetaclass):
         # Making sure the core model where the fields are inherited
         # And mapped contains the main proxy_document
         if not new_class.is_proxy_document and not new_class.meta.abstract:
-            proxy_document: "ProxyDocument" = new_class.generate_proxy_document()
+            proxy_document: "ProxyDocument" = (
+                new_class.generate_proxy_document()
+            )
             new_class.__proxy_document__ = proxy_document
             new_class.__proxy_document__.parent = new_class
             new_class.__proxy_document__.model_rebuild(force=True)
@@ -471,7 +507,9 @@ class EmbeddedModelMetaClass(ModelMetaclass):
         for field_name, field in new_class.model_fields.items():
             if not field.alias:
                 field.alias = field_name
-            new_field = MongozField(pydantic_field=field, model_class=new_class)
+            new_field = MongozField(
+                pydantic_field=field, model_class=new_class
+            )
             mongoz_fields[field_name] = new_field
 
         new_class.__mongoz_fields__ = mongoz_fields

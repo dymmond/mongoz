@@ -18,7 +18,7 @@ class AnotherMovie(Document):
     name: str = mongoz.String()
     email: str = mongoz.Email(index=True, unique=True)
     year: int = mongoz.Integer()
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client

@@ -110,7 +110,11 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                     setattr(self, key, value())
                 else:
                     field_obj = self.meta.fields.get(key)
-                    if field_obj and field_obj.choices:
+                    if (
+                        field_obj
+                        and hasattr(field_obj, "choices")
+                        and field_obj.choices
+                    ):
                         is_matched = False
                         for option_key, option_value in field_obj.choices:
                             if isinstance(option_value, (list, tuple, set)):

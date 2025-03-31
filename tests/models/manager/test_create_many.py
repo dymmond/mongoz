@@ -23,7 +23,7 @@ class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -49,7 +49,10 @@ async def prepare_database() -> AsyncGenerator:
     await Movie.create_indexes(collection=collection)
 
 
-@pytest.mark.skipif(sys.version_info < (3, 10), reason="zip() implementation refactored in 3.10+")
+@pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="zip() implementation refactored in 3.10+",
+)
 async def test_model_create_many() -> None:
     movies = []
     movie_names = ("The Dark Knight", "The Dark Knight Rises", "The Godfather")
@@ -76,7 +79,10 @@ async def test_model_create_many() -> None:
         await Movie.objects.create_many([book, movie])  # type: ignore
 
 
-@pytest.mark.skipif(sys.version_info < (3, 10), reason="zip() implementation refactored in 3.10+")
+@pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="zip() implementation refactored in 3.10+",
+)
 async def test_model_create_many_different_db() -> None:
     db = "another_test_db"
     movies = []
@@ -110,7 +116,10 @@ async def test_model_create_many_different_db() -> None:
         await Movie.objects.using(db).create_many([book, movie])  # type: ignore
 
 
-@pytest.mark.skipif(sys.version_info < (3, 10), reason="zip() implementation refactored in 3.10+")
+@pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="zip() implementation refactored in 3.10+",
+)
 async def test_model_bulk_create() -> None:
     movies = []
     movie_names = ("The Dark Knight", "The Dark Knight Rises", "The Godfather")

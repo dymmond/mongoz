@@ -20,7 +20,7 @@ class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -81,6 +81,11 @@ async def test_model_sort() -> None:
     assert movies[0].name == "Batman"
     assert movies[1].name == "Oppenheimer"
 
-    movies = await Movie.query().sort(Q.desc(Movie.name)).sort(Q.asc(Movie.year)).all()
+    movies = (
+        await Movie.query()
+        .sort(Q.desc(Movie.name))
+        .sort(Q.asc(Movie.year))
+        .all()
+    )
     assert movies[0].name == "Oppenheimer"
     assert movies[1].name == "Batman"
