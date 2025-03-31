@@ -1,5 +1,13 @@
 # Release Notes
 
+## 0.11.4
+
+### Fix
+
+- Initialize the method to get the choice field display name.
+- Abstract class initialization for Mapping tables with ObjectID,
+- Replace the ObjectId null field to UUID field into test cases to represent the UUID.
+
 ## 0.11.3
 
 ### Added
