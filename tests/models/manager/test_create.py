@@ -23,7 +23,7 @@ class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -53,9 +53,12 @@ async def test_model_create() -> None:
 
     error = exc.value.errors()[0]
 
-    assert error["type"] == "value_error"
+    assert error["type"] == "uuid_parsing"
     assert error["loc"] == ("uuid",)
-    assert error["msg"] == "Value error, Expected ObjectId, got: <class 'str'>"
+    assert (
+        error["msg"]
+        == "Input should be a valid UUID, invalid length: expected length 32 for simple format, found 1"
+    )
     assert error["input"] == "1"
 
     with pytest.raises(errors.DuplicateKeyError):

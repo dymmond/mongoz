@@ -31,7 +31,7 @@ class BaseDocument(Document):
 
 class Movie(BaseDocument):
     all_manager: ClassVar[CustomManager] = CustomManager()
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)

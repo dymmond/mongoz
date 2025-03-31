@@ -20,7 +20,7 @@ class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -49,21 +49,29 @@ async def test_model_bulk_update_many() -> None:
     movies = await Movie.objects.all()
     assert movies[0].year == 2010
 
-    movies = await Movie.objects.filter(name="Boyhood-2").update_many(year=2010)
+    movies = await Movie.objects.filter(name="Boyhood-2").update_many(
+        year=2010
+    )
     assert len(movies) == 1
     assert movies[0].year == 2010
 
     movies = await Movie.objects.filter(year=2010)
     assert len(movies) == 2
 
-    movies = await Movie.objects.filter(name="Boyhood-2").update_many(year=2014, name="Boyhood 2")
+    movies = await Movie.objects.filter(name="Boyhood-2").update_many(
+        year=2014, name="Boyhood 2"
+    )
     assert movies[0].year == 2014
     assert movies[0].name == "Boyhood 2"
 
     with pytest.raises(pydantic.ValidationError):
-        movies = await Movie.objects.filter(name="Boyhood 2").update_many(year="test")
+        movies = await Movie.objects.filter(name="Boyhood 2").update_many(
+            year="test"
+        )
 
-    movies = await Movie.objects.filter(name="Boyhood 2").update_many(test=2021)
+    movies = await Movie.objects.filter(name="Boyhood 2").update_many(
+        test=2021
+    )
     assert movies[0].year == 2014
     assert movies[0].name == "Boyhood 2"
 
@@ -85,12 +93,16 @@ async def test_model_bulk_update() -> None:
     movies = await Movie.objects.filter(year=2010)
     assert len(movies) == 2
 
-    movies = await Movie.objects.filter(name="Boyhood-2").update(year=2014, name="Boyhood 2")
+    movies = await Movie.objects.filter(name="Boyhood-2").update(
+        year=2014, name="Boyhood 2"
+    )
     assert movies[0].year == 2014
     assert movies[0].name == "Boyhood 2"
 
     with pytest.raises(pydantic.ValidationError):
-        movies = await Movie.objects.filter(name="Boyhood 2").update(year="test")
+        movies = await Movie.objects.filter(name="Boyhood 2").update(
+            year="test"
+        )
 
     movies = await Movie.objects.filter(name="Boyhood 2").update(test=2021)
     assert movies[0].year == 2014
@@ -107,20 +119,28 @@ async def test_model_bulk_update_function() -> None:
     movies = await Movie.objects.all()
     assert movies[0].year == 2010
 
-    movies = await Movie.objects.filter(name="Boyhood-2").bulk_update(year=2010)
+    movies = await Movie.objects.filter(name="Boyhood-2").bulk_update(
+        year=2010
+    )
     assert len(movies) == 1
     assert movies[0].year == 2010
 
     movies = await Movie.objects.filter(year=2010)
     assert len(movies) == 2
 
-    movies = await Movie.objects.filter(name="Boyhood-2").bulk_update(year=2014, name="Boyhood 2")
+    movies = await Movie.objects.filter(name="Boyhood-2").bulk_update(
+        year=2014, name="Boyhood 2"
+    )
     assert movies[0].year == 2014
     assert movies[0].name == "Boyhood 2"
 
     with pytest.raises(pydantic.ValidationError):
-        movies = await Movie.objects.filter(name="Boyhood 2").bulk_update(year="test")
+        movies = await Movie.objects.filter(name="Boyhood 2").bulk_update(
+            year="test"
+        )
 
-    movies = await Movie.objects.filter(name="Boyhood 2").bulk_update(test=2021)
+    movies = await Movie.objects.filter(name="Boyhood 2").bulk_update(
+        test=2021
+    )
     assert movies[0].year == 2014
     assert movies[0].name == "Boyhood 2"

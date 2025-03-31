@@ -23,7 +23,7 @@ class BaseDocument(Document):
 
 
 class Movie(BaseDocument):
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
 
 class Actor(BaseDocument):
@@ -40,7 +40,9 @@ async def prepare_database() -> AsyncGenerator:
 
 
 async def test_filter() -> None:
-    barbie = await Movie.objects.create(name="Barbie", year=2023, tags=["barbie"])
+    barbie = await Movie.objects.create(
+        name="Barbie", year=2023, tags=["barbie"]
+    )
 
     movies = await Movie.objects.all()
     assert len(movies) == 1
@@ -56,7 +58,9 @@ async def test_filter() -> None:
         assert movie.name == "Barbie"
         assert movie.tags == ["barbie"]
 
-    batman = await Movie.objects.create(name="Batman", year=2022, tags=["detective", "dc"])
+    batman = await Movie.objects.create(
+        name="Batman", year=2022, tags=["detective", "dc"]
+    )
     movies = await Movie.objects.all()
 
     assert len(movies) == 2

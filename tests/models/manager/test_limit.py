@@ -20,7 +20,7 @@ class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -47,7 +47,12 @@ async def test_model_limit() -> None:
     assert len(movies) == 1
     assert movies[0].name == "Batman"
 
-    movies = await Movie.objects.sort("name", Order.ASCENDING).skip(1).limit(1).all()
+    movies = (
+        await Movie.objects.sort("name", Order.ASCENDING)
+        .skip(1)
+        .limit(1)
+        .all()
+    )
     assert len(movies) == 1
     assert movies[0].name == "Oppenheimer"
 

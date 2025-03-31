@@ -20,7 +20,7 @@ class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -40,7 +40,9 @@ async def prepare_database() -> AsyncGenerator:
 
 
 async def test_model_get_or_none() -> None:
-    movie = await Movie.objects.filter(name="Barbie").get_or_create({"year": 2023})
+    movie = await Movie.objects.filter(name="Barbie").get_or_create(
+        {"year": 2023}
+    )
     assert movie.name == "Barbie"
     assert movie.year == 2023
 

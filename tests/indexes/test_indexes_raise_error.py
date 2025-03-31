@@ -16,12 +16,17 @@ async def test_create_indexes() -> None:
         class Movie(Document):
             name: str = mongoz.String(index=True, unique=True)
             year: int = mongoz.Integer()
-            uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+            uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
             class Meta:
                 registry = client
                 indexes = [
                     Index("name", unique=True),
-                    Index(keys=[("year", Order.DESCENDING), ("genre", IndexType.HASHED)]),
+                    Index(
+                        keys=[
+                            ("year", Order.DESCENDING),
+                            ("genre", IndexType.HASHED),
+                        ]
+                    ),
                 ]
                 database = "test_db"

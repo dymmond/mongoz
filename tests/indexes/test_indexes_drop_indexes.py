@@ -17,7 +17,7 @@ class AnotherMovie(Document):
     name: str = mongoz.String()
     email: str = mongoz.Email(index=True, unique=True)
     year: int = mongoz.Integer()
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -30,7 +30,7 @@ class Movie(Document):
     name: str = mongoz.String()
     email: str = mongoz.Email(index=True, unique=True)
     year: int = mongoz.Integer()
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -50,7 +50,9 @@ async def prepare_database() -> AsyncGenerator:
 
 async def test_drops_indexes() -> None:
     await AnotherMovie.create_indexes()
-    await AnotherMovie.objects.create(name="Mongoz", email="mongoz@mongoz.com", year=2023)
+    await AnotherMovie.objects.create(
+        name="Mongoz", email="mongoz@mongoz.com", year=2023
+    )
 
     total_indexes = await AnotherMovie.list_indexes()
 
@@ -90,7 +92,8 @@ async def test_drops_indexes_different_db() -> None:
     collection = Movie.objects.using("another_test_db")._collection
     await Movie.create_indexes(collection=collection)
     await Movie.objects.using("another_test_db").create(
-        name="Mongoz", email="mongoz@mongoz.com", year=2023)
+        name="Mongoz", email="mongoz@mongoz.com", year=2023
+    )
     total_indexes = await Movie.list_indexes(collection=collection)
 
     assert len(total_indexes) == 2

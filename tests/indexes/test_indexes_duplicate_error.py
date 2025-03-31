@@ -18,7 +18,7 @@ class AnotherMovie(Document):
     name: str = mongoz.String()
     email: str = mongoz.Email(index=True, unique=True)
     year: int = mongoz.Integer()
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -28,9 +28,13 @@ class AnotherMovie(Document):
 
 async def test_raises_duplicate_error() -> None:
     await AnotherMovie.create_indexes()
-    movie = await AnotherMovie.objects.create(name="Mongoz", email="mongoz@mongoz.com", year=2023)
+    movie = await AnotherMovie.objects.create(
+        name="Mongoz", email="mongoz@mongoz.com", year=2023
+    )
 
     assert movie is not None
 
     with pytest.raises(DuplicateKeyError):
-        await AnotherMovie.objects.create(name="Mongoz", email="mongoz@mongoz.com", year=2023)
+        await AnotherMovie.objects.create(
+            name="Mongoz", email="mongoz@mongoz.com", year=2023
+        )

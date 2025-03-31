@@ -20,7 +20,7 @@ class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -61,22 +61,36 @@ async def test_raw_queries() -> None:
     assert movie.name == "The Two Towers"
     assert movie.year == 2002
 
-    movie = await Movie.query({"year": {"$gt": 2000}}).query({"year": {"$lt": 2003}}).get()
+    movie = (
+        await Movie.query({"year": {"$gt": 2000}})
+        .query({"year": {"$lt": 2003}})
+        .get()
+    )
 
     assert movie.name == "The Two Towers"
     assert movie.year == 2002
 
-    movie = await Movie.query({"year": 1942}).query({"name": {"$regex": "Casa"}}).get()
+    movie = (
+        await Movie.query({"year": 1942})
+        .query({"name": {"$regex": "Casa"}})
+        .get()
+    )
 
     assert movie.name == "Casablanca"
     assert movie.year == 1942
 
-    movie = await Movie.query({"name": "Casablanca"}).query({"year": {"$lt": 1950}}).get()
+    movie = (
+        await Movie.query({"name": "Casablanca"})
+        .query({"year": {"$lt": 1950}})
+        .get()
+    )
 
     assert movie.name == "Casablanca"
     assert movie.year == 1942
 
-    movie = await Movie.query({"$and": [{"name": "Casablanca", "year": 1942}]}).get()
+    movie = await Movie.query(
+        {"$and": [{"name": "Casablanca", "year": 1942}]}
+    ).get()
 
     assert movie.name == "Casablanca"
     assert movie.year == 1942

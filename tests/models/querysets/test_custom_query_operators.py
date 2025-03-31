@@ -22,7 +22,7 @@ class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -42,9 +42,13 @@ async def prepare_database() -> AsyncGenerator:
 
 
 async def test_custom_query_operators() -> None:
-    await Movie(name="The Two Towers", year=2002, tags=["Fantasy", "Adventure"]).create()
+    await Movie(
+        name="The Two Towers", year=2002, tags=["Fantasy", "Adventure"]
+    ).create()
     await Movie(name="Downfall", year=2004, tags=["Drama"]).create()
-    await Movie(name="Boyhood", year=2010, tags=["Coming Of Age", "Drama"]).create()
+    await Movie(
+        name="Boyhood", year=2010, tags=["Coming Of Age", "Drama"]
+    ).create()
 
     movies = await Movie.query(Q.in_(Movie.year, [2000, 2001, 2002])).all()
 
@@ -62,22 +66,30 @@ async def test_custom_query_operators() -> None:
     assert movies[0].name == "Boyhood"
     assert movies[1].name == "Downfall"
 
-    movies = await Movie.query(Q.or_(Movie.name == "The Two Towers", Movie.year > 2005)).all()
+    movies = await Movie.query(
+        Q.or_(Movie.name == "The Two Towers", Movie.year > 2005)
+    ).all()
     assert movies[0].name == "The Two Towers"
     assert movies[1].name == "Boyhood"
 
-    movie = await Movie.query(Q.and_(Movie.name == "The Two Towers", Movie.year > 2000)).get()
+    movie = await Movie.query(
+        Q.and_(Movie.name == "The Two Towers", Movie.year > 2000)
+    ).get()
     assert movie.name == "The Two Towers"
 
     movie = (
-        await Movie.query(Q.and_(Movie.name == "The Two Towers", Movie.year > 2000))
+        await Movie.query(
+            Q.and_(Movie.name == "The Two Towers", Movie.year > 2000)
+        )
         .query(Movie.name == "The Two Towers")
         .get()
     )
     assert movie.name == "The Two Towers"
 
     count = (
-        await Movie.query(Q.and_(Movie.name == "The Two Towers", Movie.year > 2000))
+        await Movie.query(
+            Q.and_(Movie.name == "The Two Towers", Movie.year > 2000)
+        )
         .query(Movie.name == "Boyhood")
         .count()
     )
@@ -94,7 +106,9 @@ async def test_custom_query_operators() -> None:
     assert len(movies) == 1
     assert movies[0].name == "The Two Towers"
 
-    movies = await Movie.query(Q.pattern(Movie.name, re.compile(r"\w+ Two \w+"))).all()
+    movies = await Movie.query(
+        Q.pattern(Movie.name, re.compile(r"\w+ Two \w+"))
+    ).all()
     assert len(movies) == 1
     assert movies[0].name == "The Two Towers"
 

@@ -21,7 +21,7 @@ class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         registry = client
@@ -41,10 +41,14 @@ async def prepare_database() -> AsyncGenerator:
 
 
 async def test_custom_query_operators() -> None:
-    await Movie.objects.create(name="The Two Towers", year=2002, tags=["Fantasy", "Adventure"])
+    await Movie.objects.create(
+        name="The Two Towers", year=2002, tags=["Fantasy", "Adventure"]
+    )
     await Movie.objects.create(name="Two Tales", year=2023, tags=["scify"])
     await Movie.objects.create(name="Downfall", year=2004, tags=["Drama"])
-    await Movie.objects.create(name="Boyhood", year=2010, tags=["Coming Of Age", "Drama"])
+    await Movie.objects.create(
+        name="Boyhood", year=2010, tags=["Coming Of Age", "Drama"]
+    )
 
     movies = await Movie.objects.filter(year__in=[2000, 2001, 2002])
 
@@ -93,7 +97,9 @@ async def test_custom_query_operators() -> None:
     assert len(movies) == 1
     assert movies[0].name == "The Two Towers"
 
-    movies = await Movie.objects.filter(name__pattern=re.compile(r"\w+ Two \w+")).all()
+    movies = await Movie.objects.filter(
+        name__pattern=re.compile(r"\w+ Two \w+")
+    ).all()
     assert len(movies) == 1
     assert movies[0].name == "The Two Towers"
 

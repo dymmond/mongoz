@@ -22,7 +22,7 @@ class BaseDocument(Document):
 
 
 class Movie(BaseDocument):
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
 
 class Actor(BaseDocument):
@@ -72,7 +72,9 @@ async def test_model_nested_inherited() -> None:
     actors = await Actor.query().all()
     assert len(actors) == 0
 
-    await Actor(name="Paul Rudd", year=1972, movies=["Only Murders in the Building"]).create()
+    await Actor(
+        name="Paul Rudd", year=1972, movies=["Only Murders in the Building"]
+    ).create()
 
     actors = await Actor.query().all()
     assert len(actors) == 1

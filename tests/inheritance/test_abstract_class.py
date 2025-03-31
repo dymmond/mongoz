@@ -29,7 +29,7 @@ class BaseDocument(Document):
 
 
 class Movie(BaseDocument):
-    uuid: Optional[ObjectId] = mongoz.ObjectId(null=True)
+    uuid: Optional[ObjectId] = mongoz.UUID(null=True)
 
     class Meta:
         indexes = indexes
