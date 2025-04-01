@@ -1,4 +1,4 @@
-__version__ = "0.11.3"
+__version__ = "0.11.4"
 
 from .conf import settings
 from .conf.global_settings import MongozSettings
@@ -32,7 +32,11 @@ from .core.db.querysets.expressions import Expression, SortExpression
 from .core.db.querysets.operators import Q
 from .core.signals import Signal
 from .core.utils.sync import run_sync
-from .exceptions import DocumentNotFound, ImproperlyConfigured, MultipleDocumentsReturned
+from .exceptions import (
+    DocumentNotFound,
+    ImproperlyConfigured,
+    MultipleDocumentsReturned,
+)
 
 __all__ = [
     "Array",
