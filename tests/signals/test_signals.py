@@ -1,6 +1,7 @@
+from logging import getLogger
+
 import pydantic
 import pytest
-from loguru import logger
 
 import mongoz
 from mongoz import Document, Q
@@ -18,6 +19,8 @@ from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]
+
+logger = getLogger(__name__)
 
 
 class User(Document):
