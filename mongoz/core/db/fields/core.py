@@ -1,7 +1,18 @@
 import datetime
 import decimal
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Generator, List, Optional, Set, Type, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generator,
+    List,
+    Optional,
+    Set,
+    Type,
+    Union,
+    cast,
+)
 
 import bson
 import pydantic
@@ -22,7 +33,7 @@ from mongoz.exceptions import FieldDefinitionError
 mongoz_setattr = object.__setattr__
 
 if TYPE_CHECKING:
-    from mongoz.core.db.documents.document import EmbeddedDocument
+    from mongoz.core.db.documents.document import Document, EmbeddedDocument
 
 
 CLASS_DEFAULTS = ["cls", "__class__", "kwargs"]
@@ -79,7 +90,9 @@ class FieldFactory:
 
 class ObjectId(bson.ObjectId):
     def __init__(
-        self, oid: Union[str, bson.ObjectId, bytes, None] = None, null: bool = False
+        self,
+        oid: Union[str, bson.ObjectId, bytes, None] = None,
+        null: bool = False,
     ) -> None:
         super().__init__(oid)
         self.null = null
@@ -126,7 +139,35 @@ class NullableObjectId(FieldFactory, ObjectId):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
+            **{
+                key: value
+                for key, value in locals().items()
+                if key not in CLASS_DEFAULTS
+            },
+        }
+        return super().__new__(cls, **kwargs)
+
+
+class ForeignKey(FieldFactory, ObjectId):
+    """
+    Foregin field refresents the foreign refrenced Document or EmbeddedDocument.
+    """
+
+    _type = ObjectId
+
+    def __new__(  # type: ignore
+        cls,
+        model: Union["Document", "EmbeddedDocument"],
+        null: bool = False,
+        **kwargs: Any,
+    ) -> BaseField:
+        kwargs = {
+            **kwargs,
+            **{
+                key: value
+                for key, value in locals().items()
+                if key not in CLASS_DEFAULTS
+            },
         }
         return super().__new__(cls, **kwargs)
 
@@ -145,7 +186,11 @@ class String(FieldFactory, str):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
+            **{
+                key: value
+                for key, value in locals().items()
+                if key not in CLASS_DEFAULTS
+            },
         }
 
         return super().__new__(cls, **kwargs)
@@ -158,7 +203,9 @@ class Number(FieldFactory):
         maximum = kwargs.get("maximum", None)
 
         if (minimum is not None and maximum is not None) and minimum > maximum:
-            raise FieldDefinitionError(detail="'minimum' cannot be bigger than 'maximum'")
+            raise FieldDefinitionError(
+                detail="'minimum' cannot be bigger than 'maximum'"
+            )
 
 
 class Integer(Number, int):
@@ -178,7 +225,11 @@ class Integer(Number, int):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{k: v for k, v in locals().items() if k not in ["cls", "__class__", "kwargs"]},
+            **{
+                k: v
+                for k, v in locals().items()
+                if k not in ["cls", "__class__", "kwargs"]
+            },
         }
         return super().__new__(cls, **kwargs)
 
@@ -198,7 +249,11 @@ class Double(Number, float):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
+            **{
+                key: value
+                for key, value in locals().items()
+                if key not in CLASS_DEFAULTS
+            },
         }
         return super().__new__(cls, **kwargs)
 
@@ -218,7 +273,11 @@ class Decimal(Number, decimal.Decimal):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{k: v for k, v in locals().items() if k not in ["cls", "__class__", "kwargs"]},
+            **{
+                k: v
+                for k, v in locals().items()
+                if k not in ["cls", "__class__", "kwargs"]
+            },
         }
         return super().__new__(cls, **kwargs)
 
@@ -228,7 +287,12 @@ class Decimal(Number, decimal.Decimal):
 
         max_digits = kwargs.get("max_digits")
         decimal_places = kwargs.get("decimal_places")
-        if max_digits is None or max_digits < 0 or decimal_places is None or decimal_places < 0:
+        if (
+            max_digits is None
+            or max_digits < 0
+            or decimal_places is None
+            or decimal_places < 0
+        ):
             raise FieldDefinitionError(
                 "max_digits and decimal_places are required for DecimalField"
             )
@@ -247,7 +311,11 @@ class Boolean(FieldFactory, int):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
+            **{
+                key: value
+                for key, value in locals().items()
+                if key not in CLASS_DEFAULTS
+            },
         }
         return super().__new__(cls, **kwargs)
 
@@ -261,7 +329,9 @@ class AutoNowMixin(FieldFactory):
         **kwargs: Any,
     ) -> BaseField:
         if auto_now_add and auto_now:
-            raise FieldDefinitionError("'auto_now' and 'auto_now_add' cannot be both True")
+            raise FieldDefinitionError(
+                "'auto_now' and 'auto_now_add' cannot be both True"
+            )
 
         if auto_now_add or auto_now:
             kwargs["read_only"] = True
@@ -352,7 +422,9 @@ class Binary(FieldFactory, bytes):
     def validate_field(cls, **kwargs: Any) -> None:
         max_length = kwargs.get("max_length", None)
         if max_length <= 0:
-            raise FieldDefinitionError(detail="Parameter 'max_length' is required for BinaryField")
+            raise FieldDefinitionError(
+                detail="Parameter 'max_length' is required for BinaryField"
+            )
 
 
 class UUID(FieldFactory, uuid.UUID):
