@@ -91,6 +91,38 @@ class MyDocument(mongoz.Document):
     an_id: ObjectId = mongoz.NullableObjectId(null=False)
 ```
 
+#### ForeignKey
+
+This is another special field that extends the `bson.ObjectId` for store the foreign refrence model details,
+this one allows to specify null fields and not null as it derives from the mongoz core FieldFactory.
+
+If defaults to `null=False` and it can be specified to `null=True` if required.
+
+**Default**
+
+```python
+import mongoz
+
+class MyAnotherDocument(mongoz.Document):
+    name: str = mongoz.String()
+
+class MyDocument(mongoz.Document):
+    an_id: ObjectId = mongoz.ForeignKey(model=MyAnotherDocument)
+```
+
+**Null True**
+
+```python
+import mongoz
+
+
+class MyAnotherDocument(mongoz.Document):
+    name: str = mongoz.String()
+
+class MyDocument(mongoz.Document):
+    an_id: ObjectId = mongoz.ForeignKey(model=MyAnotherDocument, null=True)
+```
+
 #### String
 
 ```python

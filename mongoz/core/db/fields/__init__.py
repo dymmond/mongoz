@@ -12,6 +12,7 @@ from .core import (
     Double,
     Email,
     Embed,
+    ForeignKey,
     Integer,
     NullableObjectId,
     Object,
@@ -40,4 +41,5 @@ __all__ = [
     "UUID",
     "Embed",
     "NullableObjectId",
+    "ForeignKey",
 ]
