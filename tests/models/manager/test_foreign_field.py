@@ -2,6 +2,7 @@ from typing import AsyncGenerator
 
 import pydantic
 import pytest
+from pydantic import ValidationError
 
 import mongoz
 from mongoz import Document
@@ -70,6 +71,12 @@ async def test_foreign_field() -> None:
     assert result.name == producer.name
     assert result.mobile_no == producer.mobile_no
     assert result.email == producer.email
+
+    with pytest.raises(ValidationError):
+        await Movie.objects.create(
+            name="Barbie",
+            year=2025,
+        )
 
 
 async def test_nullable_foreign_field() -> None:
