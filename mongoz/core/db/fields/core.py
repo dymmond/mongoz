@@ -1,5 +1,6 @@
 import datetime
 import decimal
+import importlib
 import uuid
 from typing import (
     TYPE_CHECKING,
@@ -157,7 +158,7 @@ class ForeignKey(FieldFactory, ObjectId):
 
     def __new__(  # type: ignore
         cls,
-        model: Union["Document", "EmbeddedDocument"],
+        refer_to: Union["Document", "EmbeddedDocument"],
         null: bool = False,
         **kwargs: Any,
     ) -> BaseField:
@@ -169,7 +170,22 @@ class ForeignKey(FieldFactory, ObjectId):
                 if key not in CLASS_DEFAULTS
             },
         }
-        return super().__new__(cls, **kwargs)
+        field = super().__new__(cls, **kwargs)
+
+        def lazy_resolve_model(
+            self: BaseField,
+        ) -> type[Union["Document", "EmbeddedDocument"]]:
+            if isinstance(field.refer_to, str):
+                module_path, class_name = field.refer_to.rsplit(".", 1)
+                module = importlib.import_module(module_path)
+                model = getattr(module, class_name)
+                return model
+            else:
+                return field.refer_to
+
+        # Monkey-patch `.to`  as a property
+        field.__class__.to = property(lazy_resolve_model)
+        return field
 
 
 class String(FieldFactory, str):

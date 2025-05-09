@@ -25,7 +25,7 @@ class Producer(Document):
 class Movie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
-    producer_id: mongoz.ObjectId = mongoz.ForeignKey(model=Producer)
+    producer_id: mongoz.ObjectId = mongoz.ForeignKey(Producer)
 
     class Meta:
         registry = client
@@ -35,7 +35,7 @@ class Movie(Document):
 class AnotherMovie(Document):
     name: str = mongoz.String()
     year: int = mongoz.Integer()
-    producer_id: mongoz.ObjectId = mongoz.ForeignKey(model=Producer, null=True)
+    producer_id: mongoz.ObjectId = mongoz.ForeignKey(Producer, null=True)
 
     class Meta:
         registry = client
@@ -60,12 +60,12 @@ async def test_foreign_field() -> None:
     movie = await Movie.objects.create(
         name="Barbie", year=2025, producer_id=producer.id
     )
-    assert movie.model_fields["producer_id"].model == Producer
+    assert movie.model_fields["producer_id"].to == Producer
     assert (
-        movie.model_fields["producer_id"].model.Meta.collection.name
+        movie.model_fields["producer_id"].to.Meta.collection.name
         == "producers"
     )
-    ForeignModel = movie.model_fields["producer_id"].model
+    ForeignModel = movie.model_fields["producer_id"].to
 
     result = await ForeignModel.objects.get(id=movie.producer_id)
     assert result.name == producer.name
@@ -81,8 +81,8 @@ async def test_foreign_field() -> None:
 
 async def test_nullable_foreign_field() -> None:
     movie = await AnotherMovie.objects.create(name="Barbie", year=2025)
-    assert movie.model_fields["producer_id"].model == Producer
+    assert movie.model_fields["producer_id"].to == Producer
     assert (
-        movie.model_fields["producer_id"].model.Meta.collection.name
+        movie.model_fields["producer_id"].to.Meta.collection.name
         == "producers"
     )
