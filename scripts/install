@@ -1,20 +1,24 @@
 #!/bin/sh -e
 
-# Use the Python executable provided from the `-p` option, or a default.
+# Use the Python executable provided from the `-p` option, or default to `python3`
 [ "$1" = "-p" ] && PYTHON=$2 || PYTHON="python3"
-
-VENV="venv"
 
 set -x
 
+# If inside a virtualenv, use it; otherwise, let uv handle env creation
 if [ "$VIRTUAL_ENV" != '' ]; then
-    PIP="$VIRTUAL_ENV/bin/pip"
+    UV="uv"
 elif [ -z "$GITHUB_ACTIONS" ]; then
-    "$PYTHON" -m venv "$VENV"
-    PIP="$VENV/bin/pip"
+    # Local dev, create a new .venv if not already active
+    uv venv
+    . .venv/bin/activate
+    UV="uv"
 else
-    PIP="pip"
+    # On CI, assume global Python and uv are pre-installed
+    UV="uv"
 fi
 
-"$PIP" install -U pip
-"$PIP" install -e .[testing,docs]
+# Install the project in editable mode with extras
+$UV venv
+$UV pip install hatch
+$UV pip install -e ".[testing]"
