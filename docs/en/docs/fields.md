@@ -93,7 +93,7 @@ class MyDocument(mongoz.Document):
 
 #### ForeignKey
 
-This is another special field that extends the `bson.ObjectId` for store the foreign refrence model details,
+This is another special field that extends the `bson.ObjectId` for store the foreign refrence model details(Object or FQCN),
 this one allows to specify null fields and not null as it derives from the mongoz core FieldFactory.
 
 If defaults to `null=False` and it can be specified to `null=True` if required.
@@ -107,7 +107,7 @@ class MyAnotherDocument(mongoz.Document):
     name: str = mongoz.String()
 
 class MyDocument(mongoz.Document):
-    an_id: ObjectId = mongoz.ForeignKey(model=MyAnotherDocument)
+    an_id: ObjectId = mongoz.ForeignKey(refer_to=MyAnotherDocument)
 ```
 
 **Null True**
@@ -120,7 +120,7 @@ class MyAnotherDocument(mongoz.Document):
     name: str = mongoz.String()
 
 class MyDocument(mongoz.Document):
-    an_id: ObjectId = mongoz.ForeignKey(model=MyAnotherDocument, null=True)
+    an_id: ObjectId = mongoz.ForeignKey(refer_to="project.apps.model.MyModel", null=True)
 ```
 
 #### String
