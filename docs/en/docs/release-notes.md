@@ -1,5 +1,12 @@
 # Release Notes
 
+## 0.11.5
+
+### Added
+
+- Support for ForeignKey field allowing to pass refrenced model.
+
+
 ## 0.11.4
 
 ### Fix
