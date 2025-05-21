@@ -1,4 +1,16 @@
-from typing import Any, ClassVar, Dict, List, Mapping, Tuple, Type, TypeVar, Union, cast
+from functools import partialmethod
+from typing import (
+    Any,
+    ClassVar,
+    Dict,
+    List,
+    Mapping,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import bson
 import pydantic
@@ -11,6 +23,7 @@ from mongoz.core.db.documents._internal import ModelDump
 from mongoz.core.db.documents.document_row import DocumentRow
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.core.db.fields.base import MongozField
+from mongoz.core.utils.hashable import make_hashable
 from mongoz.exceptions import InvalidKeyError, MongozException
 from mongoz.utils.mixins import is_operation_allowed
 
@@ -23,7 +36,8 @@ class Document(DocumentRow):
     """
 
     async def create(
-        self: "Document", collection: Union[AsyncIOMotorCollection, None] = None
+        self: "Document",
+        collection: Union[AsyncIOMotorCollection, None] = None,
     ) -> "Document":
         """
         Inserts a document.
@@ -37,14 +51,18 @@ class Document(DocumentRow):
             result = await collection.insert_one(data)
         else:
             if isinstance(self.meta.collection, Collection):
-                result = await self.meta.collection._collection.insert_one(data)  # noqa
+                result = await self.meta.collection._collection.insert_one(
+                    data
+                )  # noqa
         self.id = result.inserted_id
 
         await self.signals.post_save.send(sender=self.__class__, instance=self)
         return self
 
     async def update(
-        self, collection: Union[AsyncIOMotorCollection, None] = None, **kwargs: Any
+        self,
+        collection: Union[AsyncIOMotorCollection, None] = None,
+        **kwargs: Any,
     ) -> "Document":
         """
         Updates a record on an instance level.
@@ -72,17 +90,24 @@ class Document(DocumentRow):
             data = self.model_dump(exclude={"id": "_id"})
             data.update(values)
 
-            await self.signals.pre_update.send(sender=self.__class__, instance=self)
+            await self.signals.pre_update.send(
+                sender=self.__class__, instance=self
+            )
             await collection.update_one({"_id": self.id}, {"$set": data})  # type: ignore
-            await self.signals.post_update.send(sender=self.__class__, instance=self)
+            await self.signals.post_update.send(
+                sender=self.__class__, instance=self
+            )
 
             for k, v in data.items():
                 setattr(self, k, v)
         return self
 
     @classmethod
-    async def create_many(cls: Type["Document"], models: List["Document"],
-                          collection: Union[Collection, AsyncIOMotorCollection, None] = None) -> List["Document"]:
+    async def create_many(
+        cls: Type["Document"],
+        models: List["Document"],
+        collection: Union[Collection, AsyncIOMotorCollection, None] = None,
+    ) -> List["Document"]:
         """
         Insert many documents
         """
@@ -98,7 +123,9 @@ class Document(DocumentRow):
             results = await collection.insert_many(data)
         else:
             results = await cls.meta.collection._collection.insert_many(data)  # type: ignore
-        for model, inserted_id in zip(models, results.inserted_ids, strict=True):
+        for model, inserted_id in zip(
+            models, results.inserted_ids, strict=True
+        ):
             model.id = inserted_id
         return models
 
@@ -112,7 +139,11 @@ class Document(DocumentRow):
         return collection if collection is not None else cls.meta.collection._collection  # type: ignore
 
     @classmethod
-    async def create_index(cls, name: str, collection: Union[Collection, AsyncIOMotorCollection, None] = None) -> str:
+    async def create_index(
+        cls,
+        name: str,
+        collection: Union[Collection, AsyncIOMotorCollection, None] = None,
+    ) -> str:
         """
         Creates an index from the list of indexes of the Meta object.
         """
@@ -130,7 +161,9 @@ class Document(DocumentRow):
         raise InvalidKeyError(f"Unable to find index: {name}")
 
     @classmethod
-    async def create_indexes(cls, collection: Union[Collection, AsyncIOMotorCollection, None] = None) -> List[str]:
+    async def create_indexes(
+        cls, collection: Union[Collection, AsyncIOMotorCollection, None] = None
+    ) -> List[str]:
         """
         Create indexes defined for the collection or drop for existing ones.
 
@@ -144,7 +177,9 @@ class Document(DocumentRow):
         """
         is_operation_allowed(cls)
         if isinstance(collection, Collection):
-            return await collection._collection.create_indexes(cls.meta.indexes) # noqa
+            return await collection._collection.create_indexes(
+                cls.meta.indexes
+            )  # noqa
         elif isinstance(collection, AsyncIOMotorCollection):
             return await collection.create_indexes(cls.meta.indexes)
         else:
@@ -180,7 +215,9 @@ class Document(DocumentRow):
         is_operation_allowed(cls)
 
         if not isinstance(database_names, (list, tuple)):
-            raise MongozException(detail="Database names must be a list or tuple")
+            raise MongozException(
+                detail="Database names must be a list or tuple"
+            )
 
         database_names = list(database_names)
         if not cls.meta.autogenerate_index:
@@ -218,7 +255,9 @@ class Document(DocumentRow):
         is_operation_allowed(cls)
 
         if not isinstance(database_names, (list, tuple)):
-            raise MongozException(detail="Database names must be a list or tuple")
+            raise MongozException(
+                detail="Database names must be a list or tuple"
+            )
 
         database_names = list(database_names)
         if not cls.meta.autogenerate_index:
@@ -230,7 +269,9 @@ class Document(DocumentRow):
             await cls.check_indexes(force_drop=True, collection=collection)
 
     @classmethod
-    async def list_indexes(cls, collection: Union[Collection, AsyncIOMotorCollection, None] = None) -> List[Dict[str, Any]]:
+    async def list_indexes(
+        cls, collection: Union[Collection, AsyncIOMotorCollection, None] = None
+    ) -> List[Dict[str, Any]]:
         """
         List all indexes in the collection.
 
@@ -284,13 +325,17 @@ class Document(DocumentRow):
         collection = cls.get_collection(collection)
 
         # Get the names of indexes in the collection
-        collection_indexes = {index["name"] for index in await cls.list_indexes()}
+        collection_indexes = {
+            index["name"] for index in await cls.list_indexes()
+        }
 
         # Get the names of indexes defined in the Meta object
         document_index_names = {index.name for index in cls.meta.indexes}
 
         # Find the indexes that are present in one set but not in the other
-        symmetric_difference = collection_indexes.symmetric_difference(document_index_names)
+        symmetric_difference = collection_indexes.symmetric_difference(
+            document_index_names
+        )
 
         # Remove the "_id_" index from the symmetric difference
         symmetric_difference.discard("_id_")
@@ -310,7 +355,9 @@ class Document(DocumentRow):
             ):
                 await cls.drop_index(name, collection)
 
-    async def delete(self, collection: Union[AsyncIOMotorCollection, None] = None) -> int:
+    async def delete(
+        self, collection: Union[AsyncIOMotorCollection, None] = None
+    ) -> int:
         """Delete the document."""
         is_operation_allowed(self)
 
@@ -319,10 +366,14 @@ class Document(DocumentRow):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection._collection
-        await self.signals.pre_delete.send(sender=self.__class__, instance=self)
+        await self.signals.pre_delete.send(
+            sender=self.__class__, instance=self
+        )
 
         result = await collection.delete_one({"_id": self.id})  # type: ignore
-        await self.signals.post_delete.send(sender=self.__class__, instance=self)
+        await self.signals.post_delete.send(
+            sender=self.__class__, instance=self
+        )
         return cast(int, result.deleted_count)
 
     @classmethod
@@ -344,7 +395,9 @@ class Document(DocumentRow):
 
     @classmethod
     async def drop_indexes(
-        cls, force: bool = False, collection: Union[AsyncIOMotorCollection, None] = None
+        cls,
+        force: bool = False,
+        collection: Union[AsyncIOMotorCollection, None] = None,
     ) -> Union[List[str], None]:
         """Drop all indexes defined for the collection.
 
@@ -360,11 +413,14 @@ class Document(DocumentRow):
                 return await collection.drop_indexes()  # type: ignore
             else:
                 return await cls.meta.collection._collection.drop_indexes()  # type: ignore
-        index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
+        index_names = [
+            await cls.drop_index(index.name) for index in cls.meta.indexes
+        ]
         return index_names
 
     async def save(
-        self: "Document", collection: Union[AsyncIOMotorCollection, None] = None
+        self: "Document",
+        collection: Union[AsyncIOMotorCollection, None] = None,
     ) -> "Document":
         """Save the document.
 
@@ -404,7 +460,9 @@ class Document(DocumentRow):
         return self
 
     @classmethod
-    async def get_document_by_id(cls: Type[T], id: Union[str, bson.ObjectId]) -> "Document":
+    async def get_document_by_id(
+        cls: Type[T], id: Union[str, bson.ObjectId]
+    ) -> "Document":
         is_operation_allowed(cls)
 
         if isinstance(id, str):
@@ -427,5 +485,27 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
     Graphical representation of an Embedded document.
     """
 
-    model_config: ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(arbitrary_types_allowed=True)
+    model_config: ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(
+        arbitrary_types_allowed=True
+    )
     __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.get_field_display()
+
+    def _get_FIELD_display(self, field: Type["Document"]) -> str:
+        value = getattr(self, field.name)
+        choices_dict: Dict = dict(make_hashable(field.choices))
+        return choices_dict.get(make_hashable(value), value)
+
+    @classmethod
+    def get_field_display(cls) -> None:
+        for name, field in cls.model_fields.items():
+            if hasattr(field, "choices") and field.choices:
+                if "get_%s_display" % name not in cls.__dict__:
+                    setattr(
+                        cls,
+                        "get_%s_display" % name,
+                        partialmethod(cls._get_FIELD_display, field=field),
+                    )
