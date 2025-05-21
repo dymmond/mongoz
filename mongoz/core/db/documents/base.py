@@ -66,6 +66,23 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
             self.__dict__ = values  # type: ignore
         else:
             self.extract_default_values_from_field()
+        self.get_field_display()
+
+    def _get_FIELD_display(self, field: Type["Document"]) -> str:
+        value = getattr(self, field.name)
+        choices_dict: Dict = dict(make_hashable(field.choices))
+        return choices_dict.get(make_hashable(value), value)
+
+    @classmethod
+    def get_field_display(cls) -> None:
+        for name, field in cls.model_fields.items():
+            if hasattr(field, "choices") and field.choices:
+                if "get_%s_display" % name not in cls.__dict__:
+                    setattr(
+                        cls,
+                        "get_%s_display" % name,
+                        partialmethod(cls._get_FIELD_display, field=field),
+                    )
 
     def extract_default_values_from_field(
         self, is_proxy: bool = False, **kwargs: Any

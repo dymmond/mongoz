@@ -3,10 +3,10 @@ from typing import AsyncGenerator, List, Optional
 import bson
 import pydantic
 import pytest
-from tests.conftest import client
 
 import mongoz
 from mongoz import Document, EmbeddedDocument
+from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
 pydantic_version = pydantic.__version__[:3]
@@ -62,9 +62,9 @@ async def test_model_create() -> None:
     assert movie.year == 2023
     assert movie.movie_type == "K"
     assert isinstance(movie.id, bson.ObjectId)
-    assert movie.get_movie_type_display() == "Kids"
     assert movie.producer.name == "Harshali"
     assert movie.producer.gender == "F"
+    assert movie.get_movie_type_display() == "Kids"
     assert movie.producer.get_gender_display() == "Female"
 
     try:
