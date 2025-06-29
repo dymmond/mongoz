@@ -1,15 +1,25 @@
 # Release Notes
 
-## 0.11.5
+## 0.11.6
 
 ### Added
 
-- Support for ForeignKey field allowing to pass referenced model.
+- Add Choices the support for embedded document.
 
 ### Changed
 
 - Officially stop the support for Python 3.9 to match the ecosystem and tooling used.
 - Updated internals for mypy.
+
+### Fixed
+
+- Fix the circular import issues for the foreign field.
+
+## 0.11.5
+
+### Added
+
+- Support for ForeignKey field allowing to pass referenced model.
 
 ## 0.11.4
 
