@@ -4,7 +4,12 @@
 
 ### Added
 
-- Support for ForeignKey field allowing to pass refrenced model.
+- Support for ForeignKey field allowing to pass referenced model.
+
+### Changed
+
+- Officially stop the support for Python 3.9 to match the ecosystem and tooling used.
+- Updated internals for mypy.
 
 ## 0.11.4
 

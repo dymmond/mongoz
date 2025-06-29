@@ -599,7 +599,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         Creates many documents (bulk create).
         """
         manager: "Manager" = self.clone()
-        return await manager.model_class.create_many(models=models, collection=manager._collection)  # type: ignore
+        return await manager.model_class.create_many(models=models, collection=manager._collection)
 
     async def bulk_create(self, models: List["Document"]) -> List["Document"]:
         """
@@ -619,7 +619,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         Gets a document by the id
         """
         manager: "Manager" = self.clone()
-        return await manager.model_class.get_document_by_id(id)  # type: ignore
+        return await manager.model_class.get_document_by_id(id)
 
     async def values(
         self,
@@ -640,10 +640,10 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             raise FieldDefinitionError(detail="Fields must be an iterable.")
 
         if not fields:
-            documents = [document.model_dump(exclude=exclude, exclude_none=exclude_none) for document in documents]  # type: ignore
+            documents = [document.model_dump(exclude=exclude, exclude_none=exclude_none) for document in documents]
         else:
             documents = [
-                document.model_dump(exclude=exclude, exclude_none=exclude_none, include=fields)  # type: ignore
+                document.model_dump(exclude=exclude, exclude_none=exclude_none, include=fields)
                 for document in documents
             ]
 
@@ -653,7 +653,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             return documents
 
         if not flatten:
-            documents = [tuple(document.values()) for document in documents]  # type: ignore
+            documents = [tuple(document.values()) for document in documents]
         else:
             try:
                 documents = [document[fields[0]] for document in documents]  # type: ignore

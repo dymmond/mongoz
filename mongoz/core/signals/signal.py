@@ -60,7 +60,7 @@ class Signal:
 
 class Broadcaster(dict):
     def __getattr__(self, item: str) -> Signal:
-        return self.setdefault(item, Signal())  # type: ignore
+        return self.setdefault(item, Signal())
 
     def __setattr__(self, __name: str, __value: Signal) -> None:
         if not isinstance(__value, Signal):

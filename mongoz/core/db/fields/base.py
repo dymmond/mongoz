@@ -156,10 +156,10 @@ class MongozField:
     def __le__(self, other: Any) -> Expression:
         return Expression(self._name, "$lte", other)
 
-    def __eq__(self, other: Any) -> Expression:  # type: ignore[override]
+    def __eq__(self, other: Any) -> Expression:
         return Expression(self._name, "$eq", other)
 
-    def __ne__(self, other: Any) -> Expression:  # type: ignore[override]
+    def __ne__(self, other: Any) -> Expression:
         return Expression(self._name, "$ne", other)
 
     def __gt__(self, other: Any) -> Expression:

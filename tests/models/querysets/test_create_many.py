@@ -53,7 +53,7 @@ async def test_model_create_many() -> None:
         movies.append(Movie(name=movie_name, year=random.randint(1970, 2020)))
 
     movies_db = await Movie.create_many(movies)
-    for movie, movie_db in zip(movies, movies_db):
+    for movie, movie_db in zip(movies, movies_db, strict=False):
         assert movie.name == movie_db.name
         assert movie.year == movie_db.year
         assert isinstance(movie.id, bson.ObjectId)
@@ -83,7 +83,7 @@ async def test_model_bulk_create() -> None:
         movies.append(Movie(name=movie_name, year=random.randint(1970, 2020)))
 
     movies_db = await Movie.query().bulk_create(movies)
-    for movie, movie_db in zip(movies, movies_db):
+    for movie, movie_db in zip(movies, movies_db, strict=False):
         assert movie.name == movie_db.name
         assert movie.year == movie_db.year
         assert isinstance(movie.id, bson.ObjectId)

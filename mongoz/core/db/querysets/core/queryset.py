@@ -152,7 +152,7 @@ class QuerySet(BaseQuerySet[T]):
         is_defer_fields = True if self._defer_fields else False
 
         results: List[T] = [
-            self.model_class.from_row(  # type: ignore
+            self.model_class.from_row(
                 document,
                 is_only_fields=is_only_fields,
                 only_fields=self._only_fields,
@@ -328,10 +328,10 @@ class QuerySet(BaseQuerySet[T]):
             raise FieldDefinitionError(detail="Fields must be an iterable.")
 
         if not fields:
-            documents = [document.model_dump(exclude=exclude, exclude_none=exclude_none) for document in documents]  # type: ignore
+            documents = [document.model_dump(exclude=exclude, exclude_none=exclude_none) for document in documents]
         else:
             documents = [
-                document.model_dump(exclude=exclude, exclude_none=exclude_none, include=fields)  # type: ignore
+                document.model_dump(exclude=exclude, exclude_none=exclude_none, include=fields)
                 for document in documents
             ]
 
@@ -341,7 +341,7 @@ class QuerySet(BaseQuerySet[T]):
             return documents
 
         if not flatten:
-            documents = [tuple(document.values()) for document in documents]  # type: ignore
+            documents = [tuple(document.values()) for document in documents]
         else:
             try:
                 documents = [document[fields[0]] for document in documents]  # type: ignore

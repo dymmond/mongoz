@@ -53,7 +53,7 @@ async def test_decimal_128_create_many() -> None:
         archives.append(Archive(name=movie_name, price=Decimal("22.246")))
 
     archives_db = await Archive.objects.create_many(archives)
-    for archive, archive_db in zip(archives, archives_db):
+    for archive, archive_db in zip(archives, archives_db, strict=False):
         assert archive.name == archive_db.name
         assert archive.price == archive_db.price
         assert isinstance(archive.id, bson.ObjectId)
