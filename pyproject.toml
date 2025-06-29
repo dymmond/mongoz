@@ -7,9 +7,8 @@ name = "mongoz"
 description = "ODM with pydantic made it simple"
 long_description = "ODM with pydantic made it simple"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dynamic = ['version']
-license = "MIT"
 authors = [{ name = "Tiago Silva", email = "tiago.arasivla@gmail.com" }]
 classifiers = [
     "Intended Audience :: Information Technology",
@@ -28,9 +27,8 @@ classifiers = [
     "Framework :: AsyncIO",
     "Framework :: AnyIO",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: BSD License",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -60,7 +58,7 @@ path = "mongoz/__init__.py"
 [tool.hatch.envs.default]
 dependencies = [
     "anyio>=4.0.0,<5",
-    "mypy==1.9.0",
+    "mypy==1.16.1",
     "ruff>=0.3.0,<5.0.0",
     "pre-commit>=3.3.1,<4.0.0",
     "devtools>=0.12.2",
@@ -78,7 +76,7 @@ testing = [
     "lilya>=0.13.3,<0.15.0",
     "httpx>=0.25.0,<0.30.0",
     "isort>=5.12.0,<6.0.0",
-    "mypy==1.9.0",
+    "mypy==1.16.1",
     "pytest>=7.2.2,<9.0.0",
     "pytest-asyncio>=0.21.1,<1.0.0",
     "pytest-cov>=4.0.0,<5.0.0",
@@ -127,7 +125,7 @@ dependencies = [
     "esmerald>=3.7.5",
     "httpx>=0.25.0,<0.30.0",
     "isort>=5.12.0,<6.0.0",
-    "mypy==1.9.0",
+    "mypy==1.16.1",
     "pytest>=7.2.2,<9.0.0",
     "pytest-asyncio>=0.21.1,<1.0.0",
     "pytest-cov>=4.0.0,<5.0.0",

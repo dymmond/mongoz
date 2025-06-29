@@ -46,7 +46,7 @@ class FieldFactory:
     _bases = (BaseField,)
     _type: Any = None
 
-    def __new__(cls, *args: Any, **kwargs: Any) -> BaseField:  # type: ignore
+    def __new__(cls, *args: Any, **kwargs: Any) -> BaseField:
         cls.validate_field(**kwargs)
 
         default = kwargs.pop("default", None)
@@ -82,7 +82,7 @@ class FieldFactory:
             **kwargs,
         )
         Field = type(cls.__name__, cls._bases, {})
-        return Field(**namespace)  # type: ignore
+        return Field(**namespace)
 
     @classmethod
     def validate_field(cls, **kwargs: Any) -> None:  # pragma no cover
@@ -133,7 +133,7 @@ class ObjectId(bson.ObjectId):
 class NullableObjectId(FieldFactory, ObjectId):
     _type = ObjectId
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         null: bool = True,
         **kwargs: Any,
@@ -156,7 +156,7 @@ class ForeignKey(FieldFactory, ObjectId):
 
     _type = ObjectId
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         refer_to: Union["Document", "EmbeddedDocument"],
         null: bool = False,
@@ -193,7 +193,7 @@ class String(FieldFactory, str):
 
     _type = str
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         *,
         max_length: Optional[int] = None,
@@ -231,7 +231,7 @@ class Integer(Number, int):
 
     _type = int
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         *,
         minimum: Optional[int] = None,
@@ -255,7 +255,7 @@ class Double(Number, float):
 
     _type = float
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         *,
         mininum: Optional[float] = None,
@@ -277,7 +277,7 @@ class Double(Number, float):
 class Decimal(Number, decimal.Decimal):
     _type = Union[decimal.Decimal, Decimal128]
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         *,
         minimum: float = None,
@@ -319,7 +319,7 @@ class Boolean(FieldFactory, int):
 
     _type = bool
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         *,
         default: Optional[bool] = False,
@@ -337,7 +337,7 @@ class Boolean(FieldFactory, int):
 
 
 class AutoNowMixin(FieldFactory):
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         *,
         auto_now: Optional[bool] = False,
@@ -364,7 +364,7 @@ class DateTime(AutoNowMixin, datetime.datetime):
 
     _type = datetime.datetime
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         *,
         auto_now: Optional[bool] = False,
@@ -386,7 +386,7 @@ class Date(AutoNowMixin, datetime.date):
 
     _type = datetime.date
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         *,
         auto_now: Optional[bool] = False,
@@ -408,7 +408,7 @@ class Time(FieldFactory, datetime.time):
 
     _type = datetime.time
 
-    def __new__(cls, **kwargs: Any) -> BaseField:  # type: ignore
+    def __new__(cls, **kwargs: Any) -> BaseField:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
@@ -416,7 +416,7 @@ class Time(FieldFactory, datetime.time):
         return super().__new__(cls, **kwargs)
 
 
-class Object(FieldFactory, pydantic.Json):  # type: ignore
+class Object(FieldFactory, pydantic.Json):
     """Representation of a JSONField"""
 
     _type = Any
@@ -427,7 +427,7 @@ class Binary(FieldFactory, bytes):
 
     _type = bytes
 
-    def __new__(cls, *, max_length: Optional[int] = 0, **kwargs: Any) -> BaseField:  # type: ignore
+    def __new__(cls, *, max_length: Optional[int] = 0, **kwargs: Any) -> BaseField:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
@@ -437,7 +437,7 @@ class Binary(FieldFactory, bytes):
     @classmethod
     def validate_field(cls, **kwargs: Any) -> None:
         max_length = kwargs.get("max_length", None)
-        if max_length <= 0:
+        if max_length is None or max_length <= 0:
             raise FieldDefinitionError(
                 detail="Parameter 'max_length' is required for BinaryField"
             )
@@ -448,7 +448,7 @@ class UUID(FieldFactory, uuid.UUID):
 
     _type = uuid.UUID
 
-    def __new__(cls, **kwargs: Any) -> BaseField:  # type: ignore
+    def __new__(cls, **kwargs: Any) -> BaseField:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
@@ -463,7 +463,7 @@ class Email(String):
 class Array(FieldFactory, list):
     _type = list
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         type_of: type,
         **kwargs: Any,
@@ -479,7 +479,7 @@ class Array(FieldFactory, list):
 class ArrayList(FieldFactory, list):
     _type = list
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         **kwargs: Any,
     ) -> BaseField:
@@ -494,7 +494,7 @@ class ArrayList(FieldFactory, list):
 class Embed(FieldFactory):
     _type = None
 
-    def __new__(  # type: ignore
+    def __new__(
         cls,
         document: Type["EmbeddedDocument"],
         **kwargs: Any,
