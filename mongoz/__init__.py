@@ -1,4 +1,4 @@
-__version__ = "0.11.6"
+__version__ = "0.11.7"
 
 from .conf import settings
 from .conf.global_settings import MongozSettings
