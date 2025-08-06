@@ -493,6 +493,7 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.get_field_display()
+        self.validate_fields_values()
 
     def _get_FIELD_display(self, field: Type["Document"]) -> str:
         value = getattr(self, field.name)
@@ -509,3 +510,15 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
                         "get_%s_display" % name,
                         partialmethod(cls._get_FIELD_display, field=field),
                     )
+
+    def validate_fields_values(self) -> None:
+        for field_name, value in self.model_dump().items():
+            if (
+                field_name in self.model_fields.keys()
+                and not isinstance(value, bson.ObjectId)
+                and value
+            ):
+                validated_value = self.model_fields[
+                    field_name
+                ].validate_field_value(value)
+                setattr(self, field_name, validated_value)

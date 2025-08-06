@@ -67,6 +67,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         else:
             self.extract_default_values_from_field()
         self.get_field_display()
+        self.validate_fields_values(**data)
 
     def _get_FIELD_display(self, field: Type["Document"]) -> str:
         value = getattr(self, field.name)
@@ -83,6 +84,18 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                         "get_%s_display" % name,
                         partialmethod(cls._get_FIELD_display, field=field),
                     )
+
+    def validate_fields_values(self, **data: Dict[str, Any]) -> None:
+        for field_name, value in data.items():
+            if (
+                field_name in self.model_fields.keys()
+                and not isinstance(value, bson.ObjectId)  # type: ignore
+                and value
+            ):
+                validated_value = self.model_fields[
+                    field_name
+                ].validate_field_value(value)
+                setattr(self, field_name, validated_value)
 
     def extract_default_values_from_field(
         self, is_proxy: bool = False, **kwargs: Any

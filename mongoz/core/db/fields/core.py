@@ -17,8 +17,9 @@ from typing import (
 
 import bson
 import pydantic
+import pydantic_core
 from bson.decimal128 import Decimal128
-from pydantic import EmailStr
+from pydantic import EmailStr, ValidationError
 from pydantic._internal._schema_generation_shared import (
     GetJsonSchemaHandler as GetJsonSchemaHandler,
 )
@@ -82,11 +83,16 @@ class FieldFactory:
             **kwargs,
         )
         Field = type(cls.__name__, cls._bases, {})
+        # Monkey patch the validation functionality.
+        Field.validate_field_value = cls.validate_field_value
         return Field(**namespace)
 
     @classmethod
     def validate_field(cls, **kwargs: Any) -> None:  # pragma no cover
         ...
+
+    def validate_field_value(self, value: Any) -> Any:
+        return value
 
 
 class ObjectId(bson.ObjectId):
@@ -223,6 +229,43 @@ class Number(FieldFactory):
                 detail="'minimum' cannot be bigger than 'maximum'"
             )
 
+    def validate_field_value(self, value: int) -> Union[Type["Number"], int]:
+        errors = []
+        if self.minimum and self.minimum > value:
+            errors.append(
+                {
+                    "loc": (self.alias,),
+                    "input": value,
+                    "type": pydantic_core.PydanticCustomError(
+                        "value_error",
+                        (
+                            "Value must be greater than or equals to "
+                            f"{self.minimum}"
+                        ),
+                    ),
+                }
+            )
+        if self.maximum and self.maximum < value:
+            errors.append(
+                {
+                    "loc": (self.alias,),
+                    "input": value,
+                    "type": pydantic_core.PydanticCustomError(
+                        "value_error",
+                        (
+                            "Value must be less than or equals to "
+                            f"{self.maximum}"
+                        ),
+                    ),
+                }
+            )
+        if errors:
+            raise ValidationError.from_exception_data(
+                title=f"Validation error for field {self.alias}",
+                line_errors=errors,
+            )
+        return value
+
 
 class Integer(Number, int):
     """
@@ -248,6 +291,43 @@ class Integer(Number, int):
             },
         }
         return super().__new__(cls, **kwargs)
+
+    def validate_field_value(self, value: int) -> Union[Type["Integer"], int]:
+        errors = []
+        if self.minimum and self.minimum > value:
+            errors.append(
+                {
+                    "loc": (self.alias,),
+                    "input": value,
+                    "type": pydantic_core.PydanticCustomError(
+                        "value_error",
+                        (
+                            "Value must be greater than or equals to "
+                            f"{self.minimum}"
+                        ),
+                    ),
+                }
+            )
+        if self.maximum and self.maximum < value:
+            errors.append(
+                {
+                    "loc": (self.alias,),
+                    "input": value,
+                    "type": pydantic_core.PydanticCustomError(
+                        "value_error",
+                        (
+                            "Value must be less than or equals to "
+                            f"{self.maximum}"
+                        ),
+                    ),
+                }
+            )
+        if errors:
+            raise ValidationError.from_exception_data(
+                title=f"Validation error for field {self.alias}",
+                line_errors=errors,
+            )
+        return value
 
 
 class Double(Number, float):
@@ -312,6 +392,85 @@ class Decimal(Number, decimal.Decimal):
             raise FieldDefinitionError(
                 "max_digits and decimal_places are required for DecimalField"
             )
+
+    def validate_field_value(
+        self, value: Union[Type["Decimal"], float]
+    ) -> Union[Type["Decimal"], float]:
+        errors = []
+        dec = decimal.Decimal(str(value))
+
+        def get_decimal_parts(value: Union[Type["Decimal"], float]) -> tuple:
+            dec = decimal.Decimal(str(value))
+            # Precision check
+            sign, digits, exponent = dec.as_tuple()
+            num_digits = len(digits)
+            if isinstance(exponent, int) and exponent >= 0:
+                int_digits = num_digits + exponent
+                frac_digit = 0
+            else:
+                if isinstance(exponent, int):
+                    frac_digit = -exponent
+                int_digits = max(0, num_digits - frac_digit)
+            return int_digits, frac_digit
+
+        if self.minimum and self.minimum > dec:
+            errors.append(
+                {
+                    "loc": (self.alias,),
+                    "input": value,
+                    "type": pydantic_core.PydanticCustomError(
+                        "value_error",
+                        (
+                            "Value must be greater than or equals to "
+                            f"{self.minimum}"
+                        ),
+                    ),
+                }
+            )
+        if self.maximum and self.maximum < dec:
+            errors.append(
+                {
+                    "loc": (self.alias,),
+                    "input": value,
+                    "type": pydantic_core.PydanticCustomError(
+                        "value_error",
+                        (
+                            "Value must be less than or equals to "
+                            f"{self.maximum}"
+                        ),
+                    ),
+                }
+            )
+        int_digits, frac_digit = get_decimal_parts(value)
+        if frac_digit > self.decimal_places:
+            value = float(
+                dec.quantize(
+                    decimal.Decimal(10) ** -self.decimal_places,
+                    rounding=decimal.ROUND_DOWN,
+                )
+            )
+        int_digits, frac_digit = get_decimal_parts(value)
+        total_digits = int_digits + frac_digit
+        if total_digits > self.max_digits:
+            errors.append(
+                {
+                    "loc": (self.alias,),
+                    "input": value,
+                    "type": pydantic_core.PydanticCustomError(
+                        "value_error",
+                        (
+                            f"Value must have at most {self.max_digits} total "
+                            "digits (including decimals)"
+                        ),
+                    ),
+                }
+            )  # For max digit violation
+        if errors:
+            raise ValidationError.from_exception_data(
+                title=f"Validation error for field {self.alias}",
+                line_errors=errors,
+            )
+        return value
 
 
 class Boolean(FieldFactory, int):
@@ -427,7 +586,9 @@ class Binary(FieldFactory, bytes):
 
     _type = bytes
 
-    def __new__(cls, *, max_length: Optional[int] = 0, **kwargs: Any) -> BaseField:
+    def __new__(
+        cls, *, max_length: Optional[int] = 0, **kwargs: Any
+    ) -> BaseField:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
