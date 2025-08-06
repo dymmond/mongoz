@@ -6,6 +6,7 @@ import bson
 import pydantic
 import pytest
 from bson import Decimal128
+from pydantic import ValidationError
 
 import mongoz
 from mongoz import Document
@@ -24,6 +25,17 @@ class Archive(Document):
         database = "test_db"
 
 
+class ArchiveD(Document):
+    name: str = mongoz.String()
+    price: Decimal = mongoz.Decimal(
+        max_digits=5, decimal_places=3, null=True, maximum=50, minimum=10
+    )
+
+    class Meta:
+        registry = client
+        database = "test_db"
+
+
 @pytest.fixture(scope="function", autouse=True)
 async def prepare_database() -> AsyncGenerator:
     await Archive.objects.delete()
@@ -35,20 +47,49 @@ async def test_decimal_128() -> None:
     await Archive.objects.create(name="Batman", price=22.246)
 
     arch = await Archive.objects.last()
+    assert float(str(arch.price)) == 22.24
+
+
+async def test_decimal_128_with_decimal() -> None:
+    await ArchiveD.objects.create(name="Batman", price=22.246)
+
+    arch = await ArchiveD.objects.last()
     assert float(str(arch.price)) == 22.246
+
+
+async def test_decimal_128_with_min() -> None:
+    with pytest.raises(ValidationError):
+        await ArchiveD.objects.create(name="Batman", price=5.246)
+
+
+async def test_decimal_128_with_max() -> None:
+    with pytest.raises(ValidationError):
+        await ArchiveD.objects.create(name="Batman", price=51.246)
+
+
+async def test_decimal_128_max_digit() -> None:
+    with pytest.raises(ValidationError):
+        await Archive.objects.create(name="Batman", price=2442.246)
 
 
 async def test_decimal_128_two() -> None:
     await Archive.objects.create(name="Batman", price="22.246")
 
     arch = await Archive.objects.last()
-    assert float(str(arch.price)) == 22.246
+    assert float(str(arch.price)) == 22.24
 
 
-@pytest.mark.skipif(sys.version_info < (3, 10), reason="zip() implementation refactored in 3.10+")
+@pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="zip() implementation refactored in 3.10+",
+)
 async def test_decimal_128_create_many() -> None:
     archives = []
-    archive_names = ("The Dark Knight", "The Dark Knight Rises", "The Godfather")
+    archive_names = (
+        "The Dark Knight",
+        "The Dark Knight Rises",
+        "The Godfather",
+    )
     for movie_name in archive_names:
         archives.append(Archive(name=movie_name, price=Decimal("22.246")))
 
