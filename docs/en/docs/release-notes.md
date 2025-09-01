@@ -1,5 +1,22 @@
 # Release Notes
 
+## 0.11.8
+
+### Added
+
+- Precision validation into decimal field.
+- Include test cases to verify the functionality.
+
+### Fixed
+
+- Optimized the decimal field validation code.
+
+## 0.11.7
+
+### Added
+
+- Add field validation.
+
 ## 0.11.6
 
 ### Added
