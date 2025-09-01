@@ -403,15 +403,12 @@ class Decimal(Number, decimal.Decimal):
             dec = decimal.Decimal(str(value))
             # Precision check
             sign, digits, exponent = dec.as_tuple()
-            num_digits = len(digits)
-            if isinstance(exponent, int) and exponent >= 0:
-                int_digits = num_digits + exponent
-                frac_digit = 0
-            else:
-                if isinstance(exponent, int):
-                    frac_digit = -exponent
-                int_digits = max(0, num_digits - frac_digit)
-            return int_digits, frac_digit
+            digits_count = len(digits)
+
+            # Count fractional digits
+            frac_digit = -exponent if exponent < 0 else 0  # type: ignore
+            int_digits = digits_count - frac_digit
+            return int_digits, frac_digit, digits_count
 
         if self.minimum and self.minimum > dec:
             errors.append(
@@ -441,7 +438,10 @@ class Decimal(Number, decimal.Decimal):
                     ),
                 }
             )
-        int_digits, frac_digit = get_decimal_parts(value)
+
+        # Rule 1: Fractional digits <= scale
+
+        int_digits, frac_digit, digits_count = get_decimal_parts(value)
         if frac_digit > self.decimal_places:
             value = float(
                 dec.quantize(
@@ -449,9 +449,10 @@ class Decimal(Number, decimal.Decimal):
                     rounding=decimal.ROUND_DOWN,
                 )
             )
-        int_digits, frac_digit = get_decimal_parts(value)
-        total_digits = int_digits + frac_digit
-        if total_digits > self.max_digits:
+
+        # Rule 2: Total digits <= precision
+        int_digits, frac_digit, digits_count = get_decimal_parts(value)
+        if digits_count > self.max_digits:
             errors.append(
                 {
                     "loc": (self.alias,),
@@ -459,12 +460,28 @@ class Decimal(Number, decimal.Decimal):
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
                         (
-                            f"Value must have at most {self.max_digits} total "
-                            "digits (including decimals)"
+                            f"Value must have at most {self.max_digits} "
+                            "total digits"
                         ),
                     ),
                 }
-            )  # For max digit violation
+            )
+        # Check integer digits
+        if int_digits > (self.max_digits - self.decimal_places):
+            errors.append(
+                {
+                    "loc": (self.alias,),
+                    "input": value,
+                    "type": pydantic_core.PydanticCustomError(
+                        "value_error",
+                        (
+                            "Value must have at most "
+                            f"{self.max_digits - self.decimal_places} "
+                            "digits before the decimal point"
+                        ),
+                    ),
+                }
+            )
         if errors:
             raise ValidationError.from_exception_data(
                 title=f"Validation error for field {self.alias}",
