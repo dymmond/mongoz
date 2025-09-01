@@ -57,6 +57,11 @@ async def test_decimal_128_with_decimal() -> None:
     assert float(str(arch.price)) == 22.246
 
 
+async def test_decimal_validation() -> None:
+    with pytest.raises(ValidationError):
+        await Archive.objects.create(name="Batman", price=1530.2)
+
+
 async def test_decimal_128_with_min() -> None:
     with pytest.raises(ValidationError):
         await ArchiveD.objects.create(name="Batman", price=5.246)
