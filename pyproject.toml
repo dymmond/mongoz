@@ -36,12 +36,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP",
 ]
-dependencies = [
-    "motor>=3.3.1",
-    "dymmond-settings>=1.0.4",
-    "orjson>=3.9.5",
-    "pydantic>=2.8.0,<3.0.0",
-]
+dependencies = ["motor>=3.3.1", "pydantic-settings>=2.9.0", "orjson>=3.9.5"]
 keywords = ["mongoz", "odm", "nosql", "mongodb"]
 
 [project.urls]
@@ -72,7 +67,7 @@ testing = [
     "a2wsgi>1.10.0,<2.0.0",
     "autoflake>=2.0.2,<3.0.0",
     "black==24.1.1,<25.0",
-    "esmerald>=3.7.5",
+    "esmerald[standard]>=3.8.11",
     "lilya>=0.13.3,<0.15.0",
     "httpx>=0.25.0,<0.30.0",
     "isort>=5.12.0,<6.0.0",
@@ -83,7 +78,6 @@ testing = [
     "requests>=2.28.2",
     "ruff>=0.0.256,<1.0.0",
     "ipdb",
-    "pdbpp",
 ]
 
 docs = [
@@ -104,6 +98,7 @@ clean_pyi = "find . -type f -name \"*.pyi\" -delete"
 clean_pycache = "find . -type d -name \"*__pycache__*\" -delete"
 build_with_check = "hatch build; twine check dist/*"
 lint = "ruff check --fix --line-length 99  mongoz tests {args}; hatch run test:check_types;"
+format = "hatch fmt && hatch fmt --check && hatch run test:check_types"
 
 [tool.hatch.envs.docs]
 features = ["testing", "docs"]

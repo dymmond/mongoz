@@ -1,8 +1,13 @@
-from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Dict, List, cast
+from typing import (
+    TYPE_CHECKING,
+    ClassVar,
+    Dict,
+    List,
+    cast,
+)
 
-from dymmond_settings import Settings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from mongoz.exceptions import OperatorInvalid
 
@@ -10,8 +15,13 @@ if TYPE_CHECKING:
     from mongoz import Expression
 
 
-@dataclass
-class MongozSettings(Settings):
+class MongozSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        extra="allow",
+        ignored_types=(cached_property,),
+        arbitrary_types_allowed=True,
+    )
+
     ipython_args: ClassVar[List[str]] = ["--no-banner"]
     ptpython_config_file: str = "~/.config/ptpython/config.py"
 

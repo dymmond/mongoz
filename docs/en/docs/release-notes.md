@@ -1,5 +1,13 @@
 # Release Notes
 
+## 0.12.0
+
+### Changed
+
+- Optimized the decimal validation code and include the precision validation.
+- New internal settings for MongoZ removing the dependency of dymmond-settings and keep the
+`pydantic-settings`.
+
 ## 0.11.8
 
 ### Added
