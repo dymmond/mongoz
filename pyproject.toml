@@ -116,7 +116,7 @@ dependencies = [
     "a2wsgi>1.10.0,<2.0.0",
     "autoflake>=2.0.2,<3.0.0",
     "black==24.1.1,<25.0",
-    "esmerald>=3.7.5",
+    "esmerald[standard]>=3.8.11",
     "httpx>=0.25.0,<0.30.0",
     "isort>=5.12.0,<6.0.0",
     "mypy==1.16.1",
