@@ -54,7 +54,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         sort_by: Union[List[SortExpression], None] = None,
         only_fields: Union[str, None] = None,
         defer_fields: Union[str, None] = None,
-        unwound_fields=None,
+        unwound_fields: Union[Dict[str, Any], None] = None,
     ) -> None:
         self.model_class = model_class  # type: ignore
 
@@ -70,7 +70,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         self._only_fields = [] if only_fields is None else only_fields
         self._defer_fields = [] if defer_fields is None else defer_fields
         self.extra: Dict[str, Any] = {}
-        self.unwound_fields: Dict[str, Any] = None
+        self.unwound_fields: Union[Dict[str, Any], None] = unwound_fields
 
     def __get__(self, instance: Any, owner: Any) -> "Manager":
         return self.__class__(model_class=owner)
