@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import ClassVar, List, Optional
 
 import pydantic
@@ -47,6 +48,19 @@ class Movie(BaseDocument):
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
 
 
+class Course(mongoz.EmbeddedDocument):
+    code: str = mongoz.String()
+    name: str = mongoz.String()
+    start_date: datetime = mongoz.DateTime()
+    end_date: datetime = mongoz.DateTime()
+
+
+class Student(BaseDocument):
+    name: str = mongoz.String()
+    roll_no: int = mongoz.Integer()
+    courses: List[Course] = mongoz.Array(Course, default=[])
+
+
 @pytest.fixture(scope="function", autouse=True)
 async def prepare_database():
     await Movie.query().delete()
@@ -67,3 +81,51 @@ async def test_custom_abstraction():
 
     total_smaller = await Movie.smaller.all()
     assert total_smaller[0].id == die_hard.id
+
+
+async def test_filter():
+    cn = Course(
+        code="CN",
+        name="Computer Network",
+        start_date="2025-09-22",
+        end_date="2026-04-30",
+    )
+    os = Course(
+        code="OS",
+        name="Operating System",
+        start_date="2025-04-22",
+        end_date="2026-04-30",
+    )
+    ml = Course(
+        code="ML",
+        name="Machine Learning",
+        start_date="2025-04-22",
+        end_date="2025-12-31",
+    )
+    cs = Course(
+        code="CS",
+        name="Cyber Security",
+        start_date="2025-01-01",
+        end_date="2025-04-30",
+    )
+    pe = Course(
+        code="PE",
+        name="Prompt Engg.",
+        start_date="2025-09-22",
+        end_date="2026-04-30",
+    )
+    await Student.objects.create(
+        name="Harshali", roll_no=2022, courses=[cn, os, cs, pe]
+    )
+    await Student.objects.create(
+        name="Samit", roll_no=2023, courses=[cn, os, pe]
+    )
+    await Student.objects.create(
+        name="Tanaji", roll_no=2024, courses=[cn, os, ml, cs, pe]
+    )
+    await Student.objects.filter().values_list(["roll_no"], flat=True)
+    roll_nos = await Student.objects.filter(
+        **{"courses.code": "CS"}
+    ).values_list(["role_no"], flat=True)
+
+    assert roll_nos.sort() == [2022, 2023]

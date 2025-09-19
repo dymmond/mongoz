@@ -54,6 +54,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         sort_by: Union[List[SortExpression], None] = None,
         only_fields: Union[str, None] = None,
         defer_fields: Union[str, None] = None,
+        unwound_fields=None,
     ) -> None:
         self.model_class = model_class  # type: ignore
 
@@ -69,6 +70,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         self._only_fields = [] if only_fields is None else only_fields
         self._defer_fields = [] if defer_fields is None else defer_fields
         self.extra: Dict[str, Any] = {}
+        self.unwound_fields: Dict[str, Any] = None
 
     def __get__(self, instance: Any, owner: Any) -> "Manager":
         return self.__class__(model_class=owner)
@@ -167,6 +169,12 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
         for key, value in kwargs.items():
             key = self._find_and_replace_id(key)
+            embedded_key = None
+
+            if "." in key:
+                parts = key.split(".")
+                embedded_key = parts[0]
+                key = parts[1]
 
             if "__" in key:
                 parts = key.split("__")
@@ -180,7 +188,14 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 # For "eq", "neq", "contains", "where", "pattern", "startswith", "endswith", "istartswith", "iendswith"
                 if lookup_operator in VALUE_EQUALITY:
                     operator = self.get_operator(lookup_operator)
-                    expression = operator(field_name, value)  # type: ignore
+                    expression = operator(
+                        (
+                            embedded_key + "." + field_name
+                            if embedded_key
+                            else field_name
+                        ),
+                        value,
+                    )  # type: ignore
 
                 # For "in" and "not_in"
                 elif lookup_operator in LIST_EQUALITY:
@@ -193,7 +208,14 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                         value = [*value]
 
                     operator = self.get_operator(lookup_operator)
-                    expression = operator(field_name, value)  # type: ignore
+                    expression = operator(
+                        (
+                            embedded_key + "." + field_name
+                            if embedded_key
+                            else field_name
+                        ),
+                        value,
+                    )  # type: ignore
 
                 # For "asc" and "desc"
                 elif lookup_operator in ORDER_EQUALITY:
@@ -220,14 +242,27 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                         asc_or_desc = OrderEnum.ASCENDING
 
                     operator = self.get_operator(asc_or_desc)
-                    expression = operator(field_name)  # type: ignore
+                    expression = operator(
+                        (
+                            embedded_key + "." + field_name
+                            if embedded_key
+                            else field_name
+                        )
+                    )  # type: ignore
                     sort_clauses.append(expression)
                     continue
 
                 # For "lt", "lte", "gt", "gte"
                 elif lookup_operator in GREATNESS_EQUALITY:
                     operator = self.get_operator(lookup_operator)
-                    expression = operator(field_name, value)  # type: ignore
+                    expression = operator(
+                        (
+                            embedded_key + "." + field_name
+                            if embedded_key
+                            else field_name
+                        ),
+                        value,
+                    )  # type: ignore
 
                 # For "date"
                 elif lookup_operator == "date":
@@ -235,17 +270,33 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                     from_datetime = datetime.combine(
                         value, datetime.min.time()
                     )
-                    expression1 = operator(field_name, from_datetime)  # type: ignore
+                    expression1 = operator(
+                        (
+                            embedded_key + "." + field_name
+                            if embedded_key
+                            else field_name
+                        ),
+                        from_datetime,
+                    )  # type: ignore
                     clauses.append(expression1)
                     operator = self.get_operator("lt")
-                    expression = operator(field_name, from_datetime + timedelta(days=1))  # type: ignore
+                    expression = operator(
+                        (
+                            embedded_key + "." + field_name
+                            if embedded_key
+                            else field_name
+                        ),
+                        from_datetime + timedelta(days=1),
+                    )  # type: ignore
 
                 # Add expression to the clauses
                 clauses.append(expression)
 
             else:
                 operator = self.get_operator("exact")
-                expression = operator(key, value)  # type: ignore
+                expression = operator(
+                    (embedded_key + "." + key if embedded_key else key), value
+                )  # type: ignore
 
                 clauses.append(expression)
 
@@ -599,7 +650,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         Creates many documents (bulk create).
         """
         manager: "Manager" = self.clone()
-        return await manager.model_class.create_many(models=models, collection=manager._collection)
+        return await manager.model_class.create_many(
+            models=models, collection=manager._collection
+        )
 
     async def bulk_create(self, models: List["Document"]) -> List["Document"]:
         """
@@ -640,10 +693,15 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             raise FieldDefinitionError(detail="Fields must be an iterable.")
 
         if not fields:
-            documents = [document.model_dump(exclude=exclude, exclude_none=exclude_none) for document in documents]
+            documents = [
+                document.model_dump(exclude=exclude, exclude_none=exclude_none)
+                for document in documents
+            ]
         else:
             documents = [
-                document.model_dump(exclude=exclude, exclude_none=exclude_none, include=fields)
+                document.model_dump(
+                    exclude=exclude, exclude_none=exclude_none, include=fields
+                )
                 for document in documents
             ]
 
