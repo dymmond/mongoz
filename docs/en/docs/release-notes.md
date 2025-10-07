@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.13.0
+
+### Added
+
+- Support for Python 3.14.
+
 ## 0.12.0
 
 ### Changed
