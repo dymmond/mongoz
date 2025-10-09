@@ -52,14 +52,14 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         json_encoders={bson.ObjectId: str, Signal: str},
         validate_assignment=True,
     )
-    is_proxy_document: ClassVar[bool] = False
+    __is_proxy_document__: ClassVar[bool] = False
     meta: ClassVar[MetaInfo] = MetaInfo(None)
     Meta: ClassVar[DescriptiveMeta] = DescriptiveMeta()
     objects: ClassVar[Manager] = Manager()
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        if self.is_proxy_document:
+        if self.__is_proxy_document__:
             values = self.extract_default_values_from_field(
                 is_proxy=True, **data
             )

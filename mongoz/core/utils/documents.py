@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Set, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Set, Tuple, Type, Union
 
 from pydantic import ConfigDict
 
@@ -33,8 +33,7 @@ def create_mongoz_document(
     core_definitions = {
         "__module__": __module__,
         "__qualname__": qualname,
-        "is_proxy_document": __proxy__,
-        "__annotations__": {"is_proxy_document": ClassVar[bool]},
+        "__is_proxy_document__": __proxy__,
     }
     if not __definitions__:
         __definitions__ = {}

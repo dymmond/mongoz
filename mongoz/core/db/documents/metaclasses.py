@@ -410,7 +410,7 @@ class BaseModelMeta(ModelMetaclass):
             if isinstance(field.default, MongozField):
                 new_class.model_fields[name] = field.default.pydantic_field
 
-            if not new_class.is_proxy_document:
+            if not new_class.__is_proxy_document__:
                 # For the indexes
                 _index: Union[Index, None] = None
                 if (
@@ -453,7 +453,7 @@ class BaseModelMeta(ModelMetaclass):
         # Generates a proxy model for each model created
         # Making sure the core model where the fields are inherited
         # And mapped contains the main proxy_document
-        if not new_class.is_proxy_document and not new_class.meta.abstract:
+        if not new_class.__is_proxy_document__ and not new_class.meta.abstract:
             proxy_document: "ProxyDocument" = (
                 new_class.generate_proxy_document()
             )
@@ -466,7 +466,7 @@ class BaseModelMeta(ModelMetaclass):
 
         # Build the indexes
         if not meta.abstract and meta.indexes and meta.autogenerate_index:
-            if not new_class.is_proxy_document:
+            if not new_class.__is_proxy_document__:
                 run_sync(new_class.create_indexes())
 
         # Protect the model namespaces to avoid UserWarnings on overriding the fields.
