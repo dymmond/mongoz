@@ -300,6 +300,7 @@ class BaseModelMeta(ModelMetaclass):
         annotations: Dict[str, Any] = handle_annotations(
             bases, base_annotations, attrs
         )
+        annotations["meta"] = ClassVar[MetaInfo]
 
         # Ensure the initialization is only performed for subclasses of Model
         attrs["__init_annotations__"] = annotations
