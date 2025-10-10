@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from functools import partialmethod
 from typing import (
     Any,
@@ -495,7 +497,7 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
         self.get_field_display()
         self.validate_fields_values()
 
-    def _get_FIELD_display(self, field: Type["Document"]) -> str:
+    def _get_field_display(self, field: Type["Document"]) -> str:
         value = getattr(self, field.name)
         choices_dict: Dict = dict(make_hashable(field.choices))
         return choices_dict.get(make_hashable(value), value)
@@ -508,7 +510,7 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
                     setattr(
                         cls,
                         "get_%s_display" % name,
-                        partialmethod(cls._get_FIELD_display, field=field),
+                        partialmethod(cls._get_field_display, field=field),
                     )
 
     def validate_fields_values(self) -> None:

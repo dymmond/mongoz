@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import collections
 import typing
 from typing import TYPE_CHECKING, Any, Dict, List, Union, cast
