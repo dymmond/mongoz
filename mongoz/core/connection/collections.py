@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from motor.motor_asyncio import AsyncIOMotorCollection
 
 

@@ -6,6 +6,10 @@
 
 - Support for Python 3.14.
 
+### Fixed
+
+- Fix the internals where Python 3.14 annotations are evaluated differently.
+
 ## 0.12.0
 
 ### Changed

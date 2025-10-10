@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Type, cast
 
 from mongoz.core.db.querysets.core.manager import Manager as BaseManager

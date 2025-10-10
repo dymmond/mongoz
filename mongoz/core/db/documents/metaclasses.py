@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import inspect
 from typing import (
@@ -227,12 +229,19 @@ def handle_annotations(
     annotations.update(base_annotations)
     return annotations
 
-
 class BaseModelMeta(ModelMetaclass):
     __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]] = {}
 
     @no_type_check
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
+        annotations = dict(attrs.get("__annotations__", {}))
+        attrs["__annotations__"] = annotations
+
+        # Mark any remaining runtime-only attributes as ClassVar[Any]
+        for key, _ in list(attrs.items()):
+            if key not in annotations and not key.startswith("__"):
+                annotations[key] = ClassVar[Any]
+
         fields: Dict[str, BaseField] = {}
         meta_class: "object" = attrs.get("Meta", type("Meta", (), {}))
         id_attribute: str = "id"
@@ -240,7 +249,6 @@ class BaseModelMeta(ModelMetaclass):
         registry: Any = None
         base_annotations: Dict[str, Any] = {}
 
-        # Extract the custom Mongoz Fields in a pydantic format.
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
         cls.__mongoz_fields__ = model_fields
 
@@ -297,7 +305,7 @@ class BaseModelMeta(ModelMetaclass):
         model_class = super().__new__
 
         # Handle annotations
-        annotations: Dict[str, Any] = handle_annotations(
+        annotations: Dict[str, Any] = handle_annotations( # type: ignore
             bases, base_annotations, attrs
         )
         annotations["meta"] = ClassVar[MetaInfo]
@@ -500,18 +508,30 @@ class EmbeddedModelMetaClass(ModelMetaclass):
 
     @no_type_check
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
+        # Always ensure annotations exist and are concrete
+        annotations = dict(attrs.get("__annotations__", {}))
+        attrs["__annotations__"] = annotations
+
+        # Extract fields first (so runtime values like ObjectId are removed)
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
         cls.__mongoz_fields__ = model_fields
+
+        # Mark any remaining runtime-only attributes as ClassVar[Any]
+        for key, _ in list(attrs.items()):
+            if key not in annotations and not key.startswith("__"):
+                annotations[key] = ClassVar[Any]
+
+        # Construct the Pydantic model normally
         new_class = super().__new__(cls, name, bases, attrs)
 
+        # Build Mongoz field wrappers
         mongoz_fields: Dict[str, MongozField] = {}
         for field_name, field in new_class.model_fields.items():
             if not field.alias:
                 field.alias = field_name
-            new_field = MongozField(
-                pydantic_field=field, model_class=new_class
-            )
+            new_field = MongozField(pydantic_field=field, model_class=new_class)
             mongoz_fields[field_name] = new_field
 
         new_class.__mongoz_fields__ = mongoz_fields
         return new_class
+

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Dict, List, Protocol, Tuple, TypeVar, Union, overload
 
 if TYPE_CHECKING:
