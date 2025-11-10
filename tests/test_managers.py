@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import ClassVar, List, Optional
 
@@ -124,8 +126,11 @@ async def test_filter():
         name="Tanaji", roll_no=2024, courses=[cn, os, ml, cs, pe]
     )
     await Student.objects.filter().values_list(["roll_no"], flat=True)
+
+    # Embedded search
     roll_nos = await Student.objects.filter(
         **{"courses.code": "CS"}
-    ).values_list(["role_no"], flat=True)
+    ).values_list(["roll_no"], flat=True)
 
-    assert roll_nos.sort() == [2022, 2023]
+    roll_nos.sort()
+    assert roll_nos == [2022, 2024]
