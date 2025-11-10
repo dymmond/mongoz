@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Dict, Sequence, Type, Union, cast
 
 from motor.motor_asyncio import AsyncIOMotorCollection

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from concurrent import futures
 from concurrent.futures import Future

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 from functools import cached_property, partialmethod
 from typing import (
@@ -13,8 +15,6 @@ from typing import (
 
 import bson
 import pydantic
-
-# from bson.decimal128 import Decimal128
 from pydantic import BaseModel, ConfigDict
 
 from mongoz.core.db.documents._internal import DescriptiveMeta, ModelDump
@@ -52,14 +52,14 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         json_encoders={bson.ObjectId: str, Signal: str},
         validate_assignment=True,
     )
-    is_proxy_document: ClassVar[bool] = False
+    __is_proxy_document__: ClassVar[bool] = False
     meta: ClassVar[MetaInfo] = MetaInfo(None)
     Meta: ClassVar[DescriptiveMeta] = DescriptiveMeta()
     objects: ClassVar[Manager] = Manager()
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        if self.is_proxy_document:
+        if self.__is_proxy_document__:
             values = self.extract_default_values_from_field(
                 is_proxy=True, **data
             )
@@ -69,7 +69,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         self.get_field_display()
         self.validate_fields_values(**data)
 
-    def _get_FIELD_display(self, field: Type["Document"]) -> str:
+    def _get_field_display(self, field: Type["Document"]) -> str:
         value = getattr(self, field.name)
         choices_dict: Dict = dict(make_hashable(field.choices))
         return choices_dict.get(make_hashable(value), value)
@@ -82,7 +82,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                     setattr(
                         cls,
                         "get_%s_display" % name,
-                        partialmethod(cls._get_FIELD_display, field=field),
+                        partialmethod(cls._get_field_display, field=field),
                     )
 
     def validate_fields_values(self, **data: Dict[str, Any]) -> None:

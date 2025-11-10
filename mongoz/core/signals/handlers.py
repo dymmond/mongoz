@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Callable, List, Type, Union
 
 if TYPE_CHECKING:  # pragma: no cover

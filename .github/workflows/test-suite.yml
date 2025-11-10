@@ -20,7 +20,7 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     services:
       mongodb:
@@ -42,15 +42,10 @@ jobs:
         with:
           path: ${{ env.pythonLocation }}
           key: ${{ runner.os }}-python-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}-test-v02
-      - name: Install UV
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: "Install dependencies"
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          pip install click==8.2.2
           pip install hatch
-          scripts/install
       - name: "Run linting checks"
         run: "hatch run lint"
       - name: "Run typing checks"

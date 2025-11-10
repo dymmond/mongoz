@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 from decimal import Decimal
 from typing import Any, Dict
 
 import bson
 from bson.decimal128 import Decimal128
 from pydantic import BaseModel, ConfigDict
-from pydantic_core._pydantic_core import SchemaValidator as SchemaValidator
 
 from mongoz.core.signals.signal import Signal
 

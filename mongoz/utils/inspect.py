@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 from inspect import isclass
 from typing import Any, Callable

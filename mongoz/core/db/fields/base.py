@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import decimal
 from typing import (
     TYPE_CHECKING,
@@ -13,9 +15,6 @@ from typing import (
 )
 
 from pydantic._internal import _repr
-from pydantic._internal._schema_generation_shared import (
-    GetJsonSchemaHandler as GetJsonSchemaHandler,
-)
 from pydantic.fields import FieldInfo
 
 from mongoz.core.connection.database import Database
