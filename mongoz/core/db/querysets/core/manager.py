@@ -217,25 +217,30 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                                 "from": r_field.refer_to.meta.collection.name,
                                 "localField": field,
                                 "foreignField": "_id",
-                                "as": "lookup_on_" + field,
+                                "as": settings.lookup_prefix + field,
                             }
                         }
                     )
-                    unwound_fields["lookup_on_" + field] = {
+                    unwound_fields[settings.lookup_prefix + field] = {
                         "$unwind": {
-                            "path": "$lookup_on_" + field,
+                            "path": "$" + settings.lookup_prefix + field,
                             "preserveNullAndEmptyArrays": True,
                         }
                     }
 
                     lookups_on[r_field.refer_to.meta.collection.name] = (
-                        "lookup_on_" + refrence_field
+                        settings.lookup_prefix + refrence_field
                     )
                     refrence_field = field
                 if refrence_field and ref_field:
-                    ref_field = "lookup_on_" + refrence_field + "." + ref_field
+                    ref_field = (
+                        settings.lookup_prefix
+                        + refrence_field
+                        + "."
+                        + ref_field
+                    )
                 if refrence_field:
-                    ref_field = "lookup_on_" + refrence_field
+                    ref_field = settings.lookup_prefix + refrence_field
 
                 assert (
                     lookup_operator in settings.filter_operators
@@ -754,6 +759,81 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager: "Manager" = self.clone()
         return await manager.model_class.get_document_by_id(id)
 
+    def _rename_lookup(self, field: str) -> List[str]:
+        """
+        Split a field string into parts based on "." with "__" meaning lookup rename.
+        """
+        raw_parts = field.split(".")
+        parts = []
+
+        for p in raw_parts:
+            if "__" in p:
+                sub = p.split("__")
+                for i, s in enumerate(sub):
+                    if i == 0:
+                        parts.append(settings.lookup_prefix + s)
+                    else:
+                        parts.append(s)
+            else:
+                parts.append(p)
+        return parts
+
+    def _ensure_list_level(self, node: dict, key: str) -> Dict[str, Any]:
+        """
+        Ensure that list fields are wrapped under __all__.
+        """
+        if key not in node:
+            node[key] = {"__all__": {}}
+            return node[key]["__all__"]
+
+        # key exists
+        if node[key] is True:
+            node[key] = {"__all__": {}}
+            return node[key]["__all__"]
+
+        if "__all__" not in node[key]:
+            node[key]["__all__"] = {}
+
+        return node[key]["__all__"]
+
+    def _insert_path(self, include_map: dict, parts: list[str]) -> None:
+        """
+        Recursive insertion with automatic __all__ for list-like fields.
+        Every nested field is assumed to be list-of-dict, unless it's the last key.
+        """
+
+        head = parts[0]
+
+        # last part → include True directly
+        if len(parts) == 1:
+            include_map[head] = True
+            return
+
+        # For nested parts → treat as list-of-dict by default
+        next_level = self._ensure_list_level(include_map, head)
+
+        self._insert_path(next_level, parts[1:])
+
+    def _build_include_map(self, fields: list[str]) -> Dict[str, Any]:
+        """
+        Main function to build Pydantic include format.
+
+        Supports:
+        - unlimited recursion
+        - list-of-dictionaries via "."
+        - lookup renaming via "__"
+        """
+        include: Dict = {}
+
+        for field in fields:
+            # Apply lookup renaming ("__")
+            parts = self._rename_lookup(field)
+
+            # Process parts recursively
+            self._insert_path(include, parts)
+
+        return include
+
     async def values(
         self,
         fields: Union[Sequence[str], str, None] = None,
@@ -780,7 +860,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         else:
             documents = [
                 document.model_dump(
-                    exclude=exclude, exclude_none=exclude_none, include=fields
+                    exclude=exclude,
+                    exclude_none=exclude_none,
+                    include=self._build_include_map(fields),
                 )
                 for document in documents
             ]

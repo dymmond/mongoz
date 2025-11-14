@@ -1,13 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import (
-    TYPE_CHECKING,
-    ClassVar,
-    Dict,
-    List,
-    cast,
-)
+from typing import TYPE_CHECKING, ClassVar, Dict, List, cast
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -28,6 +22,9 @@ class MongozSettings(BaseSettings):
     ptpython_config_file: str = "~/.config/ptpython/config.py"
 
     parsed_ids: ClassVar[List[str]] = ["id", "pk"]
+
+    # Lookup field prefix
+    lookup_prefix: str = "lookup_on_"
 
     filter_operators: ClassVar[Dict[str, str]] = {
         "exact": "eq",

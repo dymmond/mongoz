@@ -160,11 +160,30 @@ async def test_reference_filter():
         name="Barbie", year=2022, producer_id=producer2.id
     )
     await Movie.objects.create(
-        name="The NUN", year=2024, producer_id=producer1.id
+        name="Haunted House", year=2024, producer_id=producer1.id
     )
     await Movie.objects.create(
         name="The Ghost", year=2023, producer_id=producer3.id
     )
 
-    movies = await Movie.objects.filter(producer_id__age__gte=50)
-    assert movies
+    # Fetch the movie object.
+    movie = await Movie.objects.get(producer_id__age__gte=50)
+    assert movie.producer_id == producer1.id
+    assert movie.name == "Haunted House"
+    assert movie.year == 2024
+    producer_obj = movie.lookup_on_producer_id[0]
+    assert producer_obj.id == producer1.id
+    assert producer_obj.name == producer1.name
+    assert producer_obj.age == producer1.age
+    assert producer_obj.movie_types == producer1.movie_types
+
+    # Fetch the Movie using the values.
+    movies = await Movie.objects.filter(producer_id__age__gte=50).values(
+        ["name", "producer_id__movie_types"]
+    )
+    assert len(movies) == 1
+    movie_obj = movies[0]
+    assert movie_obj["name"] == movie.name
+    assert len(movie_obj["lookup_on_producer_id"]) == 1
+    producer_obj = movie_obj["lookup_on_producer_id"][0]
+    assert producer_obj["movie_types"] == producer1.movie_types
