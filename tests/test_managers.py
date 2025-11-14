@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import ClassVar, List, Optional
+from typing import AsyncGenerator, ClassVar, List, Optional
 
 import pydantic
 import pytest
@@ -43,11 +43,19 @@ class BaseDocument(Document):
         database = "test_db"
 
 
+class Producer(BaseDocument):
+
+    name: str = mongoz.String()
+    age: int = mongoz.Integer()
+    movie_types: Optional[List[str]] = mongoz.Array(str, null=True)
+
+
 class Movie(BaseDocument):
     uuid: Optional[ObjectId] = mongoz.UUID(null=True)
     name: str = mongoz.String()
     year: int = mongoz.Integer()
     tags: Optional[List[str]] = mongoz.Array(str, null=True)
+    producer_id: ObjectId = mongoz.ForeignKey(Producer, null=True)
 
 
 class Course(mongoz.EmbeddedDocument):
@@ -64,10 +72,12 @@ class Student(BaseDocument):
 
 
 @pytest.fixture(scope="function", autouse=True)
-async def prepare_database():
+async def prepare_database() -> AsyncGenerator:
+    await Student.query().delete()
     await Movie.query().delete()
     yield
     await Movie.query().delete()
+    await Student.query().delete()
 
 
 async def test_custom_abstraction():
@@ -85,7 +95,7 @@ async def test_custom_abstraction():
     assert total_smaller[0].id == die_hard.id
 
 
-async def test_filter():
+async def test_embedded_filter():
     cn = Course(
         code="CN",
         name="Computer Network",
@@ -125,7 +135,6 @@ async def test_filter():
     await Student.objects.create(
         name="Tanaji", roll_no=2024, courses=[cn, os, ml, cs, pe]
     )
-    await Student.objects.filter().values_list(["roll_no"], flat=True)
 
     # Embedded search
     roll_nos = await Student.objects.filter(
@@ -134,3 +143,28 @@ async def test_filter():
 
     roll_nos.sort()
     assert roll_nos == [2022, 2024]
+
+
+async def test_reference_filter():
+    producer1 = await Producer.objects.create(
+        name="Jhon", age=56, movie_types=["Horror", "Anime"]
+    )
+    producer2 = await Producer.objects.create(
+        name="Alok", age=46, movie_types=["Thriller", "Anime"]
+    )
+    producer3 = await Producer.objects.create(
+        name="Prasad", age=36, movie_types=["Horror", "Action"]
+    )
+
+    await Movie.objects.create(
+        name="Barbie", year=2022, producer_id=producer2.id
+    )
+    await Movie.objects.create(
+        name="The NUN", year=2024, producer_id=producer1.id
+    )
+    await Movie.objects.create(
+        name="The Ghost", year=2023, producer_id=producer3.id
+    )
+
+    movies = await Movie.objects.filter(producer_id__age__gte=50)
+    assert movies
