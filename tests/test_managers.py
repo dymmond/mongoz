@@ -171,7 +171,7 @@ async def test_reference_filter():
     assert movie.producer_id == producer1.id
     assert movie.name == "Haunted House"
     assert movie.year == 2024
-    producer_obj = movie.lookup_on_producer_id[0]
+    producer_obj = movie.producers[0]
     assert producer_obj.id == producer1.id
     assert producer_obj.name == producer1.name
     assert producer_obj.age == producer1.age
@@ -184,6 +184,6 @@ async def test_reference_filter():
     assert len(movies) == 1
     movie_obj = movies[0]
     assert movie_obj["name"] == movie.name
-    assert len(movie_obj["lookup_on_producer_id"]) == 1
-    producer_obj = movie_obj["lookup_on_producer_id"][0]
+    assert len(movie_obj["producers"]) == 1
+    producer_obj = movie_obj["producers"][0]
     assert producer_obj["movie_types"] == producer1.movie_types

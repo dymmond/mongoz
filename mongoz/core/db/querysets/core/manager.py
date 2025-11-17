@@ -771,7 +771,11 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 sub = p.split("__")
                 for i, s in enumerate(sub):
                     if i == 0:
-                        parts.append(settings.lookup_prefix + s)
+                        parts.append(
+                            self.model_class.model_fields[
+                                s
+                            ].refer_to.meta.collection.name
+                        )
                     else:
                         parts.append(s)
             else:

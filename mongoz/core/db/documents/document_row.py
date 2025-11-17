@@ -71,7 +71,11 @@ class DocumentRow(MongozBaseModel):
                                     **data
                                 )
                             )
-                        item[column] = values
+                        item[
+                            cls.model_fields[
+                                loopkup_field
+                            ].refer_to.meta.collection.name
+                        ] = values
                     else:
                         item[column] = value
 
