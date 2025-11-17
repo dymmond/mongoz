@@ -1051,35 +1051,35 @@ You can now query the user by embedded document field.
 
 === "Manager"
 
-    ```python
-    await User.objects.get(**{"user_type.level": "admin"})
-    ```
+```python
+await User.objects.get(**{"user_type.level": "admin"})
+```
 
 === "QuerySet"
 
-    ```python
-    await User.query(User.user_type.level == "admin").get()
-    ```
+```python
+await User.query(User.user_type.level == "admin").get()
+```
 
-    # This is the equivalent to the following filter:
+This is the equivalent to the following filter:
 
-    ```json
-    {"access_level.level": "admin" }
-    ```
+```json
+{"access_level.level": "admin" }
+```
 
-    # You can also use the complete embedded document.
+You can also use the complete embedded document.
 
-    ```python
-    await User.query(User.user_type == level).get()
-    ```
+```python
+await User.query(User.user_type == level).get()
+```
 
-    # This is the equivalent to the following filter:
+This is the equivalent to the following filter:
 
-    ```json
-    {"access_level": {"level": "admin"} }
-    ```
+```json
+{"access_level": {"level": "admin"} }
+```
 
-## Querying On Refrenced Fields
+## Querying On Refrence Fields
 
 Mongoz now supports filtering on referenced (foreign key) fields using the `__` (double underscore) notation.
 
