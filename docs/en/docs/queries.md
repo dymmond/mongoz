@@ -1049,31 +1049,62 @@ This will create the following document in the database:
 
 You can now query the user by embedded document field.
 
-```python
-await User.query(User.user_type.level == "admin").get()
-```
+=== "Manager"
 
-This is the equivalent to the following filter:
+    ```python
+    await User.objects.get(**{"user_type.level": "admin"})
+    ```
 
-```json
-{"access_level.level": "admin" }
-```
+=== "QuerySet"
 
-You can also use the complete embedded document.
+    ```python
+    await User.query(User.user_type.level == "admin").get()
+    ```
 
-```python
-await User.query(User.user_type == level).get()
-```
+    # This is the equivalent to the following filter:
 
-This is the equivalent to the following filter:
+    ```json
+    {"access_level.level": "admin" }
+    ```
 
-```json
-{"access_level": {"level": "admin"} }
-```
+    # You can also use the complete embedded document.
 
-!!! Warning
-    For the [Embedded Documents](./embedded-documents.md) type of query, using the manager it won't
-    work. **You should use the `queryset` type of approach for the query**.
+    ```python
+    await User.query(User.user_type == level).get()
+    ```
+
+    # This is the equivalent to the following filter:
+
+    ```json
+    {"access_level": {"level": "admin"} }
+    ```
+
+## Querying On Refrenced Fields
+
+Mongoz now supports filtering on referenced (foreign key) fields using the `__` (double underscore) notation.
+
+=== "Manager"
+
+    ```python
+    role = await Role.objects.create(code="ADMIN", name="Admin")
+
+    await User.objects.create(
+        first_name="Mongoz", last_name="ODM", email="mongoz@mongoz.com",
+        role_id=role.id
+    )
+    ```
+
+Filter the document with the role.
+
+    ```python
+    await User.objects.filter(role_id__code="ADMIN")
+    ```
+
+Filter the document with the specific values.
+
+    ```python
+    await User.objects.filter(role_id__code="ADMIN").values(["role_id__code", "role_id__name"])
+    ```
 
 ## The Q operator
 

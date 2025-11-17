@@ -52,10 +52,17 @@ class Expression:
             return {self.key: {"$regex": regex_value, "$options": "i"}}
         if not self.options:
             return {self.key: {self.operator: self.compiled_value}}
-        return {self.key: {self.operator: self.compiled_value, "$options": self.options}}
+        return {
+            self.key: {
+                self.operator: self.compiled_value,
+                "$options": self.options,
+            }
+        }
 
     @classmethod
-    def compile_many(cls, expressions: List["Expression"]) -> Dict[str, Dict[str, Any]]:
+    def compile_many(
+        cls, expressions: List["Expression"]
+    ) -> Dict[str, Dict[str, Any]]:
         compiled_dicts: Dict[Any, dict] = collections.defaultdict(dict)
         compiled_lists: Dict[Any, list] = collections.defaultdict(list)
 
@@ -65,7 +72,10 @@ class Expression:
                 if key in ["$and", "$or"]:
                     list_value = value.get(key, value.get("$eq"))
                     assert isinstance(list_value, (list, tuple))
-                    values = [v.compile() if isinstance(v, Expression) else v for v in list_value]
+                    values = [
+                        v.compile() if isinstance(v, Expression) else v
+                        for v in list_value
+                    ]
                     compiled_lists[key] = values
                 else:
                     values_dict: Dict[str, Any] = {}
@@ -75,7 +85,9 @@ class Expression:
                             compiled_dicts[key].update(values_dict)
                         else:
                             compiled_dicts[key].update(value)
-        return cast(Dict[str, Dict[str, Any]], {**compiled_dicts, **compiled_lists})
+        return cast(
+            Dict[str, Dict[str, Any]], {**compiled_dicts, **compiled_lists}
+        )
 
     @classmethod
     def unpack(cls, d: Dict[str, Any]) -> "List[Expression]":
@@ -100,7 +112,9 @@ class Expression:
 
 
 class SortExpression:
-    def __init__(self, key: typing.Union[str, "MongozField"], direction: Order) -> None:
+    def __init__(
+        self, key: typing.Union[str, "MongozField"], direction: Order
+    ) -> None:
         self.key = key if isinstance(key, str) else key._name
         self.direction = direction
 

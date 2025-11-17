@@ -56,6 +56,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         sort_by: Union[List[SortExpression], None] = None,
         only_fields: Union[str, None] = None,
         defer_fields: Union[str, None] = None,
+        unwound_fields: Union[Dict[str, Any], None] = None,
+        lookups_on: Union[Dict[str, str], None] = None,
+        lookup_queries: Union[List[Any], None] = None,
     ) -> None:
         self.model_class = model_class  # type: ignore
 
@@ -70,6 +73,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         self._sort: List[SortExpression] = [] if sort_by is None else sort_by
         self._only_fields = [] if only_fields is None else only_fields
         self._defer_fields = [] if defer_fields is None else defer_fields
+        self._lookups_on: Union[Dict[str, str], None] = lookups_on
+        self._lookup_queries: Union[List[Any], None] = lookup_queries
+        self._unwound_fields: Union[Dict[str, Any], None] = unwound_fields
         self.extra: Dict[str, Any] = {}
 
     def __get__(self, instance: Any, owner: Any) -> "Manager":
@@ -116,6 +122,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager._collection = self._collection
         manager._only_fields = self._only_fields
         manager._defer_fields = self._defer_fields
+        manager._lookups_on = self._lookups_on
+        manager._lookup_queries = self._lookup_queries
+        manager._unwound_fields = self._unwound_fields
         manager.extra = self.extra
         return manager
 
@@ -159,6 +168,19 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         setattr(manager, only_or_defer, document_fields)
         return manager
 
+    def _refs_expression(
+        self, lookup_parts: List, operators: Dict
+    ) -> List[Any]:
+        """
+        Check if the lookup_parts contains references to the given operators set.
+        Because the LOOKUP_SEP is contained in the default operators names, check
+        each prefix of the lookup_parts for a match.
+        """
+        for n in range(len(lookup_parts)):
+            if operators.get(lookup_parts[n]):
+                return lookup_parts[0 : n - 1]
+        return []
+
     def filter_query(self, exclude: bool = False, **kwargs: Any) -> "Manager":
         """
         Builds the filter query for the given manager.
@@ -166,14 +188,59 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         clauses = []
         filter_clauses = self._filter
         sort_clauses = self._sort
+        lookups_on = {}
+        lookup_queries = []
+        unwound_fields = {}
 
         for key, value in kwargs.items():
             key = self._find_and_replace_id(key)
+            ref_field = None
+
+            if "." in key:
+                parts = key.split(".")
+                ref_field = parts[0]
+                key = parts[1]
 
             if "__" in key:
                 parts = key.split("__")
+                lookup_fields = self._refs_expression(
+                    parts, settings.filter_operators
+                )
                 lookup_operator = parts[-1]
                 field_name = self._find_and_replace_id(parts[-2])
+                refrence_field = ""
+                for field in lookup_fields:
+                    r_field = self.model_class.model_fields["producer_id"]
+                    lookup_queries.append(
+                        {
+                            "$lookup": {
+                                "from": r_field.refer_to.meta.collection.name,
+                                "localField": field,
+                                "foreignField": "_id",
+                                "as": settings.lookup_prefix + field,
+                            }
+                        }
+                    )
+                    unwound_fields[settings.lookup_prefix + field] = {
+                        "$unwind": {
+                            "path": "$" + settings.lookup_prefix + field,
+                            "preserveNullAndEmptyArrays": True,
+                        }
+                    }
+
+                    lookups_on[r_field.refer_to.meta.collection.name] = (
+                        settings.lookup_prefix + refrence_field
+                    )
+                    refrence_field = field
+                if refrence_field and ref_field:
+                    ref_field = (
+                        settings.lookup_prefix
+                        + refrence_field
+                        + "."
+                        + ref_field
+                    )
+                if refrence_field:
+                    ref_field = settings.lookup_prefix + refrence_field
 
                 assert (
                     lookup_operator in settings.filter_operators
@@ -182,7 +249,14 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 # For "eq", "neq", "contains", "where", "pattern", "startswith", "endswith", "istartswith", "iendswith"
                 if lookup_operator in VALUE_EQUALITY:
                     operator = self.get_operator(lookup_operator)
-                    expression = operator(field_name, value)  # type: ignore
+                    expression = operator(
+                        (
+                            ref_field + "." + field_name
+                            if ref_field
+                            else field_name
+                        ),
+                        value,
+                    )  # type: ignore
 
                 # For "in" and "not_in"
                 elif lookup_operator in LIST_EQUALITY:
@@ -195,7 +269,14 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                         value = [*value]
 
                     operator = self.get_operator(lookup_operator)
-                    expression = operator(field_name, value)  # type: ignore
+                    expression = operator(
+                        (
+                            ref_field + "." + field_name
+                            if ref_field
+                            else field_name
+                        ),
+                        value,
+                    )  # type: ignore
 
                 # For "asc" and "desc"
                 elif lookup_operator in ORDER_EQUALITY:
@@ -222,14 +303,27 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                         asc_or_desc = OrderEnum.ASCENDING
 
                     operator = self.get_operator(asc_or_desc)
-                    expression = operator(field_name)  # type: ignore
+                    expression = operator(
+                        (
+                            ref_field + "." + field_name
+                            if ref_field
+                            else field_name
+                        )
+                    )  # type: ignore
                     sort_clauses.append(expression)
                     continue
 
                 # For "lt", "lte", "gt", "gte"
                 elif lookup_operator in GREATNESS_EQUALITY:
                     operator = self.get_operator(lookup_operator)
-                    expression = operator(field_name, value)  # type: ignore
+                    expression = operator(
+                        (
+                            ref_field + "." + field_name
+                            if ref_field
+                            else field_name
+                        ),
+                        value,
+                    )  # type: ignore
 
                 # For "date"
                 elif lookup_operator == "date":
@@ -237,17 +331,33 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                     from_datetime = datetime.combine(
                         value, datetime.min.time()
                     )
-                    expression1 = operator(field_name, from_datetime)  # type: ignore
+                    expression1 = operator(
+                        (
+                            ref_field + "." + field_name
+                            if ref_field
+                            else field_name
+                        ),
+                        from_datetime,
+                    )  # type: ignore
                     clauses.append(expression1)
                     operator = self.get_operator("lt")
-                    expression = operator(field_name, from_datetime + timedelta(days=1))  # type: ignore
+                    expression = operator(
+                        (
+                            ref_field + "." + field_name
+                            if ref_field
+                            else field_name
+                        ),
+                        from_datetime + timedelta(days=1),
+                    )  # type: ignore
 
                 # Add expression to the clauses
                 clauses.append(expression)
 
             else:
                 operator = self.get_operator("exact")
-                expression = operator(key, value)  # type: ignore
+                expression = operator(
+                    (ref_field + "." + key if ref_field else key), value
+                )  # type: ignore
 
                 clauses.append(expression)
 
@@ -266,6 +376,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 sort_by=sort_clauses,
                 only_fields=self._only_fields,
                 defer_fields=self._defer_fields,
+                unwound_fields=unwound_fields,
+                lookups_on=lookups_on,
+                lookup_queries=lookup_queries,
             ),
         )
         manager._collection = self._collection
@@ -381,17 +494,38 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager: "Manager" = self.clone()
 
         filter_query = Expression.compile_many(manager._filter)
-        cursor = manager._collection.find(filter_query)
 
+        pipeline: List[Any] = []
+
+        # Add lookup stages (if any)
+        if getattr(manager, "_lookup_queries", None):
+            pipeline.extend(manager._lookup_queries)  # list of lookup dicts
+
+        # Add unwind stages (if any)
+        if (
+            getattr(manager, "_unwound_fields", None)
+            and manager._unwound_fields is None
+        ):
+            pipeline.extend(manager._unwound_fields.values())
+
+        # Initial filter (same as find)
+        if filter_query:
+            pipeline.append({"$match": filter_query})
+
+        # Sorting
         if manager._sort:
-            sort_query = [expr.compile() for expr in manager._sort]
-            cursor = cursor.sort(sort_query)
+            sort_query = {expr.key: expr.direction for expr in manager._sort}
+            pipeline.append({"$sort": sort_query})
 
+        # Pagination
         if manager._skip_count:
-            cursor = cursor.skip(manager._skip_count)
+            pipeline.append({"$skip": manager._skip_count})
 
         if manager._limit_count:
-            cursor = cursor.limit(manager._limit_count)
+            pipeline.append({"$limit": manager._limit_count})
+
+        # Execute aggregation
+        cursor = manager._collection.aggregate(pipeline)
 
         # For only fields
         is_only_fields = True if manager._only_fields else False
@@ -601,7 +735,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         Creates many documents (bulk create).
         """
         manager: "Manager" = self.clone()
-        return await manager.model_class.create_many(models=models, collection=manager._collection)
+        return await manager.model_class.create_many(
+            models=models, collection=manager._collection
+        )
 
     async def bulk_create(self, models: List["Document"]) -> List["Document"]:
         """
@@ -623,6 +759,85 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager: "Manager" = self.clone()
         return await manager.model_class.get_document_by_id(id)
 
+    def _rename_lookup(self, field: str) -> List[str]:
+        """
+        Split a field string into parts based on "." with "__" meaning lookup rename.
+        """
+        raw_parts = field.split(".")
+        parts = []
+
+        for p in raw_parts:
+            if "__" in p:
+                sub = p.split("__")
+                for i, s in enumerate(sub):
+                    if i == 0:
+                        parts.append(
+                            self.model_class.model_fields[
+                                s
+                            ].refer_to.meta.collection.name
+                        )
+                    else:
+                        parts.append(s)
+            else:
+                parts.append(p)
+        return parts
+
+    def _ensure_list_level(self, node: dict, key: str) -> Dict[str, Any]:
+        """
+        Ensure that list fields are wrapped under __all__.
+        """
+        if key not in node:
+            node[key] = {"__all__": {}}
+            return node[key]["__all__"]
+
+        # key exists
+        if node[key] is True:
+            node[key] = {"__all__": {}}
+            return node[key]["__all__"]
+
+        if "__all__" not in node[key]:
+            node[key]["__all__"] = {}
+
+        return node[key]["__all__"]
+
+    def _insert_path(self, include_map: dict, parts: list[str]) -> None:
+        """
+        Recursive insertion with automatic __all__ for list-like fields.
+        Every nested field is assumed to be list-of-dict, unless it's the last key.
+        """
+
+        head = parts[0]
+
+        # last part → include True directly
+        if len(parts) == 1:
+            include_map[head] = True
+            return
+
+        # For nested parts → treat as list-of-dict by default
+        next_level = self._ensure_list_level(include_map, head)
+
+        self._insert_path(next_level, parts[1:])
+
+    def _build_include_map(self, fields: list[str]) -> Dict[str, Any]:
+        """
+        Main function to build Pydantic include format.
+
+        Supports:
+        - unlimited recursion
+        - list-of-dictionaries via "."
+        - lookup renaming via "__"
+        """
+        include: Dict = {}
+
+        for field in fields:
+            # Apply lookup renaming ("__")
+            parts = self._rename_lookup(field)
+
+            # Process parts recursively
+            self._insert_path(include, parts)
+
+        return include
+
     async def values(
         self,
         fields: Union[Sequence[str], str, None] = None,
@@ -642,10 +857,17 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             raise FieldDefinitionError(detail="Fields must be an iterable.")
 
         if not fields:
-            documents = [document.model_dump(exclude=exclude, exclude_none=exclude_none) for document in documents]
+            documents = [
+                document.model_dump(exclude=exclude, exclude_none=exclude_none)
+                for document in documents
+            ]
         else:
             documents = [
-                document.model_dump(exclude=exclude, exclude_none=exclude_none, include=fields)
+                document.model_dump(
+                    exclude=exclude,
+                    exclude_none=exclude_none,
+                    include=self._build_include_map(fields),
+                )
                 for document in documents
             ]
 

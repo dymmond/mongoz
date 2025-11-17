@@ -1,5 +1,12 @@
 # Release Notes
 
+## 0.13.1
+
+### Added
+
+- Add the query support for the embedded documents and refrenced fields.
+
+
 ## 0.13.0
 
 ### Added
