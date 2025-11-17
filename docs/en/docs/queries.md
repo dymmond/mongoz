@@ -1106,6 +1106,7 @@ Filter the document with the specific values.
     await User.objects.filter(role_id__code="ADMIN").values(["role_id__code", "role_id__name"])
     ```
 
+
 ## The Q operator
 
 This operator was inspired by `Mongox` and extended for Mongoz needs. The credit for the initial
