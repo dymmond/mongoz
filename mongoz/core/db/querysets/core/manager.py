@@ -210,7 +210,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 field_name = self._find_and_replace_id(parts[-2])
                 refrence_field = ""
                 for field in lookup_fields:
-                    r_field = self.model_class.model_fields["producer_id"]
+                    r_field = self.model_class.model_fields[field]
                     lookup_queries.append(
                         {
                             "$lookup": {
