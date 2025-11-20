@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.13.2
+
+### Fixed
+
+- Fix the filter query method, revmoved the hard-coded values.
+
 ## 0.13.1
 
 ### Added
