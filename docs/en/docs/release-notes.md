@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.13.3
+
+### Fixed
+
+- Fix the filter query method, handle the reference field validation.
+
 ## 0.13.2
 
 ### Fixed
