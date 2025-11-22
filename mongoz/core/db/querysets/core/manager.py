@@ -211,6 +211,8 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 refrence_field = ""
                 for field in lookup_fields:
                     r_field = self.model_class.model_fields[field]
+                    if not hasattr(r_field, "refer_to"):
+                        continue
                     lookup_queries.append(
                         {
                             "$lookup": {
