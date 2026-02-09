@@ -1,8 +1,8 @@
 import json
 
 import pytest
-from esmerald import Esmerald, Gateway, JSONResponse, Request, get, post
-from esmerald.testclient import EsmeraldTestClient
+from ravyn import Gateway, JSONResponse, Ravyn, Request, get, post
+from ravyn.testclient import RavynTestClient
 
 import mongoz
 from mongoz import Document
@@ -38,7 +38,7 @@ async def get_movies(request: Request) -> JSONResponse:
     return JSONResponse(json.loads(movie.model_dump_json()))
 
 
-app = Esmerald(
+app = Ravyn(
     routes=[
         Gateway(handler=get_movies),
         Gateway(handler=create_movies),
@@ -46,8 +46,8 @@ app = Esmerald(
 )
 
 
-async def test_esmerald_integration_create() -> None:
-    with EsmeraldTestClient(app) as client:
+async def test_ravyn_integration_create() -> None:
+    with RavynTestClient(app) as client:
         response = client.post("/create", json={"name": "Barbie", "year": 2023})
 
         assert response.json()["name"] == "Barbie"
@@ -55,8 +55,8 @@ async def test_esmerald_integration_create() -> None:
         assert response.status_code == 201
 
 
-async def test_esmerald_integration_read() -> None:
-    with EsmeraldTestClient(app) as client:
+async def test_ravyn_integration_read() -> None:
+    with RavynTestClient(app) as client:
         client.post("/create", json={"name": "Barbie", "year": 2023})
         response = client.get("/all")
 
