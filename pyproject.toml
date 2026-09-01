@@ -114,6 +114,12 @@ quality = [
     "hatch run typing",
     "hatch run test:coverage",
 ]
+mongodb-standalone-up = "docker compose -p mongoz-standalone -f compose.yml up -d --wait"
+mongodb-standalone-down = "docker compose -p mongoz-standalone -f compose.yml down --volumes --remove-orphans"
+mongodb-standalone-smoke = "python scripts/mongodb_topology.py standalone {args}"
+mongodb-replica-set-up = "docker compose -p mongoz-replica-set -f compose.replica-set.yml up -d --wait"
+mongodb-replica-set-down = "docker compose -p mongoz-replica-set -f compose.replica-set.yml down --volumes --remove-orphans"
+mongodb-replica-set-smoke = "python scripts/mongodb_topology.py replica-set {args}"
 
 [tool.hatch.envs.docs]
 features = ["docs"]
