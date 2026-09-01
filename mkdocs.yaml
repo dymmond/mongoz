@@ -35,7 +35,7 @@ theme:
 
 repo_name: dymmond/mongoz
 repo_url: https://github.com/dymmond/mongoz
-edit_uri: edit/feat/rev/docs/en/docs/
+edit_uri: edit/main/docs/en/docs/
 
 extra_css:
   - stylesheets/extra.css

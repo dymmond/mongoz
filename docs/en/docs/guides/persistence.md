@@ -17,8 +17,8 @@ Instance `update()` validates supplied modeled keys, sends one `$set`, and synch
 on the instance. Manager and QuerySet `update()`/`update_many()` patch every match and return the
 hydrated documents that still match the updated values.
 
-Unknown update keys are rejected. An empty instance patch is rejected as ambiguous; a missing
-acknowledged instance match raises `DocumentNotFound`.
+Unknown update keys are rejected. An empty instance patch is an explicit no-op that returns the
+same instance; a missing acknowledged instance match raises `DocumentNotFound`.
 
 ## `save()` synchronizes the model
 

@@ -47,5 +47,5 @@ unvalidated request value.
 ## Inspection
 
 `await registry.get_databases()` and `await database.get_collections()` expose server state through
-wrappers. `await registry.address()` reports the selected server address when PyMongo has one. These
+wrappers. `await registry.address` reports the selected server address when PyMongo has one. These
 operations can perform network I/O and therefore belong inside the active lifecycle.

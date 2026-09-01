@@ -42,7 +42,7 @@ authorization system.
 plan = await Customer.plan_indexes()
 
 for entry in plan.entries:
-    print(entry.action, entry.name)
+    print(entry.action.value, entry.name)
 ```
 
 Planning reads server metadata and returns `already_correct`, `create`, `recreate`,
@@ -59,5 +59,7 @@ the same name requires `force_drop=True`; unmanaged deletion requires `drop_unma
 driver-managed `_id_` index is always retained.
 
 For several database names, use `create_indexes_for_multiple_databases()` after reviewing the
-target list. Destructive multi-database operations deserve an application migration with an
-explicit audit trail, not an import-time side effect.
+target list. The document must already own a default `Meta.database` and `Meta.collection`.
+When `autogenerate_index=True`, Mongoz also appends that default database to the supplied names.
+Destructive multi-database operations deserve an application migration with an explicit audit
+trail, not an import-time side effect.

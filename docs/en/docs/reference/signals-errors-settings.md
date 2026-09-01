@@ -33,6 +33,22 @@ returns a Boolean. `send(sender=..., **kwargs)` awaits receivers sequentially in
 Native PyMongo errors—including duplicate key, bulk write, server selection, timeout, concern, and
 transaction failures—are not translated.
 
+Mongoz-owned exceptions accept an optional `detail=` keyword, which is appended to positional
+message fragments. `DocumentNotFound()` and `MultipleDocumentsReturned()` use their documented
+default messages when constructed without arguments.
+
+```python
+from mongoz.exceptions import DocumentNotFound
+
+try:
+    user = await User.query(User.email == "missing@example.com").get()
+except DocumentNotFound as exc:
+    print(exc)  # Document not found.
+```
+
+Catch native PyMongo exceptions separately when using writes, transactions, or native driver
+escape hatches; Mongoz deliberately preserves those concrete error types.
+
 ## Settings
 
 `MongozSettings` defines identifier aliases, relation lookup prefix, query operator mapping, and
@@ -40,7 +56,10 @@ shell defaults. `mongoz.settings` is loaded lazily. Set `MONGOZ_SETTINGS_MODULE`
 for a `MongozSettings` subclass when custom global settings are required.
 
 Invalid imports, wrong base classes, invalid Pydantic values, and uppercase setting names raise
-`ImproperlyConfigured` while retaining the original import or validation error as `__cause__`.
+`ImproperlyConfigured`. Validation errors retain their cause while hiding input values. String and
+repr rendering of the lazy settings proxy exposes only its state or configured class name. Use
+Pydantic `SecretStr` or `SecretBytes` for application-defined secret fields as an additional
+model-level safeguard.
 
 Custom query operators should be explicit application policy. Prefer ordinary field expressions
 and raw native escape hatches over globally changing familiar operator meaning.

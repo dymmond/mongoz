@@ -36,7 +36,7 @@ validation errors.
 
 | Option | Contract |
 | --- | --- |
-| `default`, `default_factory` | Default value ownership. |
+| `default` | Default value ownership. A callable is invoked per instance. |
 | `null` | Whether `None` is accepted. Keep the Python annotation compatible. |
 | `alias` | Stored/model key mapping. |
 | `read_only` | Model metadata only; not request authorization. |

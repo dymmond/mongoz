@@ -14,7 +14,7 @@ description: Reference Mongoz Registry, Database, Collection, native driver, ses
 | `get_database(name)` | Return a `Database` wrapper. |
 | `get_databases()` | Await server database names as wrappers. |
 | `drop_database(database)` | Await native database deletion. |
-| `address()` | Await selected server address when available. |
+| `address` | Awaitable property yielding the selected server address when available. |
 | `host`, `port` | Parsed configured endpoint compatibility accessors. |
 | `is_closed` | Whether final cleanup has occurred. |
 | `close()` | Async, idempotent, final cleanup. |

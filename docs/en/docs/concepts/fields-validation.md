@@ -27,7 +27,7 @@ raises the applicable Pydantic or Mongoz-owned error.
 
 | Option | Purpose |
 | --- | --- |
-| `default`, `default_factory` | Supply a value when the caller omits the field. |
+| `default` | Supply a value when the caller omits the field. A callable is invoked per instance. |
 | `null` | Allow a stored `None` where supported. |
 | `read_only` | Document model intent; it is not an authorization boundary. |
 | `index`, `unique` | Contribute index metadata; creation still requires explicit reconciliation. |

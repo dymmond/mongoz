@@ -33,7 +33,7 @@ For raw BSON mappings, aggregation pipelines, cursor batch control, collection o
 feature not modeled by Mongoz, use the native collection:
 
 ```python
-native = User.get_collection().driver
+native = User.get_collection()
 document = await native.find_one({"email": "ada@example.com"})
 ```
 
