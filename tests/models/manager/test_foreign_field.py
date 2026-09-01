@@ -67,6 +67,14 @@ async def test_foreign_field() -> None:
     assert result.mobile_no == producer.mobile_no
     assert result.email == producer.email
 
+    replacement = await Producer.objects.create(
+        name="Replacement", mobile_no="111222333", email="replacement@example.com"
+    )
+    await movie.update(producer_id=replacement.id)
+    assert (await Movie.objects.get(id=movie.id)).producer_id == replacement.id
+    updated = await Movie.objects.filter(id=movie.id).update_many(producer_id=producer.id)
+    assert updated[0].producer_id == producer.id
+
     with pytest.raises(ValidationError):
         await Movie.objects.create(
             name="Barbie",

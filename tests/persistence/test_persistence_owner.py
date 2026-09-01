@@ -3,6 +3,7 @@ from typing import AsyncGenerator
 
 import pytest
 from bson import ObjectId
+from pydantic import field_validator
 
 import mongoz
 from mongoz import Document
@@ -29,6 +30,11 @@ class PersistenceRecord(BaseRecord):
 
     class Meta:
         collection = "persistence_owner"
+
+    @field_validator("note")
+    @classmethod
+    def normalize_note(cls, value: str) -> str:
+        return value.strip()
 
 
 @pytest.fixture(autouse=True)
@@ -66,9 +72,9 @@ async def test_instance_update_is_a_validated_atomic_patch() -> None:
 async def test_update_accepts_inherited_fields_and_rejects_unknown_or_invalid_fields() -> None:
     record = await PersistenceRecord(tenant="one", title="initial", count=1, note="").create()
 
-    await record.update(tenant="two", note="")
+    await record.update(tenant="two", note="  normalized  ")
     assert record.tenant == "two"
-    assert record.note == ""
+    assert record.note == "normalized"
 
     with pytest.raises(InvalidKeyError):
         await record.update(unknown="ignored")
