@@ -130,9 +130,10 @@ Ruff owns linting, import ordering, and formatting. Apply intentional formatting
 hatch run format
 ```
 
-The current mypy gate checks the `mongoz` package. It remains strict overall, but temporarily
-disables `attr-defined`, `arg-type`, `override`, `misc`, `valid-type`, `call-overload`, and
-`no-any-return`; Campaign 6 owns removing those suppressions.
+Ty is the canonical type checker. The gate checks the complete `mongoz` package plus positive
+consumer contracts, while `hatch run typing-negative` verifies that intentional negative
+fixtures fail for their exact expected rules. Do not add blanket exclusions or suppression
+comments to make the gate pass; repair the owning annotation or implementation instead.
 
 ### Enable pre-commit
 

@@ -19,3 +19,11 @@ repos:
       - id: ruff-format
         files: ^(mongoz|tests|scripts)/.*\.py$
         args: [--check]
+  - repo: local
+    hooks:
+      - id: ty-check
+        name: ty check
+        entry: hatch run typing
+        language: system
+        pass_filenames: false
+        always_run: true

@@ -41,6 +41,7 @@ jobs:
       - run: hatch run lint
       - run: hatch run format-check
       - run: hatch run typing
+      - run: hatch run typing-negative
       - run: hatch run pre-commit-check
 
   tests:

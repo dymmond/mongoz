@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import pymongo
 
@@ -26,8 +26,8 @@ class Index(pymongo.IndexModel):
     def __init__(
         self,
         key: Union[str, None] = None,
-        keys: List[Union[Tuple[str, Order], Tuple[str, IndexType]]] = None,
-        name: str = None,
+        keys: Optional[List[Union[Tuple[str, Order], Tuple[str, IndexType]]]] = None,
+        name: Optional[str] = None,
         background: bool = False,
         unique: bool = False,
         sparse: bool = False,

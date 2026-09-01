@@ -69,12 +69,13 @@ testing = [
 ]
 
 quality = [
-    "mypy==1.16.1",
     "pre-commit==4.3.0",
     "ruff==0.16.5",
+    "ty==0.0.77",
 ]
 
 packaging = [
+    "tomli>=2.0.0; python_version < '3.11'",
     "twine==7.0.0",
 ]
 
@@ -109,12 +110,14 @@ format = [
     "ruff check --fix mongoz tests scripts {args}",
     "ruff format mongoz tests scripts {args}",
 ]
-typing = "mypy -p mongoz {args}"
+typing = "ty check {args}"
+typing-negative = "python scripts/validate_negative_typing.py {args}"
 pre-commit-check = "pre-commit run --all-files"
 quality = [
     "hatch run lint",
     "hatch run format-check",
     "hatch run typing",
+    "hatch run typing-negative",
     "hatch run test:coverage",
     "hatch run docs:validate",
     "hatch run package:validate",
@@ -170,20 +173,11 @@ dependencies = []
 validate = "python scripts/validate_package.py {args}"
 
 
-[tool.mypy]
-warn_unused_configs = true
-warn_unreachable = true
-warn_return_any = true
-strict = true
-disallow_untyped_decorators = true
-disallow_any_generics = false
-implicit_reexport = false
-no_implicit_optional = false
-show_error_codes = true
-disallow_incomplete_defs = true
-disable_error_code = "attr-defined,arg-type,override,misc,valid-type,call-overload,no-any-return"
-warn_unused_ignores = true
-warn_redundant_casts = true
+[tool.ty.src]
+include = ["mongoz", "tests/typing/positive"]
+
+[tool.ty.terminal]
+error-on-warning = true
 
 [tool.ruff]
 line-length = 99
@@ -220,16 +214,6 @@ output = "coverage.json"
 # Pydantic deprecations are intentionally absent. Unknown categories fail the gate,
 # so any reintroduced Pydantic deprecation is rejected rather than allowlisted.
 "builtins.UserWarning" = 91
-
-[[tool.mypy.overrides]]
-module = "mongoz.tests.*"
-ignore_missing_imports = true
-check_untyped_defs = true
-
-[[tool.mypy.overrides]]
-module = "docs_src.*"
-ignore_errors = true
-
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]

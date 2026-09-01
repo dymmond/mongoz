@@ -7,20 +7,25 @@ from typing import (
     AsyncGenerator,
     Dict,
     Generator,
+    Generic,
     List,
     Sequence,
     Set,
     Type,
     TypeVar,
     Union,
-    cast,
+    overload,
 )
 
 import bson
 import pydantic
 from bson import Code
+from pymongo.asynchronous.collection import AsyncCollection
+from typing_extensions import Literal, Self
 
 from mongoz import settings
+from mongoz.conf.global_settings import QueryOperator
+from mongoz.core.connection.collections import Collection
 from mongoz.core.db.datastructures import Order
 from mongoz.core.db.fields import base
 from mongoz.core.db.querysets.core.constants import (
@@ -31,7 +36,6 @@ from mongoz.core.db.querysets.core.constants import (
 )
 from mongoz.core.db.querysets.core.protocols import (
     AwaitableQuery,
-    MongozDocument,
 )
 from mongoz.core.db.querysets.core.runtime import SessionBoundQuery
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
@@ -42,7 +46,6 @@ from mongoz.exceptions import (
     MultipleDocumentsReturned,
     OperatorInvalid,
 )
-from mongoz.protocols.queryset import QuerySetProtocol
 from mongoz.utils.enums import OrderEnum
 
 if TYPE_CHECKING:
@@ -53,42 +56,63 @@ if TYPE_CHECKING:
 T = TypeVar("T", bound="Document")
 
 
-class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument]):
+class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
     def __init__(
         self,
-        model_class: Union[Type["Document"], None] = None,
+        model_class: Union[Type[T], None] = None,
         filter_by: Union[List[Expression], None] = None,
         sort_by: Union[List[SortExpression], None] = None,
-        only_fields: Union[str, None] = None,
-        defer_fields: Union[str, None] = None,
+        only_fields: Union[Sequence[str], None] = None,
+        defer_fields: Union[Sequence[str], None] = None,
         unwound_fields: Union[Dict[str, Any], None] = None,
         lookups_on: Union[Dict[str, str], None] = None,
         lookup_queries: Union[List[Any], None] = None,
         session: Union["AsyncClientSession", None] = None,
     ) -> None:
-        self.model_class = model_class  # type: ignore
+        self._model_class = model_class
 
-        if self.model_class:
-            self._collection = self.model_class.meta.collection._collection  # type: ignore
+        model_collection = None if model_class is None else model_class.meta.collection
+        if isinstance(model_collection, Collection):
+            self.__collection = model_collection._collection
         else:
-            self._collection = None
+            self.__collection = None
 
         self._filter: List[Expression] = [] if filter_by is None else filter_by
         self._limit_count = 0
         self._skip_count = 0
         self._sort: List[SortExpression] = [] if sort_by is None else sort_by
-        self._only_fields = [] if only_fields is None else only_fields
-        self._defer_fields = [] if defer_fields is None else defer_fields
+        self._only_fields = [] if only_fields is None else list(only_fields)
+        self._defer_fields = [] if defer_fields is None else list(defer_fields)
         self._lookups_on: Union[Dict[str, str], None] = lookups_on
         self._lookup_queries: Union[List[Any], None] = lookup_queries
         self._unwound_fields: Union[Dict[str, Any], None] = unwound_fields
         self.extra: Dict[str, Any] = {}
         self._session = session
 
-    def __get__(self, instance: Any, owner: Any) -> "Manager":
+    @property
+    def model_class(self) -> Type[T]:
+        if self._model_class is None:
+            raise AttributeError("Manager is not bound to a document class")
+        return self._model_class
+
+    @model_class.setter
+    def model_class(self, value: Union[Type[T], None]) -> None:
+        self._model_class = value
+
+    @property
+    def _collection(self) -> AsyncCollection[Dict[str, Any]]:
+        if self.__collection is None:
+            raise AttributeError("Manager is not bound to a collection")
+        return self.__collection
+
+    @_collection.setter
+    def _collection(self, value: Union[AsyncCollection[Dict[str, Any]], None]) -> None:
+        self.__collection = value
+
+    def __get__(self, instance: object, owner: Type[T]) -> Self:
         return self.__class__(model_class=owner)
 
-    def using(self, database_name: str) -> "Manager":
+    def using(self, database_name: str) -> Self:
         """
         **Type** Public
 
@@ -110,12 +134,14 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
                 self._collection.name
             - return the self instance.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
+        if manager.model_class.meta.registry is None:
+            raise RuntimeError(f"Document {manager.model_class.__name__} has no registry")
         database = manager.model_class.meta.registry.get_database(database_name)
         manager._collection = database.get_collection(manager._collection.name)._collection
         return manager
 
-    def clone(self) -> Any:
+    def clone(self) -> Self:
         manager = self.__class__.__new__(self.__class__)
         manager.model_class = self.model_class
         manager._filter = list(self._filter)
@@ -140,33 +166,37 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
         if self._only_fields and self._defer_fields:
             raise FieldDefinitionError("You cannot use .only() and .defer() at the same time.")
 
-    def get_operator(self, name: str) -> Expression:
+    def get_operator(self, name: str) -> QueryOperator:
         """
         Returns the operator for the given filter.
         """
-        return settings.get_operator(name)  # type: ignore
+        return settings.get_operator(name)
 
     def _find_and_replace_id(self, key: str) -> str:
         """
         Making sure the ID is always parsed as `_id`.
         """
         if key in settings.parsed_ids:
-            return cast(str, self.model_class.id.pydantic_field.alias)  # type: ignore
+            id_field = self.model_class.__mongoz_fields__.get("id")
+            if id_field is None or id_field.pydantic_field.alias is None:
+                return "_id"
+            return id_field.pydantic_field.alias
         return key
 
-    def filter_only_and_defer(self, *fields: Sequence[str], is_only: bool = False) -> "Manager":
+    def filter_only_and_defer(self, *fields: str, is_only: bool = False) -> Self:
         """
         Validates if should be defer or only and checks it out
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         manager.validate_only_and_defer()
 
-        document_fields: List[str] = list(fields)
-        if any(not isinstance(name, str) for name in document_fields):
-            raise FieldDefinitionError("The fields must be must strings.")
+        document_fields = list(fields)
 
-        if manager.model_class.meta.id_attribute not in fields and is_only:
-            document_fields.insert(0, manager.model_class.meta.id_attribute)
+        id_attribute = manager.model_class.meta.id_attribute
+        if not isinstance(id_attribute, str):
+            id_attribute = id_attribute.alias or id_attribute.name or "id"
+        if id_attribute not in fields and is_only:
+            document_fields.insert(0, id_attribute)
         only_or_defer = "_only_fields" if is_only else "_defer_fields"
 
         setattr(manager, only_or_defer, document_fields)
@@ -183,11 +213,23 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
                 return lookup_parts[0 : n - 1]
         return []
 
-    def filter_query(self, exclude: bool = False, **kwargs: Any) -> "Manager":
+    def _related_collection_name(self, field_name: str) -> str:
+        field = self.model_class.meta.fields[field_name]
+        related_model = field.refer_to
+        if not isinstance(related_model, type):
+            raise FieldDefinitionError(f"Field {field_name!r} has no document relation")
+        related_meta = getattr(related_model, "meta", None)
+        collection = getattr(related_meta, "collection", None)
+        collection_name = getattr(collection, "name", None)
+        if not isinstance(collection_name, str):
+            raise FieldDefinitionError(f"Field {field_name!r} has no related collection")
+        return collection_name
+
+    def filter_query(self, exclude: bool = False, **kwargs: Any) -> Self:
         """
         Builds the filter query for the given manager.
         """
-        clauses = []
+        clauses: List[Expression] = []
         filter_clauses = list(self._filter)
         sort_clauses = list(self._sort)
         lookups_on = {} if self._lookups_on is None else dict(self._lookups_on)
@@ -210,13 +252,11 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
                 field_name = self._find_and_replace_id(parts[-2])
                 refrence_field = ""
                 for field in lookup_fields:
-                    r_field = self.model_class.model_fields[field]
-                    if not hasattr(r_field, "refer_to"):
-                        continue
+                    related_collection_name = self._related_collection_name(field)
                     lookup_queries.append(
                         {
                             "$lookup": {
-                                "from": r_field.refer_to.meta.collection.name,
+                                "from": related_collection_name,
                                 "localField": field,
                                 "foreignField": "_id",
                                 "as": settings.lookup_prefix + field,
@@ -230,9 +270,7 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
                         }
                     }
 
-                    lookups_on[r_field.refer_to.meta.collection.name] = (
-                        settings.lookup_prefix + refrence_field
-                    )
+                    lookups_on[related_collection_name] = settings.lookup_prefix + refrence_field
                     refrence_field = field
                 if refrence_field and ref_field:
                     ref_field = settings.lookup_prefix + refrence_field + "." + ref_field
@@ -251,7 +289,8 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
                     expression = operator(
                         (ref_field + "." + field_name if ref_field else field_name),
                         value,
-                    )  # type: ignore
+                    )
+                    assert isinstance(expression, Expression)
 
                 # For "in" and "not_in"
                 elif lookup_operator in LIST_EQUALITY:
@@ -269,7 +308,8 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
                     expression = operator(
                         (ref_field + "." + field_name if ref_field else field_name),
                         value,
-                    )  # type: ignore
+                    )
+                    assert isinstance(expression, Expression)
 
                 # For "asc" and "desc"
                 elif lookup_operator in ORDER_EQUALITY:
@@ -292,7 +332,8 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
                     operator = self.get_operator(asc_or_desc)
                     expression = operator(
                         (ref_field + "." + field_name if ref_field else field_name)
-                    )  # type: ignore
+                    )
+                    assert isinstance(expression, SortExpression)
                     sort_clauses.append(expression)
                     continue
 
@@ -302,7 +343,8 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
                     expression = operator(
                         (ref_field + "." + field_name if ref_field else field_name),
                         value,
-                    )  # type: ignore
+                    )
+                    assert isinstance(expression, Expression)
 
                 # For "date"
                 elif lookup_operator == "date":
@@ -311,59 +353,65 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
                     expression1 = operator(
                         (ref_field + "." + field_name if ref_field else field_name),
                         from_datetime,
-                    )  # type: ignore
+                    )
+                    assert isinstance(expression1, Expression)
                     clauses.append(expression1)
                     operator = self.get_operator("lt")
                     expression = operator(
                         (ref_field + "." + field_name if ref_field else field_name),
                         from_datetime + timedelta(days=1),
-                    )  # type: ignore
+                    )
+                    assert isinstance(expression, Expression)
 
                 # Add expression to the clauses
+                assert isinstance(expression, Expression)
                 clauses.append(expression)
 
             else:
                 operator = self.get_operator("exact")
-                expression = operator((ref_field + "." + key if ref_field else key), value)  # type: ignore
+                expression = operator((ref_field + "." + key if ref_field else key), value)
+                assert isinstance(expression, Expression)
 
                 clauses.append(expression)
 
             if exclude:
                 operator = self.get_operator("not")
-                clauses = [operator(clause.key, clause) for clause in clauses]  # type: ignore
+                negated_clauses: List[Expression] = []
+                for clause in clauses:
+                    negated_clause = operator(clause.key, clause)
+                    assert isinstance(negated_clause, Expression)
+                    negated_clauses.append(negated_clause)
+                clauses = negated_clauses
                 filter_clauses += clauses
             else:
                 filter_clauses += clauses
 
-        manager = cast(
-            "Manager",
-            self.__class__(
-                model_class=self.model_class,
-                filter_by=filter_clauses,
-                sort_by=sort_clauses,
-                only_fields=self._only_fields,
-                defer_fields=self._defer_fields,
-                unwound_fields=unwound_fields,
-                lookups_on=lookups_on,
-                lookup_queries=lookup_queries,
-                session=self._session,
-            ),
+        manager = self.__class__(
+            model_class=self.model_class,
+            filter_by=filter_clauses,
+            sort_by=sort_clauses,
+            only_fields=self._only_fields,
+            defer_fields=self._defer_fields,
+            unwound_fields=unwound_fields,
+            lookups_on=lookups_on,
+            lookup_queries=lookup_queries,
+            session=self._session,
         )
         manager._collection = self._collection
         return manager
 
-    def filter(self, **kwargs: Any) -> "Manager":
+    def filter(self, **kwargs: Any) -> Self:
         """
         Filters the queryset based on the given clauses.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         return manager.filter_query(**kwargs)
 
-    def raw(self, *values: Union[bool, Dict, Expression]) -> "Manager":
+    def raw(self, *values: Union[bool, Dict, Expression]) -> Self:
         """
         Runs a raw query against the database.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         for value in values:
             assert isinstance(value, (dict, Expression)), "Invalid argument to Raw"
             if isinstance(value, dict):
@@ -373,35 +421,35 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
                 manager._filter.append(value)
         return manager
 
-    def all(self, **kwargs: Any) -> "Manager":
+    def all(self, **kwargs: Any) -> Self:
         """
         Returns the queryset records based on specific filters
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         manager.extra = kwargs
         return manager
 
-    def only(self, *fields: Sequence[str]) -> "Manager":
+    def only(self, *fields: str) -> Self:
         """
         Filters by the only fields.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         return manager.filter_only_and_defer(*fields, is_only=True)
 
-    def defer(self, *fields: Sequence[str]) -> "Manager":
+    def defer(self, *fields: str) -> Self:
         """
         Returns a list of documents with the selected defers fields.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         return manager.filter_only_and_defer(*fields, is_only=False)
 
-    def limit(self, count: int = 0) -> "Manager[T]":
-        manager: "Manager" = self.clone()
+    def limit(self, count: int = 0) -> Self:
+        manager = self.clone()
         manager._limit_count = count
         return manager
 
-    def skip(self, count: int = 0) -> "Manager[T]":
-        manager: "Manager" = self.clone()
+    def skip(self, count: int = 0) -> Self:
+        manager = self.clone()
         manager._skip_count = count
         return manager
 
@@ -410,9 +458,9 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
         key: Union[Any, None] = None,
         direction: Union[Order, None] = None,
         **kwargs: Any,
-    ) -> "Manager[T]":
+    ) -> Self:
         """Sort by (key, direction) or [(key, direction)]."""
-        manager: "Manager" = self.clone()
+        manager = self.clone()
 
         if kwargs:
             assert len(kwargs) == 1, (
@@ -430,14 +478,16 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
             sort_expression = SortExpression(key, direction)
             manager._sort.append(sort_expression)
         else:
+            if not isinstance(key, SortExpression):
+                raise FieldDefinitionError("Invalid sort expression.")
             manager._sort.append(key)
         return manager
 
-    async def none(self) -> "Manager":
+    async def none(self) -> Self:
         """
         Returns an empty Manager.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         manager._filter.append(Expression("$expr", "$eq", [1, 0]))
         return manager
 
@@ -451,21 +501,21 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
 
     def __await__(
         self,
-    ) -> Generator[Any, None, List["Document"]]:
+    ) -> Generator[Any, None, List[T]]:
         return self.execute().__await__()
 
     async def _all(self) -> List[T]:
         """
         Returns all the results for a given collection of a document
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
 
         filter_query = Expression.compile_many(manager._filter)
 
         pipeline: List[Any] = []
 
         # Add lookup stages (if any)
-        if getattr(manager, "_lookup_queries", None):
+        if manager._lookup_queries:
             pipeline.extend(manager._lookup_queries)  # list of lookup dicts
 
         # Initial filter (same as find)
@@ -510,58 +560,55 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
         """
         Counts all the documents for a given colletion.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
 
         filter_query = Expression.compile_many(manager._filter)
-        return cast(
-            int,
-            await manager._collection.count_documents(filter_query, **manager._driver_options),
-        )
+        return await manager._collection.count_documents(filter_query, **manager._driver_options)
 
-    async def create(self, **kwargs: Any) -> "Document":
+    async def create(self, **kwargs: Any) -> T:
         """
         Creates a mongo db document.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         instance = await manager.model_class(**kwargs).create(
             manager._collection, session=manager._session
         )
-        return cast("Document", instance)
+        return instance
 
     async def delete(self) -> int:
         """Delete documents matching the criteria."""
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         filter_query = Expression.compile_many(manager._filter)
         result = await manager._collection.delete_many(filter_query, **manager._driver_options)
 
-        return cast(int, result.deleted_count)
+        return result.deleted_count
 
     async def first(self) -> Union[T, None]:
         """
         Returns the first document of a matching criteria.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
 
         objects = await manager.limit(1).all()
         if not objects:
             return None
-        return cast(T, objects[0])
+        return objects[0]
 
     async def last(self) -> Union[T, None]:
         """
         Returns the last document of a matching criteria.
         """
-        manager: "Manager" = self.clone()
-        objects: Any = await manager._all()
+        manager = self.clone()
+        objects = await manager._all()
         if not objects:
             return None
-        return cast(T, objects[-1])
+        return objects[-1]
 
-    async def get(self, **kwargs: Any) -> Union["T", "Document"]:
+    async def get(self, **kwargs: Any) -> T:
         """
         Gets a document.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         if kwargs:
             return await manager.filter(**kwargs).get()
 
@@ -570,13 +617,13 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
             raise DocumentNotFound()
         elif len(objects) == 2:
             raise MultipleDocumentsReturned()
-        return cast(T, objects[0])
+        return objects[0]
 
-    async def get_or_none(self, **kwargs: Any) -> Union["T", "Document", None]:
+    async def get_or_none(self, **kwargs: Any) -> Union[T, None]:
         """
         Gets a document or returns None.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
 
         if kwargs:
             return await manager.filter(**kwargs).get_or_none()
@@ -586,10 +633,10 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
             return None
         elif len(objects) > 1:
             raise MultipleDocumentsReturned()
-        return cast(T, objects[0])
+        return objects[0]
 
     async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         if not defaults:
             defaults = {}
 
@@ -611,20 +658,22 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
             return_document=True,
             **manager._driver_options,
         )
-        return cast(T, manager.model_class(**model))
+        if model is None:
+            raise DocumentNotFound()
+        return manager.model_class(**model)
 
     async def distinct_values(self, key: str) -> List[Any]:
         """
         Returns a list of distinct values filtered by the key.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         filter_query = Expression.compile_many(manager._filter)
         values = await manager._collection.find(filter_query, **manager._driver_options).distinct(
             key=key
         )
-        return cast(List[Any], values)
+        return values
 
-    async def where(self, condition: Union[str, Code]) -> Any:
+    async def where(self, condition: Union[str, Code]) -> List[T]:
         """
         Adds a $where clause to the query.
 
@@ -634,39 +683,37 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
             "The where clause must be a string or a bson.Code"
         )
 
-        manager: "Manager" = self.clone()
+        manager = self.clone()
 
         filter_query = Expression.compile_many(manager._filter)
         cursor = manager._collection.find(filter_query, **manager._driver_options).where(condition)
         async with closing_cursor(cursor):
             return [manager.model_class(**document) async for document in cursor]
 
-    async def update(self, **kwargs: Any) -> List["Document"]:
+    async def update(self, **kwargs: Any) -> List[T]:
         """
         Updates a document
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         return await manager.update_many(**kwargs)
 
     async def update_many(self, **kwargs: Any) -> List[T]:
         """
         Updates many documents (bulk update)
         """
-        from mongoz.core.db.documents._internal import ModelDump
+        from mongoz.core.db.documents._internal import create_validation_model
 
-        manager: "Manager" = self.clone()
+        manager = self.clone()
 
-        field_definitions = {
+        field_definitions: Dict[str, tuple[Any, Any]] = {
             name: (annotations, ...)
             for name, annotations in manager.model_class.__annotations__.items()
             if name in kwargs
         }
 
         if field_definitions:
-            pydantic_model: Type[pydantic.BaseModel] = pydantic.create_model(
-                manager.model_class.__name__,
-                __base__=ModelDump,
-                **field_definitions,
+            pydantic_model: Type[pydantic.BaseModel] = create_validation_model(
+                manager.model_class.__name__, field_definitions
             )
             model = pydantic_model.model_validate(kwargs)
             values = model.model_dump()
@@ -684,33 +731,33 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
             manager._filter = _filter
         return await manager._all()
 
-    async def create_many(self, models: List["Document"]) -> List["Document"]:
+    async def create_many(self, models: List[T]) -> List[T]:
         """
         Creates many documents (bulk create).
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         return await manager.model_class.create_many(
             models=models,
             collection=manager._collection,
             session=manager._session,
         )
 
-    async def bulk_create(self, models: List["Document"]) -> List["Document"]:
+    async def bulk_create(self, models: List[T]) -> List[T]:
         """
         Bulk creates many documents
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         return await manager.create_many(models=models)
 
     async def bulk_update(self, **kwargs: Any) -> List[T]:
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         return await manager.update_many(**kwargs)
 
-    async def get_document_by_id(self, id: Union[str, bson.ObjectId]) -> "Document":
+    async def get_document_by_id(self, id: Union[str, bson.ObjectId]) -> T:
         """
         Gets a document by the id
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         return await manager.model_class.get_document_by_id(id, session=manager._session)
 
     def _rename_lookup(self, field: str) -> List[str]:
@@ -790,66 +837,85 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
 
         return include
 
+    @overload
     async def values(
         self,
-        fields: Union[Sequence[str], str, None] = None,
-        exclude: Union[Sequence[str], Set[str]] = None,
+        fields: Union[List[str], None] = None,
+        exclude: Union[Sequence[str], Set[str], None] = None,
         exclude_none: bool = False,
         flatten: bool = False,
-        **kwargs: Any,
-    ) -> List["Document"]:
+        *,
+        __as_tuple__: Literal[False] = False,
+    ) -> List[Dict[str, Any]]: ...
+
+    @overload
+    async def values(
+        self,
+        fields: Union[List[str], None] = None,
+        exclude: Union[Sequence[str], Set[str], None] = None,
+        exclude_none: bool = False,
+        flatten: bool = False,
+        *,
+        __as_tuple__: Literal[True],
+    ) -> List[Any]: ...
+
+    async def values(
+        self,
+        fields: Union[List[str], None] = None,
+        exclude: Union[Sequence[str], Set[str], None] = None,
+        exclude_none: bool = False,
+        flatten: bool = False,
+        *,
+        __as_tuple__: bool = False,
+    ) -> List[Any]:
         """
         Returns the results in a python dictionary format.
         """
-        fields = fields or []
-        manager: "Manager" = self.clone()
-        documents: List["Document"] = await manager.all()
-
-        if not isinstance(fields, list):
+        if fields is not None and not isinstance(fields, list):
             raise FieldDefinitionError(detail="Fields must be an iterable.")
+        selected_fields = fields or []
+        manager = self.clone()
+        documents = await manager.all()
 
-        if not fields:
-            documents = [
+        if not selected_fields:
+            serialized = [
                 document.model_dump(exclude=exclude, exclude_none=exclude_none)
                 for document in documents
             ]
         else:
-            documents = [
+            serialized = [
                 document.model_dump(
                     exclude=exclude,
                     exclude_none=exclude_none,
-                    include=self._build_include_map(fields),
+                    include=self._build_include_map(selected_fields),
                 )
                 for document in documents
             ]
 
-        as_tuple = kwargs.pop("__as_tuple__", False)
-
-        if not as_tuple:
-            return documents
+        if not __as_tuple__:
+            return serialized
 
         if not flatten:
-            documents = [tuple(document.values()) for document in documents]
-        else:
-            try:
-                documents = [document[fields[0]] for document in documents]  # type: ignore
-            except KeyError:
-                raise FieldDefinitionError(
-                    detail=f"{fields[0]} does not exist in the results."
-                ) from None
-        return documents
+            return [tuple(document.values()) for document in serialized]
+        try:
+            return [document[selected_fields[0]] for document in serialized]
+        except (IndexError, KeyError):
+            field_name = selected_fields[0] if selected_fields else ""
+            raise FieldDefinitionError(
+                detail=f"{field_name} does not exist in the results."
+            ) from None
 
     async def values_list(
         self,
-        fields: Union[Sequence[str], str, None] = None,
-        exclude: Union[Sequence[str], Set[str]] = None,
+        fields: Union[List[str], str, None] = None,
+        exclude: Union[Sequence[str], Set[str], None] = None,
         exclude_none: bool = False,
         flat: bool = False,
     ) -> List[Any]:
         """
         Returns the results in a python dictionary format.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
 
         fields = fields or []
         if flat and len(fields) > 1:
@@ -883,14 +949,14 @@ class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument
         objects = await manager.limit(2).all()
         return bool(len(objects) > 0)
 
-    async def exclude(self, **kwargs: Any) -> List["Document"]:
+    async def exclude(self, **kwargs: Any) -> List[T]:
         """
         Filters everything and excludes based on a specific condition.
         """
-        manager: "Manager" = self.clone()
+        manager = self.clone()
         return await manager.filter_query(exclude=True, **kwargs)
 
-    async def execute(self) -> Any:
-        manager: "Manager" = self.clone()
-        records: Any = await manager._all(**manager.extra)
+    async def execute(self) -> List[T]:
+        manager = self.clone()
+        records = await manager._all(**manager.extra)
         return records

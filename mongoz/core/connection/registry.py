@@ -24,7 +24,7 @@ class Registry:
         self.url = url
         self._client: AsyncMongoClient[Dict[str, Any]] = AsyncMongoClient(self.url)
         self._closed = False
-        self.documents: Dict[str, "Document"] = {}
+        self.documents: Dict[str, Type["Document"]] = {}
 
     def _ensure_open(self) -> None:
         if self._closed:

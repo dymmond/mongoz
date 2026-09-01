@@ -135,7 +135,7 @@ Now you can generate some documents and insert them into the database.
     user = await User(name="Mongoz", email="mongoz@mongoz.com").create()
     ```
 
-This will return an instance of a `User` in a Pydantic model and `mypy` will understand this is a
+This will return an instance of a `User` in a Pydantic model and `ty` will understand this is a
 `User` instance automatically which meand the type hints and validations will work everywhere.
 
 ### Fetching

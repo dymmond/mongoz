@@ -139,12 +139,10 @@ class Q(Ordering, Iterable, Equality, Comparison):
 
     @classmethod
     def and_(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
         return Expression(key=ExpressionOperator.AND, operator=ExpressionOperator.AND, value=args)
 
     @classmethod
     def or_(cls, *args: Union[bool, Expression]) -> Expression:
-        assert not isinstance(args, bool)  # type: ignore
         return Expression(key=ExpressionOperator.OR, operator=ExpressionOperator.OR, value=args)
 
     @classmethod

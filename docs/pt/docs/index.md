@@ -108,7 +108,7 @@ Agora pode gerar alguns documentos e inseri-los na base de dados.
     user = await User(name="Mongoz", email="mongoz@mongoz.com").create()
     ```
 
-Isso retornará uma instância de um `User` num modelo Pydantic e o `mypy` entenderá automaticamente que esta é uma instância de `User`, o que significa que os tipos e validações funcionarão em todo o lado.
+Isso retornará uma instância de um `User` num modelo Pydantic e o `ty` entenderá automaticamente que esta é uma instância de `User`, o que significa que os tipos e validações funcionarão em todo o lado.
 
 ### Pesquisar
 

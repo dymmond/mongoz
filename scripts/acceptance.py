@@ -19,6 +19,7 @@ def main() -> None:
         run("lint")
         run("format-check")
         run("typing")
+        run("typing-negative")
         run("pre-commit-check")
         run("docs:validate")
         run("mongodb-standalone-up")

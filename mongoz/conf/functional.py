@@ -9,12 +9,13 @@ RT = TypeVar("RT")  # return type
 
 
 def new_method_proxy(func: Callable[..., RT]) -> Callable[..., RT]:
-    def inner(self, *args: Any) -> RT:  # type: ignore
+    def inner(self: Any, *args: Any) -> RT:
         if self._wrapped is empty:
             self._setup()
         return func(self._wrapped, *args)
 
-    inner._mask_wrapped = False
+    marker_attribute = "_mask_wrapped"
+    setattr(inner, marker_attribute, False)
     return inner
 
 
@@ -94,7 +95,7 @@ class LazyObject:  # pragma: no cover
     __getitem__ = new_method_proxy(operator.getitem)
     __setitem__ = new_method_proxy(operator.setitem)
     __delitem__ = new_method_proxy(operator.delitem)
-    __iter__ = new_method_proxy(iter)  # type: ignore
+    __iter__ = new_method_proxy(iter)
     __len__ = new_method_proxy(len)
     __contains__ = new_method_proxy(operator.contains)
 

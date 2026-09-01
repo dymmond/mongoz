@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Dict
+from typing import Any, Dict, Mapping, Tuple, Type
 
 import bson
+import pydantic
 from bson.decimal128 import Decimal128
 from pydantic import BaseModel, ConfigDict, SerializerFunctionWrapHandler, field_serializer
 
@@ -104,6 +105,18 @@ class ModelDump(BaseModel):
         """
         model = super().model_dump(**kwargs)
         if "id" not in model and show_id:
-            model = {**{"id": self.id}, **model}
+            model = {**{"id": getattr(self, "id", None)}, **model}
         model_dump = self.convert_decimal(model)
         return model_dump
+
+
+def create_validation_model(
+    name: str, field_definitions: Mapping[str, Tuple[Any, Any]]
+) -> Type[ModelDump]:
+    """Create the transient Pydantic model used to validate partial updates."""
+    # Pydantic's overload cannot express dynamic field definitions until PEP 747.
+    return pydantic.create_model(  # ty: ignore[no-matching-overload]
+        name,
+        __base__=ModelDump,
+        **field_definitions,
+    )

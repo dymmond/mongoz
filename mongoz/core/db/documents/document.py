@@ -12,7 +12,6 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    cast,
 )
 
 import bson
@@ -20,15 +19,18 @@ import pydantic
 from bson.errors import InvalidId
 from pydantic import BaseModel
 from pymongo.asynchronous.collection import AsyncCollection
+from typing_extensions import Self
 
 if TYPE_CHECKING:
     from pymongo.asynchronous.client_session import AsyncClientSession
 
 from mongoz.core.connection.collections import Collection
-from mongoz.core.db.documents._internal import ModelDump
+from mongoz.core.connection.database import Database
+from mongoz.core.db.documents._internal import create_validation_model
 from mongoz.core.db.documents.document_row import DocumentRow
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.core.db.fields.base import MongozField
+from mongoz.core.db.querysets.base import Manager
 from mongoz.core.utils.cursors import closing_cursor
 from mongoz.core.utils.hashable import make_hashable
 from mongoz.exceptions import InvalidKeyError, MongozException
@@ -42,12 +44,14 @@ class Document(DocumentRow):
     Representation of an Mongoz Document.
     """
 
+    objects: ClassVar[Manager[Self]] = Manager()
+
     async def create(
-        self: "Document",
+        self: T,
         collection: Union[AsyncCollection, None] = None,
         *,
         session: Union["AsyncClientSession", None] = None,
-    ) -> "Document":
+    ) -> T:
         """
         Inserts a document.
         """
@@ -56,23 +60,20 @@ class Document(DocumentRow):
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         data = self.model_dump(exclude={"id"})
-        if collection is not None:
-            result = await collection.insert_one(data, session=session)
-        else:
-            if isinstance(self.meta.collection, Collection):
-                result = await self.meta.collection._collection.insert_one(data, session=session)
+        collection = type(self).get_collection(collection)
+        result = await collection.insert_one(data, session=session)
         self.id = result.inserted_id
 
         await self.signals.post_save.send(sender=self.__class__, instance=self)
         return self
 
     async def update(
-        self,
+        self: T,
         collection: Union[AsyncCollection, None] = None,
         *,
         session: Union["AsyncClientSession", None] = None,
         **kwargs: Any,
-    ) -> "Document":
+    ) -> T:
         """
         Updates a record on an instance level.
         """
@@ -81,16 +82,14 @@ class Document(DocumentRow):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection._collection
-        field_definitions = {
+        field_definitions: Dict[str, Tuple[Any, Any]] = {
             name: (annotations, ...)
             for name, annotations in self.__annotations__.items()
             if name in kwargs
         }
         if field_definitions:
-            pydantic_model: Type[BaseModel] = pydantic.create_model(
-                self.__class__.__name__,
-                __base__=ModelDump,
-                **field_definitions,
+            pydantic_model: Type[BaseModel] = create_validation_model(
+                self.__class__.__name__, field_definitions
             )
             model = pydantic_model.model_validate(kwargs)
             values = model.model_dump()
@@ -100,7 +99,8 @@ class Document(DocumentRow):
             data.update(values)
 
             await self.signals.pre_update.send(sender=self.__class__, instance=self)
-            await collection.update_one({"_id": self.id}, {"$set": data}, session=session)  # type: ignore
+            assert collection is not None
+            await collection.update_one({"_id": self.id}, {"$set": data}, session=session)
             await self.signals.post_update.send(sender=self.__class__, instance=self)
 
             for k, v in data.items():
@@ -109,12 +109,12 @@ class Document(DocumentRow):
 
     @classmethod
     async def create_many(
-        cls: Type["Document"],
-        models: List["Document"],
+        cls: Type[T],
+        models: List[T],
         collection: Union[Collection, AsyncCollection, None] = None,
         *,
         session: Union["AsyncClientSession", None] = None,
-    ) -> List["Document"]:
+    ) -> List[T]:
         """
         Insert many documents
         """
@@ -129,19 +129,25 @@ class Document(DocumentRow):
         elif isinstance(collection, AsyncCollection):
             results = await collection.insert_many(data, session=session)
         else:
-            results = await cls.meta.collection._collection.insert_many(  # type: ignore
-                data, session=session
-            )
+            results = await cls.get_collection().insert_many(data, session=session)
         for model, inserted_id in zip(models, results.inserted_ids, strict=True):
             model.id = inserted_id
         return models
 
     @classmethod
-    def get_collection(cls, collection: Union[AsyncCollection, None] = None) -> AsyncCollection:
+    def get_collection(
+        cls, collection: Union[Collection, AsyncCollection, None] = None
+    ) -> AsyncCollection:
         """
         Get the collection object associated with the document class.
         """
-        return collection if collection is not None else cls.meta.collection._collection  # type: ignore
+        if isinstance(collection, Collection):
+            return collection._collection
+        if collection is not None:
+            return collection
+        if not isinstance(cls.meta.collection, Collection):
+            raise RuntimeError(f"Document {cls.__name__} has no configured collection")
+        return cls.meta.collection._collection
 
     @classmethod
     async def create_index(
@@ -161,7 +167,7 @@ class Document(DocumentRow):
                 elif isinstance(collection, AsyncCollection):
                     await collection.create_indexes([index])
                 else:
-                    await cls.meta.collection._collection.create_indexes([index])  # type: ignore
+                    await cls.get_collection().create_indexes([index])
                 return index.name
         raise InvalidKeyError(f"Unable to find index: {name}")
 
@@ -186,7 +192,7 @@ class Document(DocumentRow):
         elif isinstance(collection, AsyncCollection):
             return await collection.create_indexes(cls.meta.indexes)
         else:
-            return await cls.meta.collection._collection.create_indexes(cls.meta.indexes)  # type: ignore
+            return await cls.get_collection().create_indexes(cls.meta.indexes)
 
     @classmethod
     async def create_indexes_for_multiple_databases(
@@ -222,11 +228,15 @@ class Document(DocumentRow):
 
         database_names = list(database_names)
         if not cls.meta.autogenerate_index:
-            database_names.append(cls.meta.database.name)  # type: ignore
+            if not isinstance(cls.meta.database, Database):
+                raise RuntimeError(f"Document {cls.__name__} has no configured database")
+            database_names.append(cls.meta.database.name)
 
         for database_name in database_names:
-            database = cls.meta.registry.get_database(database_name)  # type: ignore
-            collection = database.get_collection(cls.meta.collection.name)  # type: ignore
+            if cls.meta.registry is None or not isinstance(cls.meta.collection, Collection):
+                raise RuntimeError(f"Document {cls.__name__} has incomplete database metadata")
+            database = cls.meta.registry.get_database(database_name)
+            collection = database.get_collection(cls.meta.collection.name)
             await collection._collection.create_indexes(cls.meta.indexes)
 
     @classmethod
@@ -260,12 +270,16 @@ class Document(DocumentRow):
 
         database_names = list(database_names)
         if not cls.meta.autogenerate_index:
-            database_names.append(cls.meta.database.name)  # type: ignore
+            if not isinstance(cls.meta.database, Database):
+                raise RuntimeError(f"Document {cls.__name__} has no configured database")
+            database_names.append(cls.meta.database.name)
 
         for database_name in database_names:
-            database = cls.meta.registry.get_database(database_name)  # type: ignore
-            collection = database.get_collection(cls.meta.collection.name)  # type: ignore
-            await cls.check_indexes(force_drop=True, collection=collection)
+            if cls.meta.registry is None or not isinstance(cls.meta.collection, Collection):
+                raise RuntimeError(f"Document {cls.__name__} has incomplete database metadata")
+            database = cls.meta.registry.get_database(database_name)
+            collection = database.get_collection(cls.meta.collection.name)
+            await cls.check_indexes(force_drop=True, collection=collection._collection)
 
     @classmethod
     async def list_indexes(
@@ -290,7 +304,7 @@ class Document(DocumentRow):
         elif isinstance(collection, AsyncCollection):
             pass
         else:
-            collection = cls.meta.collection._collection  # type: ignore
+            collection = cls.get_collection()
 
         cursor = await collection.list_indexes()
         async with closing_cursor(cursor):
@@ -302,7 +316,7 @@ class Document(DocumentRow):
     async def check_indexes(
         cls,
         force_drop: bool = False,
-        collection: Union[AsyncCollection, None] = None,
+        collection: Union[Collection, AsyncCollection, None] = None,
     ) -> None:
         """
         Check the indexes defined in the Meta object and perform any possible drop operation.
@@ -346,10 +360,8 @@ class Document(DocumentRow):
         for name in collection_indexes:
             if name in symmetric_difference:
                 continue
-            if (
-                cls.model_fields.get(name, None) is not None
-                and not cls.model_fields.get(name).index  # type: ignore
-            ):
+            model_field = cls.model_fields.get(name)
+            if model_field is not None and not getattr(model_field, "index", False):
                 await cls.drop_index(name, collection)
 
     async def delete(
@@ -367,10 +379,10 @@ class Document(DocumentRow):
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection._collection
         await self.signals.pre_delete.send(sender=self.__class__, instance=self)
-
-        result = await collection.delete_one({"_id": self.id}, session=session)  # type: ignore
+        collection = type(self).get_collection(collection)
+        result = await collection.delete_one({"_id": self.id}, session=session)
         await self.signals.post_delete.send(sender=self.__class__, instance=self)
-        return cast(int, result.deleted_count)
+        return result.deleted_count
 
     @classmethod
     async def drop_index(cls, name: str, collection: Union[AsyncCollection, None] = None) -> str:
@@ -401,21 +413,16 @@ class Document(DocumentRow):
 
         collection = cls.get_collection(collection)
         if force:
-            if isinstance(collection, Collection):
-                return await collection._collection.drop_indexes()  # type: ignore
-            elif isinstance(collection, AsyncCollection):
-                return await collection.drop_indexes()  # type: ignore
-            else:
-                return await cls.meta.collection._collection.drop_indexes()  # type: ignore
+            return await collection.drop_indexes()
         index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
         return index_names
 
     async def save(
-        self: "Document",
+        self: T,
         collection: Union[AsyncCollection, None] = None,
         *,
         session: Union["AsyncClientSession", None] = None,
-    ) -> "Document":
+    ) -> T:
         """Save the document.
 
         This is equivalent of a single instance update.
@@ -444,7 +451,8 @@ class Document(DocumentRow):
 
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
-        await collection.update_one(  # type: ignore
+        collection = type(self).get_collection(collection)
+        await collection.update_one(
             {"_id": self.id},
             {"$set": self.model_dump(exclude={"id", "_id"})},
             session=session,
@@ -461,7 +469,7 @@ class Document(DocumentRow):
         id: Union[str, bson.ObjectId],
         *,
         session: Union["AsyncClientSession", None] = None,
-    ) -> "Document":
+    ) -> T:
         is_operation_allowed(cls)
 
         if isinstance(id, str):
@@ -488,7 +496,7 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
     """
 
     model_config: ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(arbitrary_types_allowed=True)
-    __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]
+    __mongoz_fields__: ClassVar[Mapping[str, "MongozField"]]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)

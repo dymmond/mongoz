@@ -1,6 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Protocol, Tuple, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generic,
+    List,
+    Protocol,
+    Tuple,
+    TypeVar,
+    Union,
+    overload,
+)
+
+from typing_extensions import Self
 
 if TYPE_CHECKING:
     from pymongo.asynchronous.client_session import AsyncClientSession
@@ -14,8 +27,8 @@ if TYPE_CHECKING:
 T = TypeVar("T", bound="Document")
 
 
-class QuerySetProtocol(Protocol):
-    def using_session(self, session: "AsyncClientSession") -> "QuerySet[T]": ...
+class QuerySetProtocol(Protocol, Generic[T]):
+    def using_session(self, session: "AsyncClientSession") -> Self: ...
 
     async def all(self) -> List[T]: ...
 
@@ -31,10 +44,10 @@ class QuerySetProtocol(Protocol):
 
     async def get_or_create(self, defaults: Union[Dict[str, Any], None]) -> T: ...
 
-    async def limit(self, count: int = 0) -> "QuerySet[T]":  # pragma: no cover
+    def limit(self, count: int = 0) -> "QuerySet[T]":  # pragma: no cover
         ...
 
-    async def skip(self, count: int = 0) -> "QuerySet[T]":  # pragma: no cover
+    def skip(self, count: int = 0) -> "QuerySet[T]":  # pragma: no cover
         ...
 
     @overload

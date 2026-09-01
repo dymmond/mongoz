@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from mongoz.conf.functional import LazyObject, empty
 from mongoz.conf.module_import import import_string
@@ -48,4 +48,4 @@ class MongozLazySettings(LazyObject):
         return self._wrapped is not empty
 
 
-settings: type[MongozSettings] = MongozLazySettings()  # type: ignore
+settings = cast("MongozSettings", MongozLazySettings())
