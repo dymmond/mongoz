@@ -4,6 +4,23 @@
 
 ### Changed
 
+- Signals now enforce their documented async-only receiver contract at registration. Dispatch is
+  sequential in registration order, fail-fast, cancellation-safe, and isolated per document class.
+- `run_sync()` accepts any awaitable, executes it exactly once, preserves application exceptions,
+  and uses a context-aware worker thread only when the caller already has a running event loop.
+- All Mongoz exceptions are exported consistently from `mongoz` and `mongoz.exceptions`; exception
+  messages retain contextual fragments, and cardinality errors have useful defaults. Native
+  PyMongo errors remain unwrapped.
+- `Collection` is now a top-level export. `database.driver` and `collection.driver` are the
+  supported native PyMongo escape hatches alongside `registry.driver`; Registry ownership is
+  unchanged.
+- Invalid settings imports, base classes, values, and names now raise `ImproperlyConfigured` with
+  the original import or validation failure retained as the cause.
+- Public query and settings validation no longer depends on Python assertions and remains active
+  under `python -O`.
+- Nested embedded models and callable document defaults are normalized before serialization,
+  removing the remaining seven model-contract warnings without warning filters.
+
 - Instance `update()` and query updates now validate inherited fields and aliases and write only the
   requested patch. Unknown update keys raise `InvalidKeyError`; `save()` remains the explicit
   all-modeled-fields synchronization API. Acknowledged instance writes raise `DocumentNotFound`
@@ -51,6 +68,21 @@
 - Import-time index I/O from `autogenerate_index=True` is no longer performed because it would bind
   the reusable client to a temporary import-time loop. Run `await registry.document_checks()` in
   async application startup and `await registry.close()` during shutdown.
+
+### API compatibility before 1.0
+
+Mongoz remains pre-1.0, but public API corrections follow these rules:
+
+- Unsafe or internally contradictory behavior is fixed directly when the documented contract was
+  already clear. Rejecting synchronous signal receivers and preventing `run_sync()` retries are
+  bug fixes of this kind.
+- A valid public API that is renamed or replaced should keep a deprecated alias and an actionable
+  warning for a reasonable migration window before removal.
+- Corrections to private attributes or previously undocumented internals require migration notes,
+  not indefinite compatibility shims. Existing `_db` and `_collection` attributes remain usable in
+  this release, but new code should use `database.driver` and `collection.driver`.
+- Native PyMongo exceptions and results are compatibility boundaries and are not wrapped merely to
+  make Mongoz errors look uniform.
 
 ## 0.13.3
 

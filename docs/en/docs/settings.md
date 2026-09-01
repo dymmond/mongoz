@@ -42,6 +42,21 @@ has some which are used across the codebase and those can be overriden easily.
     Be careful when overriding the settings as you might break functionality. It is your own risk
     doing it.
 
+The environment value must be a dotted import path to a `MongozSettings` subclass. Settings are
+loaded only on first access. A missing import, a target with the wrong base class, an invalid
+Pydantic setting value, or an uppercase setting name raises `ImproperlyConfigured` with the
+configured path and retains the original import or validation error as its cause.
+
+```python
+from mongoz import ImproperlyConfigured, settings
+
+try:
+    operators = settings.operators
+except ImproperlyConfigured as error:
+    # Inspect ``error.__cause__`` for the original import or Pydantic validation failure.
+    raise
+```
+
 
 
 [esmerald_settings]: https://esmerald.dev/application/settings/

@@ -1316,12 +1316,8 @@ users = await User.query(Q.lte(User.id, 20)).all()
 
 ## Blocking Queries
 
-What happens if you want to use Mongoz with a blocking operation? So by blocking means `sync`.
-For instance, Flask does not support natively `async` and Mongoz is an async agnotic ODM and you
-probably would like to take advantage of Mongoz but you want without doing a lot of magic behind.
-
-Well, Mongoz also supports the `run_sync` functionality that allows you to run the queries in
-*blocking* mode with ease!
+Mongoz is async-first, but `run_sync()` can execute one awaitable from synchronous application code.
+It accepts coroutine objects and other awaitables such as a Mongoz manager.
 
 ### How to use
 
@@ -1331,9 +1327,7 @@ You simply need to use the `run_sync` functionality from Mongoz and make it happ
 from mongoz import run_sync
 ```
 
-All the available functionalities of Mongoz run within this wrapper without extra syntax.
-
-Let us see some examples.
+Pass an already-created awaitable to the wrapper:
 
 **Async mode**
 
@@ -1348,8 +1342,22 @@ await User.objects.create(name="Mongoz")
 ```python
 from mongoz import run_sync
 
-run_sync(User.objects.filter(name__icontains="example"))
+run_sync(User.objects.filter(name__icontains="example").all())
 run_sync(User.objects.create(name="Mongoz"))
 ```
+
+When no event loop is running in the calling thread, `run_sync()` uses `asyncio.run()` directly.
+When a loop is already running, it executes the awaitable once in a worker thread and blocks the
+caller until completion. Context variables are copied to that worker thread.
+
+Application exceptions, including `RuntimeError` and cancellation, propagate unchanged. Mongoz
+does not interpret an application `RuntimeError` as an event-loop error and never retries failed
+coroutine work. A coroutine object can still be awaited only once; passing an already-consumed
+coroutine raises Python's normal reuse error.
+
+!!! Warning
+    `run_sync()` is a blocking bridge, not a replacement for `await`. Prefer native async calls in
+    async applications; calling it from an event-loop thread blocks that thread while the worker
+    completes.
 
 [document]: ./documents.md

@@ -48,7 +48,7 @@ The `pre_save` is used when a document is about to be saved and triggered on `Do
 `Document.objects.create` functions.
 
 ```python
-pre_save(send: Type["Document"], instance: "Document")
+pre_save(sender: Type["Document"], instance: "Document")
 ```
 
 #### post_save
@@ -58,7 +58,7 @@ when an instance already exists after `save`. This signal is triggered on `Docum
 `Document.objects.create` functions.
 
 ```python
-post_save(send: Type["Document"], instance: "Document")
+post_save(sender: Type["Document"], instance: "Document")
 ```
 
 #### pre_update
@@ -67,7 +67,7 @@ The `pre_update` is used when a document is about to receive the updates and tri
 and `Document.objects.update` functions.
 
 ```python
-pre_update(send: Type["Document"], instance: "Document")
+pre_update(sender: Type["Document"], instance: "Document")
 ```
 
 #### post_update
@@ -76,7 +76,7 @@ The `post_update` is used when a document **already performed the updates** and 
 and `Document.objects.update` functions.
 
 ```python
-post_update(send: Type["Document"], instance: "Document")
+post_update(sender: Type["Document"], instance: "Document")
 ```
 
 #### pre_delete
@@ -85,16 +85,16 @@ The `pre_delete` is used when a document is about to be deleted and triggered on
 and `Document.objects.delete` functions.
 
 ```python
-pre_delete(send: Type["Document"], instance: "Document")
+pre_delete(sender: Type["Document"], instance: "Document")
 ```
 
 #### post_delete
 
-The `post_update` is used when a document **is already deleted** and triggered on `Document.delete()`
+The `post_delete` is used when a document **is already deleted** and triggered on `Document.delete()`
 and `Document.objects.delete` functions.
 
 ```python
-post_update(send: Type["Document"], instance: "Document")
+post_delete(sender: Type["Document"], instance: "Document")
 ```
 
 ## Receiver
@@ -132,7 +132,8 @@ When defining your function or `receiver` it must have the following requirement
 * Must be a **callable**.
 * Must have `sender` argument as first parameter which corresponds to the document of the sending object.
 * Must have ****kwargs** argument as parameter as each document can change at any given time.
-* Must be `async` because Mongoz document operations are awaited.
+* Must be declared with `async def`. Synchronous callables are rejected by `connect()` with
+  `SignalError` instead of failing later during dispatch.
 
 ### Multiple receivers
 
@@ -164,6 +165,16 @@ You can easily achieve this like this:
 ```
 
 This will make sure that every receiver will execute the given defined action.
+
+Receivers run sequentially in registration order. Registering the same receiver more than once is
+a no-op. `send()` returns `None`; if a receiver raises, Mongoz propagates that exception unchanged
+and does not run later receivers. Cancelling dispatch cancels the active receiver and likewise
+prevents later receivers from starting. This fail-fast ordering keeps document lifecycle hooks
+deterministic.
+
+Signals keep strong references to connected receivers. Keep the return value from `disconnect()`
+when you need to know whether a receiver was present: it returns `True` when removal occurred and
+`False` when the receiver was not connected.
 
 
 ### Disconnecting receivers
@@ -200,9 +211,11 @@ So define it, you can simply do:
 Yes, this simple. You simply need to add a new signal `on_verify` to the document signals and the
 `User` document from now on has a new signal ready to be used.
 
-!!! Danger
-    Keep in mind **signals are class level type**, which means it will affect all of the derived
-    instances coming from it. Be mindful when creating a custom signal and its impacts.
+!!! Note
+    Signals belong to one document class and are shared by that class's instances. Abstract
+    documents, concrete children, and sibling documents each receive an independent signal
+    namespace. Connecting a receiver or creating a custom signal on one document does not mutate
+    another document's registry; connect explicitly to every sender that should emit it.
 
 Now you want to create a custom functionality to be listened in your new Signal.
 

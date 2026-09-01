@@ -38,7 +38,7 @@ registry = Registry(url="mongodb://localhost:27017")
 
 try:
     database = registry.get_database("my_db")
-    await database._db.command("ping")
+    await database.driver.command("ping")
 finally:
     await registry.close()
 ```
@@ -48,11 +48,28 @@ For bounded work, use the async context manager:
 ```python
 async with Registry(url="mongodb://localhost:27017") as registry:
     database = registry.get_database("my_db")
-    await database._db.command("ping")
+    await database.driver.command("ping")
 ```
 
 `registry.driver` exposes the registry-owned native PyMongo `AsyncMongoClient`. Its lifecycle still
 belongs to the Registry; use `registry.close()` for cleanup.
+
+`database.driver` and `collection.driver` expose the corresponding native PyMongo
+`AsyncDatabase` and `AsyncCollection`. `Collection` is also available from the top-level package:
+
+```python
+from mongoz import Collection, Registry
+
+registry = Registry(url="mongodb://localhost:27017")
+database = registry.get_database("my_db")
+collection: Collection = database.get_collection("users")
+
+await collection.driver.create_index("email", unique=True)
+```
+
+These are explicit escape hatches, not ownership transfers. Closing any wrapper directly is not
+required; `Registry.close()` remains the single lifecycle owner. Obtaining a native database or
+collection does not make it valid after its Registry has been closed.
 
 ## Sessions and transactions
 
