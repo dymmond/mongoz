@@ -10,7 +10,6 @@
   <a href="https://github.com/dymmond/mongoz/actions/workflows/test-suite.yml"><img src="https://github.com/dymmond/mongoz/actions/workflows/test-suite.yml/badge.svg?event=push&branch=main" alt="Test Suite"></a>
   <a href="https://pypi.org/project/mongoz"><img src="https://img.shields.io/pypi/v/mongoz?color=%234b4fd8&label=pypi%20package" alt="Package version"></a>
   <a href="https://pypi.org/project/mongoz"><img src="https://img.shields.io/pypi/pyversions/mongoz.svg?color=%23087f9d" alt="Supported Python versions"></a>
-  <a href="https://codspeed.io/dymmond/mongoz?utm_source=badge"><img src="https://img.shields.io/endpoint?url=https://codspeed.io/badge/dymmond/mongoz" alt="CodSpeed"></a>
 </p>
 
 Mongoz is an asynchronous object-document mapper for MongoDB, built on native
