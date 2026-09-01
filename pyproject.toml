@@ -62,6 +62,7 @@ testing = [
     "pydantic-settings==2.15.0",
     "pymongo==4.17.0",
     "pytest==9.1.1",
+    "pytest-codspeed>=4.3.0",
     "pytest-cov==7.1.0",
     "ravyn[standard]==0.4.1",
     "tomli>=2.0.0; python_version < '3.11'",
@@ -235,6 +236,9 @@ ignore_errors = true
 addopts = ["--strict-config", "--strict-markers"]
 xfail_strict = true
 junit_family = "xunit2"
+markers = [
+    "benchmark: mark a test as a CodSpeed benchmark",
+]
 
 [tool.hatch.build.targets.sdist]
 include = ["/mongoz"]
