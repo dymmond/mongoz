@@ -61,6 +61,8 @@ class DocumentRow(MongozBaseModel):
             model = cast(T, cls.proxy_document(**item))
             model._mongoz_collection = from_collection
             return model
+        elif not any(settings.lookup_prefix in column for column in row):
+            item = {cls.validate_id_field(column): value for column, value in row.items()}
         else:
             for column, value in row.items():
                 column = cls.validate_id_field(column)

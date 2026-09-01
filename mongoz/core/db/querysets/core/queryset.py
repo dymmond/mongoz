@@ -17,6 +17,7 @@ from typing import (
 
 import bson
 from bson import Code
+from pymongo.asynchronous.cursor import AsyncCursor
 from typing_extensions import Literal, Self
 
 from mongoz.core.db.datastructures import Order
@@ -148,13 +149,34 @@ class BaseQuerySet(SessionBoundQuery, Generic[T]):
 
 
 class QuerySet(BaseQuerySet[T]):
-    async def __aiter__(self) -> AsyncGenerator[T, None]:
+    def _cursor(self) -> AsyncCursor[Dict[str, Any]]:
+        """Build the canonical native cursor for this immutable query state."""
         filter_query = Expression.compile_many(self._filter)
         cursor = self._collection.find(filter_query, **self._driver_options)
 
+        if self._sort:
+            cursor = cursor.sort([expr.compile() for expr in self._sort])
+        if self._skip_count:
+            cursor = cursor.skip(self._skip_count)
+        if self._limit_count:
+            cursor = cursor.limit(self._limit_count)
+        return cursor
+
+    async def __aiter__(self) -> AsyncGenerator[T, None]:
+        cursor = self._cursor()
+        is_only_fields = bool(self._only_fields)
+        is_defer_fields = bool(self._defer_fields)
+
         async with closing_cursor(cursor):
             async for document in cursor:
-                yield self.model_class.from_row(document, from_collection=self._collection)
+                yield self.model_class.from_row(
+                    document,
+                    is_only_fields=is_only_fields,
+                    only_fields=self._only_fields,
+                    is_defer_fields=is_defer_fields,
+                    defer_fields=self._defer_fields,
+                    from_collection=self._collection,
+                )
 
     async def none(self) -> "QuerySet[T]":
         """
@@ -168,18 +190,7 @@ class QuerySet(BaseQuerySet[T]):
         """
         Returns all the results for a given collection of a document
         """
-        filter_query = Expression.compile_many(self._filter)
-        cursor = self._collection.find(filter_query, **self._driver_options)
-
-        if self._sort:
-            sort_query = [expr.compile() for expr in self._sort]
-            cursor = cursor.sort(sort_query)
-
-        if self._skip_count:
-            cursor = cursor.skip(self._skip_count)
-
-        if self._limit_count:
-            cursor = cursor.limit(self._limit_count)
+        cursor = self._cursor()
 
         # For only fields
         is_only_fields = True if self._only_fields else False
@@ -226,13 +237,22 @@ class QuerySet(BaseQuerySet[T]):
         return objects[0]
 
     async def last(self) -> Union[T, None]:
-        """
-        Returns the last document of a matching criteria.
-        """
-        objects = await self.all()
-        if not objects:
+        """Return the last result while retaining at most one raw row."""
+        cursor = self._cursor()
+        last_document: Union[Dict[str, Any], None] = None
+        async with closing_cursor(cursor):
+            async for document in cursor:
+                last_document = document
+        if last_document is None:
             return None
-        return objects[-1]
+        return self.model_class.from_row(
+            last_document,
+            is_only_fields=bool(self._only_fields),
+            only_fields=self._only_fields,
+            is_defer_fields=bool(self._defer_fields),
+            defer_fields=self._defer_fields,
+            from_collection=self._collection,
+        )
 
     async def get(self) -> T:
         objects: List[T] = await self.limit(2).all()

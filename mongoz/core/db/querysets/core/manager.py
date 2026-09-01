@@ -20,6 +20,7 @@ from typing import (
 import bson
 from bson import Code
 from pymongo.asynchronous.collection import AsyncCollection
+from pymongo.asynchronous.command_cursor import AsyncCommandCursor
 from typing_extensions import Literal, Self
 
 from mongoz import settings
@@ -494,13 +495,40 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
         manager._filter.append(Expression("$expr", "$eq", [1, 0]))
         return manager
 
-    async def __aiter__(self) -> AsyncGenerator[T, None]:
+    def _pipeline(self) -> List[Any]:
+        """Build the canonical aggregation pipeline for this immutable query state."""
         filter_query = Expression.compile_many(self._filter)
-        cursor = self._collection.find(filter_query, **self._driver_options)
+        pipeline: List[Any] = []
+        if self._lookup_queries:
+            pipeline.extend(self._lookup_queries)
+        if filter_query:
+            pipeline.append({"$match": filter_query})
+        if self._sort:
+            pipeline.append({"$sort": {expr.key: expr.direction for expr in self._sort}})
+        if self._skip_count:
+            pipeline.append({"$skip": self._skip_count})
+        if self._limit_count:
+            pipeline.append({"$limit": self._limit_count})
+        return pipeline
+
+    async def _cursor(self) -> AsyncCommandCursor[Dict[str, Any]]:
+        return await self._collection.aggregate(self._pipeline(), **self._driver_options)
+
+    async def __aiter__(self) -> AsyncGenerator[T, None]:
+        cursor = await self._cursor()
+        is_only_fields = bool(self._only_fields)
+        is_defer_fields = bool(self._defer_fields)
 
         async with closing_cursor(cursor):
             async for document in cursor:
-                yield self.model_class.from_row(document, from_collection=self._collection)
+                yield self.model_class.from_row(
+                    document,
+                    is_only_fields=is_only_fields,
+                    only_fields=self._only_fields,
+                    is_defer_fields=is_defer_fields,
+                    defer_fields=self._defer_fields,
+                    from_collection=self._collection,
+                )
 
     def __await__(
         self,
@@ -512,33 +540,7 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
         Returns all the results for a given collection of a document
         """
         manager = self.clone()
-
-        filter_query = Expression.compile_many(manager._filter)
-
-        pipeline: List[Any] = []
-
-        # Add lookup stages (if any)
-        if manager._lookup_queries:
-            pipeline.extend(manager._lookup_queries)  # list of lookup dicts
-
-        # Initial filter (same as find)
-        if filter_query:
-            pipeline.append({"$match": filter_query})
-
-        # Sorting
-        if manager._sort:
-            sort_query = {expr.key: expr.direction for expr in manager._sort}
-            pipeline.append({"$sort": sort_query})
-
-        # Pagination
-        if manager._skip_count:
-            pipeline.append({"$skip": manager._skip_count})
-
-        if manager._limit_count:
-            pipeline.append({"$limit": manager._limit_count})
-
-        # Execute aggregation
-        cursor = await manager._collection.aggregate(pipeline, **manager._driver_options)
+        cursor = await manager._cursor()
 
         # For only fields
         is_only_fields = True if manager._only_fields else False
@@ -598,14 +600,23 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
         return objects[0]
 
     async def last(self) -> Union[T, None]:
-        """
-        Returns the last document of a matching criteria.
-        """
+        """Return the last result while retaining at most one raw row."""
         manager = self.clone()
-        objects = await manager._all()
-        if not objects:
+        cursor = await manager._cursor()
+        last_document: Union[Dict[str, Any], None] = None
+        async with closing_cursor(cursor):
+            async for document in cursor:
+                last_document = document
+        if last_document is None:
             return None
-        return objects[-1]
+        return manager.model_class.from_row(
+            last_document,
+            is_only_fields=bool(manager._only_fields),
+            only_fields=manager._only_fields,
+            is_defer_fields=bool(manager._defer_fields),
+            defer_fields=manager._defer_fields,
+            from_collection=manager._collection,
+        )
 
     async def get(self, **kwargs: Any) -> T:
         """

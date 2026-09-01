@@ -4,9 +4,7 @@ import pytest
 
 from mongoz.core.connection.registry import Registry
 
-database_uri = os.environ.get(
-    "DATABASE_URI", "mongodb://root:mongoadmin@localhost:27017"
-)
+database_uri = os.environ.get("DATABASE_URI", "mongodb://root:mongoadmin@localhost:27017")
 client = Registry(database_uri)
 
 

@@ -1,119 +1,78 @@
-"""Benchmarks for Expression compilation and Q operator construction."""
+"""Regression benchmarks for immutable query and expression construction."""
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
+from benchmarks.test_bench_documents import Movie, measure
+from mongoz.core.db.datastructures import Order
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.core.db.querysets.operators import Q
 from mongoz.utils.enums import ExpressionOperator
 
 
-@pytest.mark.benchmark
-def test_bench_expression_compile_eq():
-    """Benchmark compiling a simple equality expression."""
-    expr = Expression(key="name", operator=ExpressionOperator.EQUAL, value="test")
-    for _ in range(100):
-        expr.compile()
+@pytest.mark.benchmark(group="expression")
+def test_bench_expression_compile_eq(benchmark: Any) -> None:
+    expression = Expression("name", ExpressionOperator.EQUAL, "test")
+    measure(benchmark, expression.compile)
 
 
-@pytest.mark.benchmark
-def test_bench_expression_compile_regex():
-    """Benchmark compiling a regex expression."""
-    expr = Expression(
-        key="name", operator=ExpressionOperator.PATTERN, value="test.*pattern"
-    )
-    for _ in range(100):
-        expr.compile()
+@pytest.mark.benchmark(group="expression")
+def test_bench_expression_compile_regex(benchmark: Any) -> None:
+    expression = Expression("name", ExpressionOperator.PATTERN, "test.*pattern")
+    measure(benchmark, expression.compile)
 
 
-@pytest.mark.benchmark
-def test_bench_expression_compile_startswith():
-    """Benchmark compiling a startswith expression."""
-    expr = Expression(
-        key="name", operator=ExpressionOperator.STARTSWITH, value="prefix"
-    )
-    for _ in range(100):
-        expr.compile()
+@pytest.mark.benchmark(group="expression")
+def test_bench_expression_compile_startswith(benchmark: Any) -> None:
+    expression = Expression("name", ExpressionOperator.STARTSWITH, "prefix.*")
+    measure(benchmark, expression.compile)
 
 
-@pytest.mark.benchmark
-def test_bench_expression_compile_many():
-    """Benchmark compiling multiple expressions at once."""
+@pytest.mark.benchmark(group="expression")
+def test_bench_expression_compile_many(benchmark: Any) -> None:
     expressions = [
-        Expression(key="name", operator=ExpressionOperator.EQUAL, value="test"),
-        Expression(key="age", operator=ExpressionOperator.GREATER_THAN, value=18),
-        Expression(key="year", operator=ExpressionOperator.LESS_THAN, value=2024),
-        Expression(
-            key="email", operator=ExpressionOperator.PATTERN, value=".*@example.com"
-        ),
-        Expression(
-            key="status", operator=ExpressionOperator.IN, value=["active", "pending"]
-        ),
+        Expression("name", ExpressionOperator.EQUAL, "test"),
+        Expression("age", ExpressionOperator.GREATER_THAN, 18),
+        Expression("year", ExpressionOperator.LESS_THAN, 2024),
+        Expression("email", ExpressionOperator.PATTERN, ".*@example.com"),
+        Expression("status", ExpressionOperator.IN, ["active", "pending"]),
     ]
-    for _ in range(100):
-        Expression.compile_many(expressions)
+    measure(benchmark, lambda: Expression.compile_many(expressions))
 
 
-@pytest.mark.benchmark
-def test_bench_expression_unpack():
-    """Benchmark unpacking a dictionary into expressions."""
-    d = {
-        "name": "test",
-        "year": {"$gt": 1990, "$lt": 2024},
-        "status": "active",
-    }
-    for _ in range(100):
-        Expression.unpack(d)
+@pytest.mark.benchmark(group="expression")
+def test_bench_expression_unpack(benchmark: Any) -> None:
+    query = {"name": "test", "year": {"$gt": 1990, "$lt": 2024}, "status": "active"}
+    measure(benchmark, lambda: Expression.unpack(query))
 
 
-@pytest.mark.benchmark
-def test_bench_q_operator_construction():
-    """Benchmark constructing Q operator expressions."""
-    for _ in range(100):
-        Q.eq("name", "test")
-        Q.neq("status", "inactive")
-        Q.gt("age", 18)
-        Q.lt("year", 2024)
-        Q.gte("score", 80)
-        Q.lte("price", 100.0)
+@pytest.mark.benchmark(group="query-construction")
+def test_bench_q_operator_construction(benchmark: Any) -> None:
+    measure(benchmark, lambda: Q.gt("age", 18))
 
 
-@pytest.mark.benchmark
-def test_bench_q_in_operator():
-    """Benchmark constructing Q in/not_in expressions."""
-    values = ["active", "pending", "approved", "rejected"]
-    for _ in range(100):
-        Q.in_("status", values)
-        Q.not_in("status", values)
+@pytest.mark.benchmark(group="query-construction")
+def test_bench_q_logical_operators(benchmark: Any) -> None:
+    expressions = [Q.eq("name", "test"), Q.gt("age", 18), Q.lt("year", 2024)]
+    measure(benchmark, lambda: Q.and_(*expressions))
 
 
-@pytest.mark.benchmark
-def test_bench_q_logical_operators():
-    """Benchmark constructing logical Q operators (and, or, nor)."""
-    expr1 = Q.eq("name", "test")
-    expr2 = Q.gt("age", 18)
-    expr3 = Q.lt("year", 2024)
-    for _ in range(100):
-        Q.and_(expr1, expr2, expr3)
-        Q.or_(expr1, expr2, expr3)
+@pytest.mark.benchmark(group="query-construction")
+def test_bench_sort_expression_compile(benchmark: Any) -> None:
+    expression = SortExpression("name", Order.ASCENDING)
+    measure(benchmark, expression.compile)
 
 
-@pytest.mark.benchmark
-def test_bench_q_ordering():
-    """Benchmark constructing ordering expressions."""
-    for _ in range(100):
-        Q.asc("name")
-        Q.desc("created_at")
-        Q.asc("year")
-        Q.desc("score")
+@pytest.mark.benchmark(group="query-construction")
+def test_bench_manager_query_clone(benchmark: Any) -> None:
+    query = Movie.objects.filter(year__gte=2020).sort("year")
+    measure(benchmark, lambda: query.filter(name="Benchmark Movie"))
 
 
-@pytest.mark.benchmark
-def test_bench_sort_expression_compile():
-    """Benchmark compiling sort expressions."""
-    from mongoz.core.db.datastructures import Order
-
-    sort_expr = SortExpression(key="name", direction=Order.ASCENDING)
-    for _ in range(100):
-        sort_expr.compile()
+@pytest.mark.benchmark(group="query-construction")
+def test_bench_queryset_query_clone(benchmark: Any) -> None:
+    query = Movie.query(Movie.year >= 2020).sort("year")
+    measure(benchmark, lambda: query.query(Movie.name == "Benchmark Movie"))

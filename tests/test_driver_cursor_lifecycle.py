@@ -2,6 +2,7 @@ import asyncio
 from typing import Any, Dict, List
 
 import pytest
+from pymongo.errors import ConnectionFailure
 
 from mongoz.core.db.querysets.core.manager import Manager
 from mongoz.core.db.querysets.core.queryset import QuerySet
@@ -25,12 +26,27 @@ class RecordingCursor:
         documents: List[Dict[str, Any]],
         block: bool = False,
         close_error: BaseException | None = None,
+        terminal_error: BaseException | None = None,
     ) -> None:
         self.documents = iter(documents)
         self.block = block
         self.close_error = close_error
+        self.terminal_error = terminal_error
         self.started = asyncio.Event()
         self.close_count = 0
+        self.modifiers: List[tuple[str, Any]] = []
+
+    def sort(self, value: Any) -> "RecordingCursor":
+        self.modifiers.append(("sort", value))
+        return self
+
+    def skip(self, value: int) -> "RecordingCursor":
+        self.modifiers.append(("skip", value))
+        return self
+
+    def limit(self, value: int) -> "RecordingCursor":
+        self.modifiers.append(("limit", value))
+        return self
 
     def __aiter__(self) -> "RecordingCursor":
         return self
@@ -42,6 +58,10 @@ class RecordingCursor:
         try:
             return next(self.documents)
         except StopIteration as exc:
+            if self.terminal_error is not None:
+                terminal_error = self.terminal_error
+                self.terminal_error = None
+                raise terminal_error from exc
             raise StopAsyncIteration from exc
 
     async def close(self) -> None:
@@ -93,20 +113,20 @@ def make_queryset(collection: Any) -> QuerySet:
 
 async def test_find_returns_cursor_without_await_and_early_close_releases_it() -> None:
     cursor = RecordingCursor([{"value": 1}, {"value": 2}])
-    collection = FindCollection(cursor)
+    collection = AggregateCollection(cursor)
     iterator = make_manager(collection).__aiter__()
 
     document = await anext(iterator)
     await iterator.aclose()
 
     assert document.values == {"value": 1}
-    assert collection.filters == [{"filter": {}}]
+    assert collection.pipelines == [[{"__options__": {}}]]
     assert cursor.close_count == 1
 
 
 async def test_cursor_cancellation_is_not_swallowed_and_releases_cursor() -> None:
     cursor = RecordingCursor([], block=True)
-    manager = make_manager(FindCollection(cursor))
+    manager = make_manager(AggregateCollection(cursor))
 
     async def consume() -> None:
         async for _ in manager:
@@ -241,3 +261,79 @@ async def test_queryset_propagates_session_to_find() -> None:
     await make_queryset(collection).using_session(session).all()
 
     assert collection.filters == [{"filter": {}, "session": session}]
+
+
+async def test_manager_iteration_preserves_pipeline_modifiers() -> None:
+    cursor = RecordingCursor([{"value": 1}])
+    collection = AggregateCollection(cursor)
+    manager = make_manager(collection).sort("value").skip(2).limit(3)
+
+    documents = [document async for document in manager]
+
+    assert [document.values for document in documents] == [{"value": 1}]
+    assert collection.pipelines == [
+        [
+            {"$sort": {"value": 1}},
+            {"$skip": 2},
+            {"$limit": 3},
+            {"__options__": {}},
+        ]
+    ]
+    assert cursor.close_count == 1
+
+
+async def test_queryset_iteration_preserves_cursor_modifiers() -> None:
+    cursor = RecordingCursor([{"value": 1}])
+    collection = FindCollection(cursor)
+    queryset = make_queryset(collection).sort("value").skip(2).limit(3)
+
+    documents = [document async for document in queryset]
+
+    assert [document.values for document in documents] == [{"value": 1}]
+    assert cursor.modifiers == [
+        ("sort", [("value", 1)]),
+        ("skip", 2),
+        ("limit", 3),
+    ]
+    assert cursor.close_count == 1
+
+
+async def test_last_hydrates_only_the_final_row() -> None:
+    class CountingDocument(DummyDocument):
+        hydrated = 0
+
+        @classmethod
+        def from_row(cls, row: Dict[str, Any], **kwargs: Any) -> "CountingDocument":
+            cls.hydrated += 1
+            return cls(**row)
+
+    manager = make_manager(
+        AggregateCollection(RecordingCursor([{"value": 1}, {"value": 2}, {"value": 3}]))
+    )
+    manager.model_class = CountingDocument
+
+    document = await manager.last()
+
+    assert document is not None
+    assert document.values == {"value": 3}
+    assert CountingDocument.hydrated == 1
+
+
+async def test_midstream_driver_failure_is_preserved_and_next_cursor_is_reusable() -> None:
+    failure = ConnectionFailure("cursor connection lost")
+    first_cursor = RecordingCursor([{"value": 1}], terminal_error=failure)
+    collection = AggregateCollection(first_cursor)
+    manager = make_manager(collection)
+
+    with pytest.raises(ConnectionFailure, match="cursor connection lost") as raised:
+        await manager._all()
+
+    assert raised.value is failure
+    assert first_cursor.close_count == 1
+
+    second_cursor = RecordingCursor([{"value": 2}])
+    collection.cursor = second_cursor
+    documents = await manager._all()
+
+    assert [document.values for document in documents] == [{"value": 2}]
+    assert second_cursor.close_count == 1
