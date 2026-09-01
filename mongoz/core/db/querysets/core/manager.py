@@ -18,7 +18,6 @@ from typing import (
 )
 
 import bson
-import pydantic
 from bson import Code
 from pymongo.asynchronous.collection import AsyncCollection
 from typing_extensions import Literal, Self
@@ -181,6 +180,9 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
             if id_field is None or id_field.pydantic_field.alias is None:
                 return "_id"
             return id_field.pydantic_field.alias
+        model_field = self.model_class.model_fields.get(key)
+        if model_field is not None and model_field.alias is not None:
+            return model_field.alias
         return key
 
     def filter_only_and_defer(self, *fields: str, is_only: bool = False) -> Self:
@@ -497,7 +499,7 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
 
         async with closing_cursor(cursor):
             async for document in cursor:
-                yield self.model_class(**document)
+                yield self.model_class.from_row(document, from_collection=self._collection)
 
     def __await__(
         self,
@@ -636,31 +638,16 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
         return objects[0]
 
     async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
+        from mongoz.core.db.documents.persistence import get_or_create_document
+
         manager = self.clone()
-        if not defaults:
-            defaults = {}
-
-        data = {expression.key: expression.value for expression in manager._filter}
-        defaults = {
-            (key if isinstance(key, str) else key._name): value for key, value in defaults.items()
-        }
-
-        try:
-            values = {**defaults, **data}
-            manager.model_class(**values)
-        except ValueError as e:
-            raise e
-
-        model = await manager._collection.find_one_and_update(
-            data,
-            {"$setOnInsert": values},
-            upsert=True,
-            return_document=True,
-            **manager._driver_options,
+        return await get_or_create_document(
+            manager.model_class,
+            manager._collection,
+            manager._filter,
+            defaults or {},
+            manager._driver_options,
         )
-        if model is None:
-            raise DocumentNotFound()
-        return manager.model_class(**model)
 
     async def distinct_values(self, key: str) -> List[Any]:
         """
@@ -701,34 +688,24 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
         """
         Updates many documents (bulk update)
         """
-        from mongoz.core.db.documents._internal import create_validation_model
+        from mongoz.core.db.documents.persistence import patch_many
 
         manager = self.clone()
-
-        field_definitions: Dict[str, tuple[Any, Any]] = {
-            name: (annotations, ...)
-            for name, annotations in manager.model_class.__annotations__.items()
-            if name in kwargs
-        }
-
-        if field_definitions:
-            pydantic_model: Type[pydantic.BaseModel] = create_validation_model(
-                manager.model_class.__name__, field_definitions
-            )
-            model = pydantic_model.model_validate(kwargs)
-            values = model.model_dump()
-
-            filter_query = Expression.compile_many(manager._filter)
-            await manager._collection.update_many(
-                filter_query, {"$set": values}, **manager._driver_options
-            )
-
-            _filter = [
-                expression for expression in manager._filter if expression.key not in values
-            ]
-            _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
-
-            manager._filter = _filter
+        if not kwargs:
+            return await manager._all()
+        update, identifiers = await patch_many(
+            manager.model_class,
+            manager._collection,
+            manager._filter,
+            kwargs,
+            manager._driver_options,
+        )
+        if not identifiers:
+            return []
+        manager._filter = [Expression("_id", "$in", identifiers)]
+        manager._filter.extend(
+            Expression(name, "$eq", value) for name, value in update.storage.items()
+        )
         return await manager._all()
 
     async def create_many(self, models: List[T]) -> List[T]:

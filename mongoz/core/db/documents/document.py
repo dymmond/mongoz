@@ -8,6 +8,7 @@ from typing import (
     Dict,
     List,
     Mapping,
+    Sequence,
     Tuple,
     Type,
     TypeVar,
@@ -17,8 +18,10 @@ from typing import (
 import bson
 import pydantic
 from bson.errors import InvalidId
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 from pymongo.asynchronous.collection import AsyncCollection
+from pymongo.operations import DeleteMany, DeleteOne, InsertOne, ReplaceOne, UpdateMany, UpdateOne
+from pymongo.results import BulkWriteResult
 from typing_extensions import Self
 
 if TYPE_CHECKING:
@@ -26,9 +29,14 @@ if TYPE_CHECKING:
 
 from mongoz.core.connection.collections import Collection
 from mongoz.core.connection.database import Database
-from mongoz.core.db.documents._internal import create_validation_model
 from mongoz.core.db.documents.document_row import DocumentRow
+from mongoz.core.db.documents.indexes import (
+    IndexPlan,
+    execute_index_plan,
+    plan_indexes as build_index_plan,
+)
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
+from mongoz.core.db.documents.persistence import dump_document, validate_update_values
 from mongoz.core.db.fields.base import MongozField
 from mongoz.core.db.querysets.base import Manager
 from mongoz.core.utils.cursors import closing_cursor
@@ -37,6 +45,14 @@ from mongoz.exceptions import InvalidKeyError, MongozException
 from mongoz.utils.mixins import is_operation_allowed
 
 T = TypeVar("T", bound="Document")
+WriteOperation = Union[
+    InsertOne[Dict[str, Any]],
+    DeleteOne,
+    DeleteMany,
+    ReplaceOne[Dict[str, Any]],
+    UpdateOne,
+    UpdateMany,
+]
 
 
 class Document(DocumentRow):
@@ -45,6 +61,7 @@ class Document(DocumentRow):
     """
 
     objects: ClassVar[Manager[Self]] = Manager()
+    _mongoz_collection: Union[AsyncCollection, None] = PrivateAttr(default=None)
 
     async def create(
         self: T,
@@ -59,10 +76,11 @@ class Document(DocumentRow):
 
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
-        data = self.model_dump(exclude={"id"})
+        data = dump_document(self)
         collection = type(self).get_collection(collection)
         result = await collection.insert_one(data, session=session)
         self.id = result.inserted_id
+        self._mongoz_collection = collection
 
         await self.signals.post_save.send(sender=self.__class__, instance=self)
         return self
@@ -74,37 +92,24 @@ class Document(DocumentRow):
         session: Union["AsyncClientSession", None] = None,
         **kwargs: Any,
     ) -> T:
-        """
-        Updates a record on an instance level.
-        """
+        """Atomically patch the supplied model fields on this persisted document."""
+        is_operation_allowed(self)
         if collection is None:
-            if isinstance(self.meta.from_collection, AsyncCollection):
-                collection = self.meta.from_collection
+            instance_collection = getattr(self, "_mongoz_collection", None)
+            if isinstance(instance_collection, AsyncCollection):
+                collection = instance_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection._collection
-        field_definitions: Dict[str, Tuple[Any, Any]] = {
-            name: (annotations, ...)
-            for name, annotations in self.__annotations__.items()
-            if name in kwargs
-        }
-        if field_definitions:
-            pydantic_model: Type[BaseModel] = create_validation_model(
-                self.__class__.__name__, field_definitions
-            )
-            model = pydantic_model.model_validate(kwargs)
-            values = model.model_dump()
+        if not kwargs:
+            return self
 
-            # Model data
-            data = self.model_dump(exclude={"id": "_id"})
-            data.update(values)
-
-            await self.signals.pre_update.send(sender=self.__class__, instance=self)
-            assert collection is not None
-            await collection.update_one({"_id": self.id}, {"$set": data}, session=session)
-            await self.signals.post_update.send(sender=self.__class__, instance=self)
-
-            for k, v in data.items():
-                setattr(self, k, v)
+        values = validate_update_values(type(self), kwargs)
+        await self.signals.pre_update.send(sender=self.__class__, instance=self)
+        collection = type(self).get_collection(collection)
+        await collection.update_one({"_id": self.id}, {"$set": values.storage}, session=session)
+        for field_name, value in values.attributes.items():
+            setattr(self, field_name, value)
+        await self.signals.post_update.send(sender=self.__class__, instance=self)
         return self
 
     @classmethod
@@ -123,7 +128,7 @@ class Document(DocumentRow):
         if not all(isinstance(model, cls) for model in models):
             raise TypeError(f"All models must be of type {cls.__name__}")
 
-        data = (model.model_dump(exclude={"id"}) for model in models)
+        data = (dump_document(model) for model in models)
         if isinstance(collection, Collection):
             results = await collection._collection.insert_many(data, session=session)
         elif isinstance(collection, AsyncCollection):
@@ -132,7 +137,40 @@ class Document(DocumentRow):
             results = await cls.get_collection().insert_many(data, session=session)
         for model, inserted_id in zip(models, results.inserted_ids, strict=True):
             model.id = inserted_id
+            model._mongoz_collection = cls.get_collection(collection)
         return models
+
+    @classmethod
+    async def aggregate(
+        cls,
+        pipeline: Sequence[Mapping[str, Any]],
+        collection: Union[Collection, AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
+        **kwargs: Any,
+    ) -> List[Mapping[str, Any]]:
+        """Run a native MongoDB pipeline and materialize its results safely."""
+        is_operation_allowed(cls)
+        cursor = await cls.get_collection(collection).aggregate(
+            pipeline, session=session, **kwargs
+        )
+        async with closing_cursor(cursor):
+            return [document async for document in cursor]
+
+    @classmethod
+    async def bulk_write(
+        cls,
+        requests: Sequence[WriteOperation],
+        collection: Union[Collection, AsyncCollection, None] = None,
+        *,
+        ordered: bool = True,
+        session: Union["AsyncClientSession", None] = None,
+    ) -> BulkWriteResult:
+        """Execute PyMongo collection-level write models without translating results/errors."""
+        is_operation_allowed(cls)
+        return await cls.get_collection(collection).bulk_write(
+            requests, ordered=ordered, session=session
+        )
 
     @classmethod
     def get_collection(
@@ -154,6 +192,8 @@ class Document(DocumentRow):
         cls,
         name: str,
         collection: Union[Collection, AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
     ) -> str:
         """
         Creates an index from the list of indexes of the Meta object.
@@ -162,41 +202,30 @@ class Document(DocumentRow):
 
         for index in cls.meta.indexes:
             if index.name == name:
-                if isinstance(collection, Collection):
-                    await collection._collection.create_indexes([index])
-                elif isinstance(collection, AsyncCollection):
-                    await collection.create_indexes([index])
-                else:
-                    await cls.get_collection().create_indexes([index])
+                await cls.get_collection(collection).create_indexes([index], session=session)
                 return index.name
         raise InvalidKeyError(f"Unable to find index: {name}")
 
     @classmethod
     async def create_indexes(
-        cls, collection: Union[Collection, AsyncCollection, None] = None
+        cls,
+        collection: Union[Collection, AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
     ) -> List[str]:
-        """
-        Create indexes defined for the collection or drop for existing ones.
-
-        This method creates indexes defined for the collection associated with the document class.
-        It checks if the operation is allowed for the class and then creates the indexes using the
-        `create_indexes` method of the collection.
-
-        Returns:
-            A list of strings representing the names of the created indexes.
-
-        """
+        """Create missing declared indexes without performing destructive reconciliation."""
         is_operation_allowed(cls)
-        if isinstance(collection, Collection):
-            return await collection._collection.create_indexes(cls.meta.indexes)  # noqa
-        elif isinstance(collection, AsyncCollection):
-            return await collection.create_indexes(cls.meta.indexes)
-        else:
-            return await cls.get_collection().create_indexes(cls.meta.indexes)
+        target = cls.get_collection(collection)
+        plan = await cls.plan_indexes(target, session=session)
+        await execute_index_plan(target, plan, session=session)
+        return [index.name for index in cls.meta.indexes]
 
     @classmethod
     async def create_indexes_for_multiple_databases(
-        cls, database_names: Union[List[str], Tuple[str]]
+        cls,
+        database_names: Union[List[str], Tuple[str]],
+        *,
+        session: Union["AsyncClientSession", None] = None,
     ) -> None:
         """
         Create indexes for multiple databases.
@@ -237,11 +266,14 @@ class Document(DocumentRow):
                 raise RuntimeError(f"Document {cls.__name__} has incomplete database metadata")
             database = cls.meta.registry.get_database(database_name)
             collection = database.get_collection(cls.meta.collection.name)
-            await collection._collection.create_indexes(cls.meta.indexes)
+            await cls.create_indexes(collection._collection, session=session)
 
     @classmethod
     async def drop_indexes_for_multiple_databases(
-        cls, database_names: Union[List[str], Tuple[str]]
+        cls,
+        database_names: Union[List[str], Tuple[str]],
+        *,
+        session: Union["AsyncClientSession", None] = None,
     ) -> None:
         """
         Drops indexes for multiple databases.
@@ -279,11 +311,14 @@ class Document(DocumentRow):
                 raise RuntimeError(f"Document {cls.__name__} has incomplete database metadata")
             database = cls.meta.registry.get_database(database_name)
             collection = database.get_collection(cls.meta.collection.name)
-            await cls.check_indexes(force_drop=True, collection=collection._collection)
+            await cls.drop_indexes(collection=collection._collection, session=session)
 
     @classmethod
     async def list_indexes(
-        cls, collection: Union[Collection, AsyncCollection, None] = None
+        cls,
+        collection: Union[Collection, AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
     ) -> List[Mapping[str, Any]]:
         """
         List all indexes in the collection.
@@ -306,63 +341,43 @@ class Document(DocumentRow):
         else:
             collection = cls.get_collection()
 
-        cursor = await collection.list_indexes()
+        cursor = await collection.list_indexes(session=session)
         async with closing_cursor(cursor):
             async for index in cursor:
                 collection_indexes.append(index)
         return collection_indexes
 
     @classmethod
+    async def plan_indexes(
+        cls,
+        collection: Union[Collection, AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
+    ) -> IndexPlan:
+        """Inspect one collection and return a side-effect-free reconciliation plan."""
+        is_operation_allowed(cls)
+        existing = await cls.list_indexes(collection, session=session)
+        return build_index_plan(cls.meta.indexes, existing)
+
+    @classmethod
     async def check_indexes(
         cls,
         force_drop: bool = False,
         collection: Union[Collection, AsyncCollection, None] = None,
-    ) -> None:
-        """
-        Check the indexes defined in the Meta object and perform any possible drop operation.
+        *,
+        session: Union["AsyncClientSession", None] = None,
+    ) -> IndexPlan:
+        """Plan and execute safe reconciliation for one collection.
 
-        This method checks if the indexes defined in the Meta object are present in the collection.
-        If an index is defined in the Meta object but not present in the collection, it performs a drop operation
-        to remove the index from the collection.
-
-        Args:
-            cls: The class object.
-
-        Returns:
-            None
+        Missing indexes are created and unmanaged indexes are retained. Same-name definition
+        changes require ``force_drop=True``; even then, unrelated names are never deleted.
         """
         is_operation_allowed(cls)
 
-        # Creates the indexes defined in the Meta object
-        if not force_drop:
-            await cls.create_indexes()
-
-        collection = cls.get_collection(collection)
-
-        # Get the names of indexes in the collection
-        collection_indexes = {index["name"] for index in await cls.list_indexes()}
-
-        # Get the names of indexes defined in the Meta object
-        document_index_names = {index.name for index in cls.meta.indexes}
-
-        # Find the indexes that are present in one set but not in the other
-        symmetric_difference = collection_indexes.symmetric_difference(document_index_names)
-
-        # Remove the "_id_" index from the symmetric difference
-        symmetric_difference.discard("_id_")
-
-        # Drop the indexes that are present in the collection but not in the Meta object
-        for name in symmetric_difference:
-            await collection.drop_index(name)
-
-        # Check if the indexes defined in the Meta object are present in the collection
-        # And perform any possible drop operation
-        for name in collection_indexes:
-            if name in symmetric_difference:
-                continue
-            model_field = cls.model_fields.get(name)
-            if model_field is not None and not getattr(model_field, "index", False):
-                await cls.drop_index(name, collection)
+        target = cls.get_collection(collection)
+        plan = await cls.plan_indexes(target, session=session)
+        await execute_index_plan(target, plan, allow_recreate=force_drop, session=session)
+        return plan
 
     async def delete(
         self,
@@ -374,8 +389,9 @@ class Document(DocumentRow):
         is_operation_allowed(self)
 
         if collection is None:
-            if isinstance(self.meta.from_collection, AsyncCollection):
-                collection = self.meta.from_collection
+            instance_collection = getattr(self, "_mongoz_collection", None)
+            if isinstance(instance_collection, AsyncCollection):
+                collection = instance_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection._collection
         await self.signals.pre_delete.send(sender=self.__class__, instance=self)
@@ -385,7 +401,13 @@ class Document(DocumentRow):
         return result.deleted_count
 
     @classmethod
-    async def drop_index(cls, name: str, collection: Union[AsyncCollection, None] = None) -> str:
+    async def drop_index(
+        cls,
+        name: str,
+        collection: Union[Collection, AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
+    ) -> str:
         """Drop single index from Meta indexes by name.
 
         Can raise `pymongo.errors.OperationFailure`.
@@ -395,7 +417,7 @@ class Document(DocumentRow):
 
         for index in cls.meta.indexes:
             if index.name == name:
-                await collection.drop_index(name)
+                await collection.drop_index(name, session=session)
                 return name
         raise InvalidKeyError(f"Unable to find index: {name}")
 
@@ -403,7 +425,9 @@ class Document(DocumentRow):
     async def drop_indexes(
         cls,
         force: bool = False,
-        collection: Union[AsyncCollection, None] = None,
+        collection: Union[Collection, AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
     ) -> Union[List[str], None]:
         """Drop all indexes defined for the collection.
 
@@ -413,8 +437,12 @@ class Document(DocumentRow):
 
         collection = cls.get_collection(collection)
         if force:
-            return await collection.drop_indexes()
-        index_names = [await cls.drop_index(index.name) for index in cls.meta.indexes]
+            await collection.drop_indexes(session=session)
+            return None
+        index_names = [
+            await cls.drop_index(index.name, collection, session=session)
+            for index in cls.meta.indexes
+        ]
         return index_names
 
     async def save(
@@ -427,8 +455,11 @@ class Document(DocumentRow):
 
         This is equivalent of a single instance update.
 
+        This synchronizes every modeled field and can overwrite concurrent changes to those
+        fields. Use :meth:`update` for a selected-field patch.
+
         When saving the document, if an ID is not provided or it is None,
-        it will create a new docuemnt. These scenarios happen when for instance
+        it will create a new document. These scenarios happen when for instance
         a copy of the object is needed on save().
 
         E.g.:
@@ -441,8 +472,9 @@ class Document(DocumentRow):
         """
         is_operation_allowed(self)
         if collection is None:
-            if isinstance(self.meta.from_collection, AsyncCollection):
-                collection = self.meta.from_collection
+            instance_collection = getattr(self, "_mongoz_collection", None)
+            if isinstance(instance_collection, AsyncCollection):
+                collection = instance_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection._collection
 
@@ -454,7 +486,7 @@ class Document(DocumentRow):
         collection = type(self).get_collection(collection)
         await collection.update_one(
             {"_id": self.id},
-            {"$set": self.model_dump(exclude={"id", "_id"})},
+            {"$set": dump_document(self)},
             session=session,
         )
         for k, v in self.model_dump(exclude={"id"}).items():

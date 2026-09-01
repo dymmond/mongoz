@@ -65,7 +65,13 @@ class MetaInfo:
         self.registry: Optional[Registry] = getattr(meta, "registry", None)
         self.collection: Union[str, Collection, None] = getattr(meta, "collection", None)
         self.parents: Any = getattr(meta, "parents", None) or []
-        self.indexes: List[Index] = cast(List[Index], getattr(meta, "indexes", None))
+        raw_indexes = getattr(meta, "indexes", None)
+        if raw_indexes is not None and not isinstance(raw_indexes, (list, tuple)):
+            value_type = type(raw_indexes).__name__
+            raise ImproperlyConfigured(
+                f"indexes must be a tuple or list. Got {value_type} instead."
+            )
+        self.indexes: List[Index] = copy.deepcopy(list(raw_indexes or []))
         self.database: Union["str", Database, None] = cast(
             Union["str", Database, None], getattr(meta, "database", None)
         )
@@ -138,9 +144,7 @@ def _check_document_inherited_indexes(bases: Tuple[Type, ...]) -> List[Any]:
         if not isinstance(meta, MetaInfo):
             continue
 
-        if getattr(meta, "indexes", None) is not None:
-            found_indexes.extend(meta.indexes)
-            break
+        found_indexes.extend(copy.deepcopy(meta.indexes))
 
     return found_indexes
 
@@ -237,7 +241,6 @@ class BaseModelMeta(ModelMetaclass):
         base_annotations: Dict[str, Any] = {}
 
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
-        cls.__mongoz_fields__ = model_fields
 
         # Searching for fields "Field" in the class hierarchy.
         def __search_for_fields(base: Type, attrs: Any) -> None:
@@ -350,20 +353,16 @@ class BaseModelMeta(ModelMetaclass):
                     "database must be a string name or an instance of mongoz.Database."
                 )
 
-        # Handle indexes
-        if getattr(meta, "indexes", None) is not None:
-            indexes = meta.indexes
-            if not isinstance(indexes, (list, tuple)):
-                value_type = type(indexes).__name__
-                raise ImproperlyConfigured(
-                    f"indexes must be a tuple or list. Got {value_type} instead."
-                )
-            else:
-                if not all(isinstance(value, Index) for value in indexes):
-                    raise ValueError("Meta.indexes must be a list of Index types.")
-
-                # Extend existing indexes.
-                indexes.extend(_check_document_inherited_indexes(bases))
+        # Index metadata is copied per model and inherited additively.
+        indexes = meta.indexes
+        if not all(isinstance(value, Index) for value in indexes):
+            raise ValueError("Meta.indexes must be a list of Index types.")
+        indexes.extend(_check_document_inherited_indexes(bases))
+        declared_index_names: set[str] = set()
+        for index in indexes:
+            if index.name in declared_index_names:
+                raise IndexError(f"There is already an index with the name `{index.name}`")
+            declared_index_names.add(index.name)
 
         for _, field in meta.fields.items():
             field.registry = meta.registry
@@ -383,6 +382,8 @@ class BaseModelMeta(ModelMetaclass):
                 field.alias = field_name
             elif field_name == id_attribute:
                 field.alias = id_attribute_alias
+            field.validation_alias = field.alias
+            field.serialization_alias = field.alias
             new_field = MongozField(pydantic_field=field, model_class=field.annotation)
             mongoz_fields[field_name] = new_field
 
@@ -486,7 +487,6 @@ class EmbeddedModelMetaClass(ModelMetaclass):
 
         # Extract fields first (so runtime values like ObjectId are removed)
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
-        cls.__mongoz_fields__ = model_fields
 
         # Mark any remaining runtime-only attributes as ClassVar[Any]
         for key, _ in list(attrs.items()):

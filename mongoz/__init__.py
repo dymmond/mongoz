@@ -6,7 +6,13 @@ from .core.connection.database import Database
 from .core.connection.registry import Registry
 from .core.db import fields
 from .core.db.datastructures import Index, IndexType, Order
-from .core.db.documents import Document, EmbeddedDocument
+from .core.db.documents import (
+    Document,
+    EmbeddedDocument,
+    IndexAction,
+    IndexPlan,
+    IndexPlanEntry,
+)
 from .core.db.documents.managers import QuerySetManager
 from .core.db.fields import (
     UUID,
@@ -58,6 +64,9 @@ __all__ = [
     "fields",
     "ImproperlyConfigured",
     "Index",
+    "IndexAction",
+    "IndexPlan",
+    "IndexPlanEntry",
     "IndexType",
     "Integer",
     "NullableObjectId",

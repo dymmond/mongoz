@@ -50,6 +50,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     model_config = ConfigDict(
         extra="allow",
         arbitrary_types_allowed=True,
+        populate_by_name=True,
         validate_assignment=True,
     )
     __is_proxy_document__: ClassVar[bool] = False

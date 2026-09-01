@@ -59,6 +59,7 @@ class DocumentRow(MongozBaseModel):
             # We need to generify the document fields to make sure we can populate the
             # model without mandatory fields
             model = cast(T, cls.proxy_document(**item))
+            model._mongoz_collection = from_collection
             return model
         else:
             for column, value in row.items():
@@ -83,7 +84,7 @@ class DocumentRow(MongozBaseModel):
                         item[column] = value
 
         model = cls(**item)
-        model.meta.from_collection = from_collection
+        model._mongoz_collection = from_collection
         return model
 
     @classmethod

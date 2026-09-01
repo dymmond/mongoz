@@ -67,7 +67,7 @@ class Expression:
         for expr in expressions:
             for key, value in expr.compile().items():
                 # Logical operators need a {"$or": [...]} query
-                if key in ["$and", "$or"]:
+                if key in ["$and", "$nor", "$or"]:
                     list_value = value.get(key, value.get("$eq"))
                     assert isinstance(list_value, (list, tuple))
                     values = [v.compile() if isinstance(v, Expression) else v for v in list_value]

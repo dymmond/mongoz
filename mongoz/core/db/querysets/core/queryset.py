@@ -16,7 +16,6 @@ from typing import (
 )
 
 import bson
-import pydantic
 from bson import Code
 from typing_extensions import Literal, Self
 
@@ -155,7 +154,7 @@ class QuerySet(BaseQuerySet[T]):
 
         async with closing_cursor(cursor):
             async for document in cursor:
-                yield self.model_class(**document)
+                yield self.model_class.from_row(document, from_collection=self._collection)
 
     async def none(self) -> "QuerySet[T]":
         """
@@ -194,6 +193,7 @@ class QuerySet(BaseQuerySet[T]):
                     only_fields=self._only_fields,
                     is_defer_fields=is_defer_fields,
                     defer_fields=self._defer_fields,
+                    from_collection=self._collection,
                 )
                 async for document in cursor
             ]
@@ -254,30 +254,15 @@ class QuerySet(BaseQuerySet[T]):
         return objects[0]
 
     async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
-        if not defaults:
-            defaults = {}
+        from mongoz.core.db.documents.persistence import get_or_create_document
 
-        data = {expression.key: expression.value for expression in self._filter}
-        defaults = {
-            (key if isinstance(key, str) else key._name): value for key, value in defaults.items()
-        }
-
-        try:
-            values = {**defaults, **data}
-            self.model_class(**values)
-        except ValueError as e:
-            raise e
-
-        model = await self._collection.find_one_and_update(
-            data,
-            {"$setOnInsert": values},
-            upsert=True,
-            return_document=True,
-            **self._driver_options,
+        return await get_or_create_document(
+            self.model_class,
+            self._collection,
+            self._filter,
+            defaults or {},
+            self._driver_options,
         )
-        if model is None:
-            raise DocumentNotFound()
-        return self.model_class(**model)
 
     async def distinct_values(self, key: str) -> List[Any]:
         """
@@ -308,7 +293,9 @@ class QuerySet(BaseQuerySet[T]):
         """
         Creates many documents (bulk create).
         """
-        return await self.model_class.create_many(models=models, session=self._session)
+        return await self.model_class.create_many(
+            models=models, collection=self._collection, session=self._session
+        )
 
     async def update(self, **kwargs: Any) -> List[T]:
         """
@@ -320,33 +307,24 @@ class QuerySet(BaseQuerySet[T]):
         return await self.update_many(**kwargs)
 
     async def update_many(self, **kwargs: Any) -> List[T]:
-        from mongoz.core.db.documents._internal import create_validation_model
+        from mongoz.core.db.documents.persistence import patch_many
 
         queryset = self.clone()
-        field_definitions: Dict[str, tuple[Any, Any]] = {
-            name: (annotations, ...)
-            for name, annotations in self.model_class.__annotations__.items()
-            if name in kwargs
-        }
-
-        if field_definitions:
-            pydantic_model: Type[pydantic.BaseModel] = create_validation_model(
-                self.model_class.__name__, field_definitions
-            )
-            model = pydantic_model.model_validate(kwargs)
-            values = model.model_dump()
-
-            filter_query = Expression.compile_many(queryset._filter)
-            await queryset._collection.update_many(
-                filter_query, {"$set": values}, **queryset._driver_options
-            )
-
-            _filter = [
-                expression for expression in queryset._filter if expression.key not in values
-            ]
-            _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
-
-            queryset._filter = _filter
+        if not kwargs:
+            return await queryset.all()
+        update, identifiers = await patch_many(
+            queryset.model_class,
+            queryset._collection,
+            queryset._filter,
+            kwargs,
+            queryset._driver_options,
+        )
+        if not identifiers:
+            return []
+        queryset._filter = [Expression("_id", "$in", identifiers)]
+        queryset._filter.extend(
+            Expression(name, "$eq", value) for name, value in update.storage.items()
+        )
         return await queryset.all()
 
     async def get_document_by_id(self, id: Union[str, bson.ObjectId]) -> T:
