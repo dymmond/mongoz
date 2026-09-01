@@ -1,5 +1,34 @@
 # Release Notes
 
+## Unreleased
+
+### Changed
+
+- Replaced Motor with native PyMongo Async. Mongoz now requires `pymongo>=4.13,<5.0`; 4.13 is
+  the first release where the async API is generally available.
+- `Registry` now owns one reusable `AsyncMongoClient`, provides idempotent async `close()`, supports
+  `async with`, and never reopens after close.
+- Native database and collection escape hatches now return PyMongo Async types. `registry.driver`
+  is the owned `AsyncMongoClient`, and the server address is obtained with `await registry.address`.
+- Cursor-producing paths follow PyMongo's call shapes: `find()` returns a cursor synchronously,
+  while aggregation and index-listing cursor creation is awaited. Mongoz closes cursors after
+  materialization, early generator close, and cancellation.
+
+### Migrating from Motor
+
+- Remove Motor from application dependencies and remove Motor-specific imports or type checks.
+- Remove the `event_loop` argument from `Registry(...)`. PyMongo binds an async client to the loop
+  of its first network operation and raises on cross-loop use; create one Registry per application
+  lifecycle instead of sharing it across loops or test-client portals.
+- Close the Registry from the same application loop with `await registry.close()`, or use
+  `async with Registry(...)`. A closed Registry must be replaced rather than reopened.
+- Code relying on native or private Motor objects must migrate to PyMongo `AsyncMongoClient`,
+  `AsyncDatabase`, `AsyncCollection`, and async cursor types. Motor-only private attributes and
+  loop monkey-patches are no longer available.
+- Import-time index I/O from `autogenerate_index=True` is no longer performed because it would bind
+  the reusable client to a temporary import-time loop. Run `await registry.document_checks()` in
+  async application startup and `await registry.close()` during shutdown.
+
 ## 0.13.3
 
 ### Fixed

@@ -22,6 +22,16 @@ O registo também é o objeto que pode ser utilizado ao gerar migrações utiliz
     registo = Registo(url="mongodb://localhost:27017")
     ```
 
+## Ciclo de vida do cliente
+
+Cada `Registry` cria e possui exatamente um `AsyncMongoClient` do PyMongo. As bases de dados e
+coleções obtidas através do registo reutilizam esse cliente. O registo fica associado ao ciclo de
+eventos da primeira operação e não deve ser partilhado com outro ciclo de eventos.
+
+Execute `await registry.close()` durante o encerramento da aplicação. O encerramento é idempotente
+e definitivo; um registo fechado não cria outro cliente. Para trabalho delimitado, também pode usar
+`async with Registry(...) as registry`.
+
 ## Registo personalizado
 
 É possível ter o seu próprio Registo personalizado? Sim, claro! Basta criar uma subclasse da classe `Registry` e continuar a partir daí, como qualquer outra classe Python.
@@ -43,6 +53,7 @@ Por vezes, pode ser útil garantir que todos os documentos têm os índices atua
 Esta funcionalidade também pode ser útil se estiver a utilizar, por exemplo, uma framework ASGI como o Starlette, [Lilya](https://lilya.dev) ou [Esmerald](https://esmerald.dev).
 
 Estas frameworks tratam do ciclo de vida do evento para si e é aqui que deseja garantir que essas verificações são executadas antecipadamente.
+O mesmo ciclo de vida da aplicação deve fechar o registo durante o encerramento.
 
 Como o Mongoz é da mesma equipa que o [Lilya](https://lilya.dev) e o [Esmerald](https://esmerald.dev), vamos ver como ficaria com o Esmerald.
 

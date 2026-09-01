@@ -32,7 +32,7 @@
 
 ## Motivação
 
-MongoZ é um ODM (Object Document Mapper) assíncrono para MongoDB em Python, construído sobre o [Motor][motor] e o [Pydantic][pydantic].
+MongoZ é um ODM (Object Document Mapper) assíncrono para MongoDB em Python, construído sobre o [PyMongo Async][pymongo] nativo e o [Pydantic][pydantic].
 
 MongoZ também é inspirado no excelente trabalho do [Aminalee](https://aminalaee.dev/mongox/) com o MongoX.
 
@@ -51,7 +51,7 @@ Este ODM é desenhado para ser **assíncrono**, o que significa flexibilidade e 
 
 ## Funcionalidades
 
-Ao adoptar uma interface mais familiar, este também oferece recursos interessantes e poderosos usando o Pydantic e o Motor.
+Ao adoptar uma interface mais familiar, este também oferece recursos interessantes e poderosos usando o Pydantic e o PyMongo Async.
 
 ### Sintaxe
 
@@ -112,7 +112,7 @@ Isso retornará uma instância de um `User` num modelo Pydantic e o `mypy` enten
 
 ### Pesquisar
 
-Como o Mongoz foi construído em cima do Motor, significa que também pode utilizar o mesmo padrão de consulta utilizado no PyMongo/Motor.
+O Mongoz utiliza o PyMongo Async e oferece padrões de pesquisa familiares ao PyMongo através da sua API assíncrona.
 
 === "Simples"
 
@@ -173,7 +173,7 @@ Internamente, o Mongoz executa essas validações por meio dos campos declarados
 Nada com que se preocupar!
 
 [mongoz]: https://mongoz.dymmond.com
-[motor]: https://github.com/mongodb/motor
+[pymongo]: https://www.mongodb.com/docs/languages/python/pymongo-driver/current/reference/migration/
 [pydantic]: https://pydantic.dev/
 [mongoz]: https://mongoz.dymmond.com
 [saffier]: https://saffier.tarsild.io

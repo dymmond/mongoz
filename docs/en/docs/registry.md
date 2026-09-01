@@ -24,6 +24,36 @@ Alembic.
     registry = Registry(url="mongodb://localhost:27017")
     ```
 
+## Client lifecycle
+
+Each `Registry` constructs and owns exactly one PyMongo `AsyncMongoClient`. Database and collection
+objects obtained from the registry reuse that client. A Registry becomes bound to the event loop of
+its first database operation and must not be shared with another loop.
+
+Close the Registry during application shutdown. `close()` is async and idempotent, but closing is
+final: a closed Registry does not create a replacement client and cannot be reopened.
+
+```python
+registry = Registry(url="mongodb://localhost:27017")
+
+try:
+    database = registry.get_database("my_db")
+    await database._db.command("ping")
+finally:
+    await registry.close()
+```
+
+For bounded work, use the async context manager:
+
+```python
+async with Registry(url="mongodb://localhost:27017") as registry:
+    database = registry.get_database("my_db")
+    await database._db.command("ping")
+```
+
+`registry.driver` exposes the registry-owned native PyMongo `AsyncMongoClient`. Its lifecycle still
+belongs to the Registry; use `registry.close()` for cleanup.
+
 ## Custom registry
 
 Can you have your own custom Registry? Yes, of course! You simply need to subclass the `Registry`
@@ -49,6 +79,7 @@ This functionality can be useful to be also plugged if you use, for example, an 
 [Lilya](https://lilya.dev) or [Esmerald](https://esmerald.dev).
 
 These frameworks handle the event lifecycle for you and this is where you want to make sure these checks are run beforehand.
+The same application lifecycle should close the Registry on shutdown.
 
 Since Mongoz is from the same team as [Lilya](https://lilya.dev) and [Esmerald](https://esmerald.dev), let us see how it
 would look like with Esmerald.

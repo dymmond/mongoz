@@ -32,8 +32,8 @@
 
 ## Motivation
 
-MongoZ is an async Python ODM (Object Document Mapper) for MongoDB built on top of [Motor][motor] and
-[Pydantic][pydantic].
+MongoZ is an async Python ODM (Object Document Mapper) for MongoDB built on native
+[PyMongo Async][pymongo] and [Pydantic][pydantic].
 
 MongoZ is also inspired by the great work of [Aminalee](https://aminalaee.dev/mongox/) from the
 MongoX.
@@ -61,7 +61,7 @@ out there such as [Esmerald][esmerald], FastAPI, Sanic, Starlette and many other
 ## Features
 
 While adopting a familiar interface, it offers some cool and powerful features using Pydantic and
-Motor.
+PyMongo Async.
 
 ### Syntax
 
@@ -101,12 +101,10 @@ The following is an example how to start with Mongoz and more details and exampl
 Use `ipython` to run the following from the console, since it supports `await`.
 
 ```python
-import asyncio
-
 import mongoz
 
 database_uri = "mongodb://localhost:27017"
-registry = mongoz.Registry(database_uri, event_loop=asyncio.get_running_loop)
+registry = mongoz.Registry(database_uri)
 
 
 class User(mongoz.Document):
@@ -138,8 +136,7 @@ This will return an instance of a `User` in a Pydantic model and `mypy` will und
 
 ### Fetching
 
-Since Mongoz was built on the top of Motor, means you can also use the same pattern to query as used
-in PyMongo/Motor.
+Mongoz uses PyMongo Async and supports familiar PyMongo-style query patterns through its async API.
 
 === "Simple"
 
@@ -205,7 +202,7 @@ Nothing to worry about!
 
 
 [mongoz]: https://mongoz.dymmond.com
-[motor]: https://github.com/mongodb/motor
+[pymongo]: https://www.mongodb.com/docs/languages/python/pymongo-driver/current/reference/migration/
 [pydantic]: https://pydantic.dev/
 [mongoz]: https://mongoz.dymmond.com
 [saffier]: https://saffier.tarsild.io

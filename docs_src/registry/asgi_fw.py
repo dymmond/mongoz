@@ -23,7 +23,11 @@ class User(mongoz.Document):
 
 
 # Declare the Esmerald instance
-app = Esmerald(routes=[...], on_startup=[registry.document_checks])
+app = Esmerald(
+    routes=[...],
+    on_startup=[registry.document_checks],
+    on_shutdown=[registry.close],
+)
 
 
 # Or using the lifespan
@@ -31,8 +35,11 @@ app = Esmerald(routes=[...], on_startup=[registry.document_checks])
 async def lifespan(app: Esmerald):
     # What happens on startup
     await registry.document_checks()
-    yield
-    # What happens on shutdown
+    try:
+        yield
+    finally:
+        # What happens on shutdown
+        await registry.close()
 
 
 app = Esmerald(routes=[...], lifespan=lifespan)
