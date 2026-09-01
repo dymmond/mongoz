@@ -5,9 +5,29 @@ from typing import Any, Dict
 
 import bson
 from bson.decimal128 import Decimal128
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, SerializerFunctionWrapHandler, field_serializer
 
 from mongoz.core.signals.signal import Signal
+
+
+def _convert_supported_json_values(value: Any) -> tuple[Any, bool]:
+    """Convert supported arbitrary values and report whether conversion was required."""
+    if isinstance(value, (bson.ObjectId, Signal)):
+        return str(value), True
+    if isinstance(value, dict):
+        converted = {}
+        changed = False
+        for key, item in value.items():
+            converted_item, item_changed = _convert_supported_json_values(item)
+            converted[key] = converted_item
+            changed = changed or item_changed
+        return converted, changed
+    if isinstance(value, (list, tuple, set, frozenset)):
+        converted_items = [_convert_supported_json_values(item) for item in value]
+        return [item for item, _ in converted_items], any(
+            changed for _, changed in converted_items
+        )
+    return value, False
 
 
 class DescriptiveMeta:
@@ -41,9 +61,16 @@ class ModelDump(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         arbitrary_types_allowed=True,
-        json_encoders={bson.ObjectId: str, Signal: str},
         validate_assignment=True,
     )
+
+    @field_serializer("*", mode="wrap", when_used="json", check_fields=False)
+    def serialize_supported_json_values(
+        self, value: Any, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Preserve BSON and signal JSON output while delegating all other serialization."""
+        converted, changed = _convert_supported_json_values(value)
+        return converted if changed else handler(value)
 
     def convert_decimal(self, model_dump_dict: Dict[str, Any]) -> Dict[str, Any]:
         """

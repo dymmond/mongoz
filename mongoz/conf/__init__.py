@@ -31,7 +31,7 @@ class MongozLazySettings(LazyObject):
 
         settings: type[MongozSettings] = import_string(settings_module)
 
-        for setting, _ in settings().dict().items():
+        for setting, _ in settings().model_dump().items():
             assert setting.islower(), "%s should be in lowercase." % setting
 
         self._wrapped = settings()

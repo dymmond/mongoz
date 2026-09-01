@@ -13,6 +13,9 @@
 - Cursor-producing paths follow PyMongo's call shapes: `find()` returns a cursor synchronously,
   while aggregation and index-listing cursor creation is awaited. Mongoz closes cursors after
   materialization, early generator close, and cancellation.
+- Model construction, settings access, and JSON serialization now use supported Pydantic APIs.
+  BSON `ObjectId` and signal JSON output is preserved without deprecated `json_encoders` config,
+  and the warning gate rejects any reintroduced Pydantic deprecation.
 
 ### Migrating from Motor
 

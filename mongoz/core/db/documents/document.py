@@ -483,11 +483,8 @@ class EmbeddedDocument(BaseModel, metaclass=EmbeddedModelMetaClass):
                     )
 
     def validate_fields_values(self) -> None:
+        model_fields = type(self).model_fields
         for field_name, value in self.model_dump().items():
-            if (
-                field_name in self.model_fields.keys()
-                and not isinstance(value, bson.ObjectId)
-                and value
-            ):
-                validated_value = self.model_fields[field_name].validate_field_value(value)
+            if field_name in model_fields and not isinstance(value, bson.ObjectId) and value:
+                validated_value = model_fields[field_name].validate_field_value(value)
                 setattr(self, field_name, validated_value)

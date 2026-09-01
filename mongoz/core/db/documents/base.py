@@ -24,7 +24,6 @@ from mongoz.core.db.fields.base import MongozField
 from mongoz.core.db.fields.core import ObjectId
 from mongoz.core.db.querysets.base import Manager, QuerySet
 from mongoz.core.db.querysets.expressions import Expression
-from mongoz.core.signals.signal import Signal
 from mongoz.core.utils.documents import generify_model_fields
 from mongoz.core.utils.hashable import make_hashable
 from mongoz.utils.mixins import is_operation_allowed
@@ -49,7 +48,6 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     model_config = ConfigDict(
         extra="allow",
         arbitrary_types_allowed=True,
-        json_encoders={bson.ObjectId: str, Signal: str},
         validate_assignment=True,
     )
     __is_proxy_document__: ClassVar[bool] = False
@@ -84,13 +82,14 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                     )
 
     def validate_fields_values(self, **data: Dict[str, Any]) -> None:
+        model_fields = type(self).model_fields
         for field_name, value in data.items():
             if (
-                field_name in self.model_fields.keys()
+                field_name in model_fields
                 and not isinstance(value, bson.ObjectId)  # type: ignore
                 and value
             ):
-                validated_value = self.model_fields[field_name].validate_field_value(value)
+                validated_value = model_fields[field_name].validate_field_value(value)
                 setattr(self, field_name, validated_value)
 
     def extract_default_values_from_field(
@@ -103,8 +102,9 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         dates.
         """
         fields: Dict[str, Any] = kwargs if is_proxy else self.model_dump()
+        model_fields = type(self).model_fields
 
-        kwargs = {k: v for k, v in fields.items() if k in self.model_fields}
+        kwargs = {k: v for k, v in fields.items() if k in model_fields}
         for key, value in kwargs.items():
             if key not in self.meta.fields:
                 if not hasattr(self, key):
@@ -142,7 +142,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                 continue
 
             # Validate the default fields
-            field = self.model_fields[key]
+            field = model_fields[key]
             if hasattr(field, "has_default") and field.has_default():
                 setattr(self, key, field.get_default_value())
                 continue

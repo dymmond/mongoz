@@ -58,9 +58,9 @@ async def test_foreign_field() -> None:
         name="Harshali Zode", mobile_no="9990099000", email="example.gmail.com"
     )
     movie = await Movie.objects.create(name="Barbie", year=2025, producer_id=producer.id)
-    assert movie.model_fields["producer_id"].to == Producer
-    assert movie.model_fields["producer_id"].to.Meta.collection.name == "producers"
-    ForeignModel = movie.model_fields["producer_id"].to
+    assert type(movie).model_fields["producer_id"].to == Producer
+    assert type(movie).model_fields["producer_id"].to.Meta.collection.name == "producers"
+    ForeignModel = type(movie).model_fields["producer_id"].to
 
     result = await ForeignModel.objects.get(id=movie.producer_id)
     assert result.name == producer.name
@@ -76,5 +76,5 @@ async def test_foreign_field() -> None:
 
 async def test_nullable_foreign_field() -> None:
     movie = await AnotherMovie.objects.create(name="Barbie", year=2025)
-    assert movie.model_fields["producer_id"].to == Producer
-    assert movie.model_fields["producer_id"].to.Meta.collection.name == "producers"
+    assert type(movie).model_fields["producer_id"].to == Producer
+    assert type(movie).model_fields["producer_id"].to.Meta.collection.name == "producers"
