@@ -43,7 +43,7 @@ Por exemplo, vamos criar um utilizador.
     ```python
     user = await User.objects.create(
         first_name="Mongoz", last_name="ODM", email="mongoz@mongoz.com",
-        password="Compl3x!pa$$"
+        password_hash="<hash produzido pela camada de autenticação>"
     )
     ```
 
@@ -52,7 +52,7 @@ Por exemplo, vamos criar um utilizador.
     ```python
     user = await User(
         first_name="Mongoz", last_name="ODM", email="mongoz@mongoz.com",
-        password="Compl3x!pa$$"
+        password_hash="<hash produzido pela camada de autenticação>"
     ).create()
     ```
 
@@ -162,6 +162,10 @@ users = await User.query(User.email == "mongoz@mongoz.com").query(User.id > 1).a
 
 Ou, alternativamente, pode usar dicionários.
 
+Os argumentos em dicionário são estruturas MongoDB em bruto. Podem conter operadores e, por isso,
+devem ser construídos apenas a partir de código confiável da aplicação, nunca a partir de dados de
+um pedido. Para filtros modelados normais, use expressões de campo ou `Manager.filter()`.
+
 ```python
 user = await User.query({"first_name": "Mongoz"}).all()
 ```
@@ -211,6 +215,11 @@ Saltar (ignorar) um certo número de documentos.
 ### Raw
 
 Executar pesquisas em "bruto" diretamente. Isto permite ter algum tipo de controlo sobre pesquisas mais complicadas que pode encontrar.
+
+!!! warning
+    `raw()`, dicionários em `query()`, objetos `Expression` em bruto, pipelines de agregação,
+    operações bulk e acesso nativo ao driver são mecanismos privilegiados. O Mongoz não sanitiza
+    operadores MongoDB recebidos de pedidos.
 
 #### Consultas simples e aninhadas em bruto
 
@@ -825,6 +834,11 @@ Ao pesquisar um documento e não desejar obter um [DocumentNotFound](./exception
 
 Aplicar pesquisas de strings em bruto ou a cláusula `where`.
 
+!!! danger
+    `$where` executa JavaScript no servidor e aceita apenas código estático confiável. Nunca
+    interpole dados de pedidos. O MongoDB 8.0 descontinuou JavaScript no servidor; prefira
+    operadores normais ou `$expr`.
+
 === "Manager"
 
     ```python
@@ -1124,6 +1138,9 @@ users = await User.query(Q.not_(User.email, "foo@bar.com")).all()
 
 ### Contains
 
+`contains`, `icontains`, `startswith` e `endswith` tratam o texto como literal, incluindo
+metacarateres de expressões regulares.
+
 ```python
 users = await User.query(Q.contains(User.email, "foo")).all()
 ```
@@ -1136,7 +1153,8 @@ users = await User.query(Q.icontains(User.email, "foo")).all()
 
 ### Padrão
 
-Aplica alguns padrões `$regex`.
+Aplica um padrão `$regex` explícito. O padrão não é escapado e deve ser criado por código
+confiável; a aplicação deve limitar ou rejeitar expressões regulares fornecidas por utilizadores.
 
 ```python
 users = await User.query(Q.pattern(User.email, r"\w+ foo \w+")).all()
@@ -1156,14 +1174,6 @@ O operador `not equals`.
 
 ```python
 users = await User.query(Q.neq(User.email, "foo@bar.com")).all()
-```
-
-### Where
-
-Aplicando o operador `where` do MongoDB.
-
-```python
-users = await User.query(Q.where(User.email, "foo@bar.com")).all()
 ```
 
 ### Maior do que

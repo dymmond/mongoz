@@ -19,7 +19,7 @@ class User(mongoz.Document):
     last_name: str = mongoz.String(max_length=50)
     email: str = mongoz.Email(max_lengh=100)
     role_id: mongoz.ObjectId = mongoz.ForeignKey(Role, null=True)
-    password: str = mongoz.String(max_length=1000)
+    password_hash: str = mongoz.String(max_length=255)
 
     class Meta:
         registry = registry

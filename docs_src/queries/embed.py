@@ -13,7 +13,7 @@ class User(mongoz.Document):
     first_name: str = mongoz.String(max_length=50)
     last_name: str = mongoz.String(max_length=50)
     email: str = mongoz.Email(max_lengh=100)
-    password: str = mongoz.String(max_length=1000)
+    password_hash: str = mongoz.String(max_length=255)
     user_type: UserType = mongoz.Embed(UserType)
 
     class Meta:

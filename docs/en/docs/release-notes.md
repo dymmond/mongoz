@@ -4,6 +4,22 @@
 
 ### Changed
 
+- Streaming managers and querysets now preserve sort, skip, limit, projection, lookup, and session
+  state. `last()` retains one raw row instead of hydrating the complete result set, and ordinary
+  BSON hydration uses a measured fast path when no lookup projection is present.
+- Literal string helpers now escape regex metacharacters; `Q.pattern()` remains the explicit raw
+  regex escape hatch. Modeled writes serialize declared fields only, while raw query dictionaries,
+  pipelines, bulk operations, native drivers, and `$where` are documented as trusted-only APIs.
+- Registry cleanup preserves an in-flight body failure if close also fails. Native PyMongo timeout,
+  retry, concern, topology, and error contracts remain unchanged and are covered by manifestation
+  tests and production guidance.
+- Removed the unused `orjson` runtime dependency. Added a private-reporting security policy,
+  dependency auditing/review, CodeQL, recognized Dependabot configuration, and immutable action
+  references in credential-sensitive release and benchmark workflows.
+- CodSpeed benchmarks now measure individual fixed operations with explicit warmups and repeats.
+  A separate informational standalone benchmark reports raw PyMongo and Mongoz end-to-end groups
+  without making cross-ODM marketing claims.
+
 - Signals now enforce their documented async-only receiver contract at registration. Dispatch is
   sequential in registration order, fail-fast, cancellation-safe, and isolated per document class.
 - `run_sync()` accepts any awaitable, executes it exactly once, preserves application exceptions,

@@ -71,6 +71,12 @@ These are explicit escape hatches, not ownership transfers. Closing any wrapper 
 required; `Registry.close()` remains the single lifecycle owner. Obtaining a native database or
 collection does not make it valid after its Registry has been closed.
 
+The complete URI is passed to PyMongo without reconstruction. Native options such as server
+selection, connect, socket, wait-queue, and operation timeouts; retryable reads/writes; read
+preference; and read/write concern therefore keep their PyMongo semantics. Mongoz does not replace
+native timeout or infrastructure exceptions. See [Production performance, security, and
+resilience](./production.md) for configuration, cancellation, large-result, and redaction guidance.
+
 ## Sessions and transactions
 
 PyMongo remains the owner of session and transaction lifecycle. Start a session from

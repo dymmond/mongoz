@@ -35,6 +35,9 @@ When reporting something you should always try to:
 Avoid putting examples extremely complex to understand and read. Simplify the examples as much as possible to make
 it clear to understand and get the required help.
 
+Suspected vulnerabilities must not be reported in a public issue or discussion. Use the repository
+Security tab's private **Report a vulnerability** workflow described in `SECURITY.md`.
+
 ## Development
 
 To develop for Mongoz, create a fork of the [Mongoz repository](https://github.com/dymmond/mongoz) on GitHub.
@@ -134,6 +137,34 @@ Ty is the canonical type checker. The gate checks the complete `mongoz` package 
 consumer contracts, while `hatch run typing-negative` verifies that intentional negative
 fixtures fail for their exact expected rules. Do not add blanket exclusions or suppression
 comments to make the gate pass; repair the owning annotation or implementation instead.
+
+### Performance and security evidence
+
+CodSpeed benchmarks are fixed-workload Python 3.13 regression checks. Each benchmark uses 20 warmup
+rounds and 100 measured rounds:
+
+```shell
+hatch run matrix.py3.13:focused benchmarks --codspeed
+```
+
+Database latency is intentionally separate. With standalone MongoDB running, the informational
+driver/ODM benchmark uses a 1,000-document dataset, five warmups, and nine repeats:
+
+```shell
+hatch run matrix.py3.13:python benchmarks/database.py
+```
+
+Do not turn a noisy end-to-end result into a framework performance claim. Establish the Python-side
+owner first and retain raw PyMongo as the driver/network control.
+
+Run the project dependency vulnerability audit with:
+
+```shell
+hatch run security:audit
+```
+
+CodeQL and dependency review run in hosted CI. The audit covers known published advisories; it is
+not a malicious-package detector or a substitute for review.
 
 ### Enable pre-commit
 

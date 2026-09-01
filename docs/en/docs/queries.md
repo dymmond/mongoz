@@ -52,7 +52,7 @@ For instance, let us create a user.
     ```python
     user = await User.objects.create(
         first_name="Mongoz", last_name="ODM", email="mongoz@mongoz.com",
-        password="Compl3x!pa$$"
+        password_hash="<hash produced by your authentication layer>"
     )
     ```
 
@@ -61,7 +61,7 @@ For instance, let us create a user.
     ```python
     user = await User(
         first_name="Mongoz", last_name="ODM", email="mongoz@mongoz.com",
-        password="Compl3x!pa$$"
+        password_hash="<hash produced by your authentication layer>"
     ).create()
     ```
 
@@ -186,6 +186,10 @@ users = await User.query(User.email == "mongoz@mongoz.com").query(User.id > 1).a
 
 Or alternatively you can use dictionaries.
 
+Dictionary arguments are raw MongoDB query structures. They may contain operators and therefore
+must be assembled from trusted application code, never forwarded from decoded request data. Use
+field expressions or `Manager.filter()` for normal modeled filters.
+
 ```python
 user = await User.query({"first_name": "Mongoz"}).all()
 ```
@@ -236,6 +240,11 @@ Skip a certain number of documents.
 
 Executing raw queries directly. This allows to have some sort of power over some more complicated
 queries you might find.
+
+!!! warning
+    `raw()`, dictionary arguments to `query()`, raw `Expression` objects, aggregation pipelines,
+    bulk-write operations, and native driver access are trusted developer escape hatches. Mongoz
+    passes their MongoDB operators through; it does not sanitize arbitrary request mappings.
 
 #### Simple and nested raw queries
 
@@ -867,6 +876,11 @@ instead returns a `None`.
 
 Apply raw string queries or the `where` clause.
 
+!!! danger
+    `$where` executes server-side JavaScript and accepts trusted static code only. Never
+    interpolate or forward request data. MongoDB 8.0 deprecates server-side JavaScript and it
+    cannot use indexes; migrate to ordinary query operators or `$expr` wherever possible.
+
 === "Manager"
 
     ```python
@@ -1248,6 +1262,9 @@ users = await User.query(Q.not_(User.email, "foo@bar.com")).all()
 
 ### Contains
 
+`contains`, `icontains`, `startswith`, and `endswith` treat the supplied text literally, including
+regular-expression metacharacters.
+
 ```python
 users = await User.query(Q.contains(User.email, "foo")).all()
 ```
@@ -1260,7 +1277,8 @@ users = await User.query(Q.icontains(User.email, "foo")).all()
 
 ### Pattern
 
-Applies some `$regex` patterns.
+Applies an explicit raw `$regex` pattern. Patterns are not escaped and must be treated as trusted
+developer-authored expressions; applications should bound or reject untrusted regex input.
 
 ```python
 users = await User.query(Q.pattern(User.email, r"\w+ foo \w+")).all()
@@ -1280,14 +1298,6 @@ The `not equals` operator.
 
 ```python
 users = await User.query(Q.neq(User.email, "foo@bar.com")).all()
-```
-
-### Where
-
-Applying the mongo `where` operator.
-
-```python
-users = await User.query(Q.where(User.email, "foo@bar.com")).all()
 ```
 
 ### Greater Than
