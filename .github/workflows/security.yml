@@ -24,7 +24,9 @@ jobs:
       security-events: write
 
     steps:
-      - uses: "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" # v4
+      - uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" # v7.0.1
+        with:
+          persist-credentials: false
       - uses: "github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938" # v4
         with:
           languages: python
@@ -35,7 +37,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" # v4
+      - uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" # v7.0.1
+        with:
+          persist-credentials: false
       - uses: "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" # v7
         with:
           python-version: "3.13"
@@ -50,5 +54,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" # v4
-      - uses: "actions/dependency-review-action@3c4e3dcb1aa7874d2c16be7d79418e9b7efd6261" # v4.8.2
+      - uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: "actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48" # v4.9.0
