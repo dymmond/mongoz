@@ -51,57 +51,73 @@ Source = "https://github.com/dymmond/mongoz"
 [tool.hatch.version]
 path = "mongoz/__init__.py"
 
-[tool.hatch.envs.default]
-dependencies = [
-    "anyio>=4.0.0,<5",
-    "mypy==1.16.1",
-    "ruff>=0.3.0,<5.0.0",
-    "pre-commit>=3.3.1,<4.0.0",
-    "devtools>=0.12.2",
-    "ipython",
-    "ptpython",
-    "twine>=7.0.0,<8.0.0",
-]
-
 [project.optional-dependencies]
 testing = [
-    "a2wsgi>1.10.0,<2.0.0",
-    "autoflake>=2.0.2,<3.0.0",
-    "black==24.1.1,<25.0",
-    "ravyn[standard]>=0.3.7",
-    "httpx>=0.25.0,<0.30.0",
-    "isort>=5.12.0,<6.0.0",
+    "a2wsgi==1.10.10",
+    "anyio==4.14.2",
+    "httpx==0.28.1",
+    "lilya==0.27.1",
+    "orjson==3.12.0",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.15.0",
+    "pymongo==4.17.0",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "ravyn[standard]==0.4.1",
+    "tomli>=2.0.0; python_version < '3.11'",
+]
+
+quality = [
     "mypy==1.16.1",
-    "pytest>=7.2.2,<9.0.0",
-    "pytest-asyncio>=0.21.1,<1.0.0",
-    "pytest-cov>=4.0.0,<5.0.0",
-    "requests>=2.28.2",
-    "ruff>=0.0.256,<1.0.0",
-    "ipdb",
+    "pre-commit==4.3.0",
+    "ruff==0.16.5",
+]
+
+packaging = [
+    "twine==7.0.0",
 ]
 
 docs = [
     "griffe-typingdoc>=0.2.2,<1.0",
-    "mkautodoc>=0.2.0,<0.3.0",
-    "mkdocs>=1.1.2,<2.0.0",
-    "mkdocs-material>=9.4.4,<10.0.0",
     "mdx-include>=1.4.2,<2.0.0",
+    "mkautodoc>=0.2.0,<0.3.0",
+    "mkdocs>=1.6.1,<2.0.0",
     "mkdocs-macros-plugin>=0.4.0",
+    "mkdocs-material>=9.4.4,<10.0.0",
     "mkdocs-meta-descriptions-plugin>=2.3.0",
     "mkdocstrings[python]>=0.23.0,<0.30.0",
     "pyyaml>=6.0,<7.0.0",
+]
+
+[tool.hatch.envs.default]
+features = ["quality", "packaging"]
+dependencies = [
+    "devtools>=0.12.2",
+    "ipython",
+    "ptpython",
 ]
 
 [tool.hatch.envs.default.scripts]
 clean_pyc = "find . -type f -name \"*.pyc\" -delete"
 clean_pyi = "find . -type f -name \"*.pyi\" -delete"
 clean_pycache = "find . -type d -name \"*__pycache__*\" -delete"
-build_with_check = "hatch build; twine check dist/*"
-lint = "ruff check --fix --line-length 99  mongoz tests {args}; hatch run test:check_types;"
-format = "hatch fmt && hatch fmt --check && hatch run test:check_types"
+lint = "ruff check mongoz tests scripts {args}"
+format-check = "ruff format --check mongoz tests scripts {args}"
+format = [
+    "ruff check --fix mongoz tests scripts {args}",
+    "ruff format mongoz tests scripts {args}",
+]
+typing = "mypy -p mongoz {args}"
+quality = [
+    "hatch run lint",
+    "hatch run format-check",
+    "hatch run typing",
+    "hatch run test:coverage",
+]
 
 [tool.hatch.envs.docs]
-features = ["testing", "docs"]
+features = ["docs"]
+dependencies = []
 
 [tool.hatch.envs.docs.scripts]
 update_languages = "scripts/docs.py update-languages"
@@ -113,34 +129,26 @@ serve_lang = "hatch run docs:update_languages; scripts/docs.py live --lang {args
 new_lang = "hatch run docs:update_languages; scripts/docs.py new-lang --lang {args}"
 
 [tool.hatch.envs.test]
-dependencies = [
-    "a2wsgi>1.10.0,<2.0.0",
-    "autoflake>=2.0.2,<3.0.0",
-    "black==24.1.1,<25.0",
-    "ravyn[standard]>=0.3.7",
-    "httpx>=0.25.0,<0.30.0",
-    "isort>=5.12.0,<6.0.0",
-    "mypy==1.16.1",
-    "pytest>=7.2.2,<9.0.0",
-    "pytest-asyncio>=0.21.1,<1.0.0",
-    "pytest-cov>=4.0.0,<5.0.0",
-    "requests>=2.28.2",
-    "ruff>=0.0.256,<1.0.0",
-    "ipdb"
-]
+features = ["testing"]
+dependencies = []
 
 [tool.hatch.envs.test.scripts]
 # needs docker services running
-test = "pytest {args} --disable-warnings"
-test_man = "pytest {args} --disable-pytest-warnings -s -vv --disable-warnings"
-coverage = "pytest --cov=asyncz --cov=tests --cov-report=term-missing:skip-covered --cov-report=html tests {args}"
-check_types = "mypy -p mongoz"
+test = "pytest --disable-warnings tests {args}"
+focused = "pytest --disable-warnings {args}"
+warnings = "pytest --disable-warnings -p scripts.pytest_warning_policy tests {args}"
+coverage = "pytest --disable-warnings -p scripts.pytest_warning_policy --cov=mongoz --cov-branch --cov-config=pyproject.toml --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=json:coverage.json tests {args}"
 
+[tool.hatch.envs.matrix]
+template = "test"
 
-[tool.isort]
-profile = "black"
-known_third_party = []
-src_paths = ["mongoz"]
+[[tool.hatch.envs.matrix.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
+
+[tool.hatch.envs.package]
+features = ["packaging"]
+dependencies = []
+
 
 [tool.mypy]
 warn_unused_configs = true
@@ -157,17 +165,42 @@ disable_error_code = "attr-defined,arg-type,override,misc,valid-type,call-overlo
 warn_unused_ignores = true
 warn_redundant_casts = true
 
+[tool.ruff]
+line-length = 99
+target-version = "py310"
+
 [tool.ruff.lint]
 select = ["E", "W", "F", "C", "B", "I"]
 ignore = ["E501", "B008", "C901", "B026"]
 
 exclude = ["docs_src/"]
 
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
 [tool.coverage.run]
-parallel = true
-context = '${CONTEXT}'
-source = ["tests", "mongoz"]
-# omit = []
+branch = true
+relative_files = true
+source = ["mongoz"]
+
+[tool.coverage.report]
+# Corrected Python 3.13 baseline measured on 2026-09-01: 88.97% branch coverage.
+# The 88.95 floor allows display rounding only; losing one covered line fails.
+fail_under = 88.95
+precision = 2
+show_missing = true
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.coverage.json]
+output = "coverage.json"
+
+[tool.mongoz.warning-ratchet]
+# Campaign 3 owns removal of the Pydantic/model-construction warning debt.
+"builtins.UserWarning" = 91
+"pydantic.warnings.PydanticDeprecatedSince20" = 614
+"pydantic.warnings.PydanticDeprecatedSince211" = 11570
 
 [[tool.mypy.overrides]]
 module = "mongoz.tests.*"
