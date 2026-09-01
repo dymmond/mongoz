@@ -2,110 +2,85 @@
 
 ## Unreleased
 
+## 0.14.0
+
+### Added
+
+- Added session-aware aggregation and bulk-write boundaries with native PyMongo results and
+  errors.
+- Added inspectable index plans, explicit policies for destructive reconciliation, and protected
+  unmanaged and `_id_` indexes.
+- Added documented native-driver access through `registry.driver`, `database.driver`, and
+  `collection.driver`, plus consistent top-level exports for public errors and `Collection`.
+
 ### Changed
 
-- Rebuilt the documentation around a strict Zensical pipeline with deterministic include
-  preparation, focused Start/Concept/Tutorial/Guide/Reference/Migration/Operations navigation,
-  compatibility routes for established URLs, an explicitly archived Portuguese surface, and a
-  distinct responsive Mongoz visual system.
-- A missing acknowledged instance `delete()` now raises `DocumentNotFound`, matching the established
-  missing-write contract for instance `update()` and `save()`; `post_delete` is not dispatched for a
-  document that was not deleted.
-- Streaming managers and querysets now preserve sort, skip, limit, projection, lookup, and session
-  state. `last()` retains one raw document instead of hydrating the complete result set, and ordinary
-  BSON hydration uses a measured fast path when no lookup projection is present.
-- Literal string helpers now escape regex metacharacters; `Q.pattern()` remains the explicit raw
-  regex escape hatch. Modeled writes serialize declared fields only, while raw query dictionaries,
-  pipelines, bulk operations, native drivers, and `$where` are documented as trusted-only APIs.
-- Registry cleanup preserves an in-flight body failure if close also fails. Native PyMongo timeout,
-  retry, concern, topology, and error contracts remain unchanged and are covered by manifestation
-  tests and production guidance.
-- Removed the unused `orjson` runtime dependency. Added a private-reporting security policy,
-  dependency auditing/review, CodeQL, recognized Dependabot configuration, and immutable action
-  references in credential-sensitive release and benchmark workflows.
-- CodSpeed benchmarks now measure individual fixed operations with explicit warmups and repeats.
-  A separate informational standalone benchmark reports raw PyMongo and Mongoz end-to-end groups
-  without making cross-ODM marketing claims.
+- Replaced Motor with PyMongo Async and introduced an explicit Registry lifecycle. A Registry owns
+  one reusable `AsyncMongoClient`, supports `async with`, closes idempotently, and does not reopen
+  after closure. Mongoz now requires `pymongo>=4.13,<5.0`.
+- Made managers and querysets clone-on-write, preserving filters, sort, pagination, projection,
+  lookup, database, and session state without mutating sibling queries. Streaming cursors now close
+  reliably, and query hydration and `last()` use lower-overhead paths for improved performance.
+- Propagated sessions through queries, instance writes, transactions, aggregation, bulk writes,
+  and index operations while preserving native PyMongo transaction behavior.
+- Clarified persistence semantics: `update()` applies an atomic modeled patch, `save()` synchronizes
+  all modeled fields, and acknowledged update, save, and delete operations raise
+  `DocumentNotFound` when the persisted document is missing.
+- Migrated static analysis from mypy to `ty`, including typed native-driver boundaries and the
+  packaged `py.typed` marker. Modernized Pydantic integration and removed model-contract warnings
+  without warning filters.
+- Rebuilt the documentation with a strict Zensical pipeline, focused task-based navigation,
+  preserved compatibility routes, and a dedicated
+  [modernization migration guide](https://mongoz.dymmond.com/migration/modernization/).
+- Signals now accept async receivers only, dispatch sequentially in registration order, fail fast,
+  preserve cancellation, and remain isolated per document class. `run_sync()` accepts any
+  awaitable and executes it exactly once.
 
-- Signals now enforce their documented async-only receiver contract at registration. Dispatch is
-  sequential in registration order, fail-fast, cancellation-safe, and isolated per document class.
-- `run_sync()` accepts any awaitable, executes it exactly once, preserves application exceptions,
-  and uses a context-aware worker thread only when the caller already has a running event loop.
-- All Mongoz exceptions are exported consistently from `mongoz` and `mongoz.exceptions`; exception
-  messages retain contextual fragments, and cardinality errors have useful defaults. Native
-  PyMongo errors remain unwrapped.
-- `Collection` is now a top-level export. `database.driver` and `collection.driver` are the
-  supported native PyMongo escape hatches alongside `registry.driver`; Registry ownership is
-  unchanged.
-- Invalid settings imports, base classes, values, and names now raise `ImproperlyConfigured` with
-  the original import or validation failure retained as the cause.
-- Public query and settings validation no longer depends on Python assertions and remains active
-  under `python -O`.
-- Nested embedded models and callable document defaults are normalized before serialization,
-  removing the remaining seven model-contract warnings without warning filters.
+### Removed
 
-- Instance `update()` and query updates now validate inherited fields and aliases and write only the
-  requested patch. Unknown update keys raise `InvalidKeyError`; `save()` remains the explicit
-  all-modeled-fields synchronization API. Acknowledged instance writes raise `DocumentNotFound`
-  when their persisted identifier no longer exists.
-- `get_or_create()` now keeps operator predicates out of insertion values and performs a native
-  atomic upsert while preserving duplicate-key errors.
-- Index reconciliation now exposes a side-effect-free `IndexPlan`, retains unmanaged and `_id_`
-  indexes, scopes all inspection/execution to the selected collection, and requires explicit
-  authorization for same-name destructive recreation. An opt-in plan can label unmanaged indexes
-  as deletion candidates, while a separate `drop_unmanaged=True` execution policy is required to
-  delete them; `_id_` remains protected.
-- `Document.aggregate()` and `Document.bulk_write()` provide session-aware, collection-targeted
-  PyMongo-compatible escape hatches with native results and errors.
+- Removed Motor, the Registry `event_loop` argument, import-time index I/O, and the unused `orjson`
+  runtime dependency.
 
-- Replaced Motor with native PyMongo Async. Mongoz now requires `pymongo>=4.13,<5.0`; 4.13 is
-  the first release where the async API is generally available.
-- `Registry` now owns one reusable `AsyncMongoClient`, provides idempotent async `close()`, supports
-  `async with`, and never reopens after close.
-- Native database and collection escape hatches now return PyMongo Async types. `registry.driver`
-  is the owned `AsyncMongoClient`, and the server address is obtained with `await registry.address`.
-- Cursor-producing paths follow PyMongo's call shapes: `find()` returns a cursor synchronously,
-  while aggregation and index-listing cursor creation is awaited. Mongoz closes cursors after
-  materialization, early generator close, and cancellation.
-- Model construction, settings access, and JSON serialization now use supported Pydantic APIs.
-  BSON `ObjectId` and signal JSON output is preserved without deprecated `json_encoders` config,
-  and the warning gate rejects any reintroduced Pydantic deprecation.
-- Manager and queryset construction is clone-on-write, so sibling filters, ordering, projection,
-  and pagination no longer share mutable state.
-- `using_session()` binds a PyMongo session to a derived manager or queryset, while document
-  create/save/update/delete methods accept explicit sessions for transaction-safe instance writes.
-- Invalid manager lookup operators now raise `OperatorInvalid` even when Python assertions are
-  disabled.
+### Fixed
+
+- Corrected literal string helpers to escape regular-expression metacharacters while retaining
+  `Q.pattern()` as the explicit raw-pattern boundary.
+- Corrected inherited-field and alias validation for modeled writes, atomic `get_or_create()`
+  behavior, missing-write errors, query validation under `python -O`, and cleanup failure
+  provenance.
+- Normalized public error, settings, signal, BSON serialization, and native compatibility
+  boundaries without wrapping PyMongo-owned failures.
+
+### Security
+
+- Hardened modeled serialization and literal query helpers, documented trusted-only raw query and
+  driver boundaries, and added private vulnerability reporting, dependency review and auditing,
+  CodeQL, immutable action references, and least-privilege release permissions.
 
 ### Migrating from Motor
 
-- Remove Motor from application dependencies and remove Motor-specific imports or type checks.
-- Remove the `event_loop` argument from `Registry(...)`. PyMongo binds an async client to the loop
-  of its first network operation and raises on cross-loop use; create one Registry per application
-  lifecycle instead of sharing it across loops or test-client portals.
-- Close the Registry from the same application loop with `await registry.close()`, or use
-  `async with Registry(...)`. A closed Registry must be replaced rather than reopened.
-- Code relying on native or private Motor objects must migrate to PyMongo `AsyncMongoClient`,
-  `AsyncDatabase`, `AsyncCollection`, and async cursor types. Motor-only private attributes and
-  loop monkey-patches are no longer available.
-- Import-time index I/O from `autogenerate_index=True` is no longer performed because it would bind
-  the reusable client to a temporary import-time loop. Run `await registry.document_checks()` in
-  async application startup and `await registry.close()` during shutdown.
+- Remove Motor imports and dependencies, then use PyMongo `AsyncMongoClient`, `AsyncDatabase`,
+  `AsyncCollection`, async cursors, and `AsyncClientSession` for native boundaries.
+- Remove the `event_loop` argument from `Registry(...)`. Create one Registry per application
+  lifecycle, close it on the same application loop, and replace it rather than reopening it.
+- Move index reconciliation to application startup with `registry.document_checks()` or explicit
+  index planning, and propagate sessions explicitly for transactional work.
+- Review query reuse, update versus save behavior, missing-write handling, signal receivers, raw
+  query boundaries, and native escape hatches. The
+  [modernization migration guide](https://mongoz.dymmond.com/migration/modernization/) is the
+  canonical step-by-step guide.
 
-### API compatibility before 1.0
+### API compatibility in the 0.x release line
 
-Mongoz remains pre-1.0, but public API corrections follow these rules:
-
-- Unsafe or internally contradictory behavior is fixed directly when the documented contract was
-  already clear. Rejecting synchronous signal receivers and preventing `run_sync()` retries are
-  bug fixes of this kind.
-- A valid public API that is renamed or replaced should keep a deprecated alias and an actionable
-  warning for a reasonable migration window before removal.
-- Corrections to private attributes or previously undocumented internals require migration notes,
-  not indefinite compatibility shims. Existing `_db` and `_collection` attributes remain usable in
-  this release, but new code should use `database.driver` and `collection.driver`.
-- Native PyMongo exceptions and results are compatibility boundaries and are not wrapped merely to
-  make Mongoz errors look uniform.
+- Unsafe or internally contradictory behavior is corrected directly when the documented contract
+  is already clear.
+- A valid public API that is renamed or replaced should retain a deprecated alias and actionable
+  migration guidance for a reasonable window before removal.
+- Corrections to private attributes or undocumented internals receive migration guidance rather
+  than indefinite shims. Existing `_db` and `_collection` attributes remain usable, while new code
+  should use `database.driver` and `collection.driver`.
+- Native PyMongo exceptions and results remain compatibility boundaries and are not wrapped merely
+  to make Mongoz errors look uniform.
 
 ## 0.13.3
 

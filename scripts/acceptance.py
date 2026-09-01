@@ -21,6 +21,8 @@ def main() -> None:
         run("typing")
         run("typing-negative")
         run("pre-commit-check")
+        run("release:validate")
+        run("security:audit")
         run("docs:validate")
         run("mongodb-standalone-up")
         run("mongodb-standalone-smoke")

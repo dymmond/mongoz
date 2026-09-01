@@ -55,6 +55,11 @@ tasks:
     cmds:
       - hatch run acceptance
 
+  release-validate:
+    desc: Validates canonical version and release-note ownership
+    cmds:
+      - hatch run release:validate {{ .ARGS }}
+
   # ---------------------------- DOCS -----------------------------------
 
   docs-prepare:

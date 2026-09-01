@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mongoz"
-description = "ODM with pydantic made it simple"
-long_description = "ODM with pydantic made it simple"
+description = "Typed asynchronous MongoDB documents and queries for Python."
 readme = "README.md"
+license = "BSD-3-Clause"
 requires-python = ">=3.10"
-dynamic = ['version']
+dynamic = ["version"]
 authors = [{ name = "Tiago Silva", email = "tiago.arasivla@gmail.com" }]
 classifiers = [
     "Intended Audience :: Information Technology",
@@ -50,6 +50,8 @@ Documentation = "https://mongoz.dymmond.com"
 Changelog = "https://mongoz.dymmond.com/release-notes/"
 Funding = "https://github.com/sponsors/tarsil"
 Source = "https://github.com/dymmond/mongoz"
+Issues = "https://github.com/dymmond/mongoz/issues"
+Security = "https://github.com/dymmond/mongoz/security/policy"
 
 
 [tool.hatch.version]
@@ -160,6 +162,13 @@ dependencies = []
 
 [tool.hatch.envs.package.scripts]
 validate = "python scripts/validate_package.py {args}"
+
+[tool.hatch.envs.release]
+features = ["packaging"]
+dependencies = []
+
+[tool.hatch.envs.release.scripts]
+validate = "python scripts/release.py validate {args}"
 
 [tool.hatch.envs.security]
 dependencies = ["pip-audit==2.10.1"]
