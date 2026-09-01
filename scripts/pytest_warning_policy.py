@@ -1,8 +1,9 @@
-"""Pytest plugin enforcing Mongoz's temporary warning baseline.
+"""Pytest plugin enforcing Mongoz's warning baseline.
 
 Known warning categories and their maximum counts live in ``pyproject.toml``.
-The policy permits the existing Campaign 3 debt to decrease, but rejects new
-categories and growth in any known category.
+The policy permits known warning debt to decrease, but rejects new categories
+and growth in any known category. Pydantic deprecations are not allowlisted, so
+their reintroduction fails the test session.
 """
 
 from __future__ import annotations

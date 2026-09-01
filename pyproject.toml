@@ -217,10 +217,9 @@ output = "coverage.xml"
 output = "coverage.json"
 
 [tool.mongoz.warning-ratchet]
-# Campaign 3 owns removal of the Pydantic/model-construction warning debt.
+# Pydantic deprecations are intentionally absent. Unknown categories fail the gate,
+# so any reintroduced Pydantic deprecation is rejected rather than allowlisted.
 "builtins.UserWarning" = 91
-"pydantic.warnings.PydanticDeprecatedSince20" = 614
-"pydantic.warnings.PydanticDeprecatedSince211" = 11570
 
 [[tool.mypy.overrides]]
 module = "mongoz.tests.*"

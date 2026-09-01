@@ -109,9 +109,9 @@ The coverage command also enforces the warning ratchet. To run that policy witho
 hatch run test:warnings -q
 ```
 
-The temporary warning ceiling contains only Pydantic/model-construction debt. New categories or
-growth fail the gate; Campaign 3 removes the existing exceptions rather than pinning an older
-Pydantic release to hide them.
+The warning ratchet rejects unknown warning categories and growth in the remaining known category.
+Pydantic deprecations are not allowlisted, so introducing a deprecated Pydantic construction fails
+the gate instead of being hidden by a warning filter or dependency pin.
 
 ### Static quality
 
