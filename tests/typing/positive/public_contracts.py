@@ -118,3 +118,5 @@ async def signal_receiver(sender: type[Document], **kwargs: object) -> None:
 
 
 User.signals.pre_save.connect(signal_receiver)
+
+assert_type(mongoz.run_sync(User.objects.all()), list[User])
