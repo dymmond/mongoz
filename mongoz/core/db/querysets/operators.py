@@ -5,7 +5,7 @@ from typing import Any, List, Union
 
 from mongoz.core.db.datastructures import Order
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
-from mongoz.exceptions import FieldDefinitionError
+from mongoz.exceptions import FieldDefinitionError, OperatorInvalid
 from mongoz.utils.enums import ExpressionOperator
 
 
@@ -44,11 +44,11 @@ class Equality:
     """
 
     @classmethod
-    def eq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+    def eq(cls, key: Any, value: object) -> Expression:
         return Expression(key=key, operator=ExpressionOperator.EQUAL, value=value)
 
     @classmethod
-    def neq(cls, key: Any, value: Union[bool, Expression]) -> Expression:
+    def neq(cls, key: Any, value: object) -> Expression:
         return Expression(key=key, operator=ExpressionOperator.NOT_EQUAL, value=value)
 
     @classmethod
@@ -67,7 +67,10 @@ class Equality:
 
     @classmethod
     def where(cls, key: Any, value: str) -> Expression:
-        assert isinstance(value, str)
+        if not isinstance(value, str):
+            raise OperatorInvalid(
+                f"The $where operator requires a string; got {type(value).__name__}."
+            )
         return Expression(key=key, operator=ExpressionOperator.WHERE, value=value)
 
     @classmethod
@@ -102,23 +105,27 @@ class Comparison:
     """
 
     @classmethod
-    def gte(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)
+    def gte(cls, key: Any, value: object) -> Expression:
+        if isinstance(value, bool):
+            raise OperatorInvalid("The $gte operator does not accept boolean values.")
         return Expression(key=key, operator=ExpressionOperator.GREATER_THAN_EQUAL, value=value)
 
     @classmethod
-    def gt(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)
+    def gt(cls, key: Any, value: object) -> Expression:
+        if isinstance(value, bool):
+            raise OperatorInvalid("The $gt operator does not accept boolean values.")
         return Expression(key=key, operator=ExpressionOperator.GREATER_THAN, value=value)
 
     @classmethod
-    def lt(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)
+    def lt(cls, key: Any, value: object) -> Expression:
+        if isinstance(value, bool):
+            raise OperatorInvalid("The $lt operator does not accept boolean values.")
         return Expression(key=key, operator=ExpressionOperator.LESS_THAN, value=value)
 
     @classmethod
-    def lte(cls, key: Any, value: Union[bool, Expression]) -> Expression:
-        assert not isinstance(value, bool)
+    def lte(cls, key: Any, value: object) -> Expression:
+        if isinstance(value, bool):
+            raise OperatorInvalid("The $lte operator does not accept boolean values.")
         return Expression(key=key, operator=ExpressionOperator.LESS_THAN_EQUAL, value=value)
 
 

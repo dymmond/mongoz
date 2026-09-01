@@ -24,7 +24,7 @@ from mongoz.core.db.documents.metaclasses import BaseModelMeta, MetaInfo
 from mongoz.core.db.fields.base import MongozField
 from mongoz.core.db.fields.core import ObjectId
 from mongoz.core.db.querysets.base import QuerySet
-from mongoz.core.db.querysets.expressions import Expression
+from mongoz.core.db.querysets.expressions import Expression, parse_query_argument
 from mongoz.core.utils.documents import generify_model_fields
 from mongoz.core.utils.hashable import make_hashable
 from mongoz.utils.mixins import is_operation_allowed
@@ -178,7 +178,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         return proxy_document.model
 
     @classmethod
-    def query(cls: Type[T], *values: Union[bool, Dict, Expression]) -> QuerySet[T]:
+    def query(cls: Type[T], *values: Union[bool, Dict[str, Any], Expression]) -> QuerySet[T]:
         """Filter query criteria nad blocks abstract class operations"""
         is_operation_allowed(cls)
 
@@ -187,12 +187,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
             return QuerySet(model_class=cls)
 
         for arg in values:
-            assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
-            if isinstance(arg, dict):
-                query_expressions = Expression.unpack(arg)
-                filter_by.extend(query_expressions)
-            else:
-                filter_by.append(arg)
+            filter_by.extend(parse_query_argument(arg, operation="Query"))
 
         return QuerySet(model_class=cls, filter_by=filter_by)
 

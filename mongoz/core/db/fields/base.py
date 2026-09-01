@@ -180,14 +180,17 @@ class MongozField:
         return super().__hash__()
 
     def __getattr__(self, name: str) -> Any:
-        assert self.model_class is not None
-
-        if name not in self.model_class.__mongoz_fields__:
+        model_class = self.model_class
+        model_fields = getattr(model_class, "__mongoz_fields__", None)
+        if model_class is None or not isinstance(model_fields, dict):
             raise InvalidKeyError(
-                f"Model '{self.model_class.__class__.__name__}' has no attribute '{name}'"
+                f"Field {self._name!r} has no related document attribute {name!r}."
             )
 
-        child_field: MongozField = self.model_class.__mongoz_fields__[name]
+        if name not in model_fields:
+            raise InvalidKeyError(f"Model {model_class.__name__!r} has no attribute {name!r}.")
+
+        child_field: MongozField = model_fields[name]
         return MongozField(
             pydantic_field=child_field.pydantic_field,
             model_class=child_field.model_class,

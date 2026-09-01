@@ -5,6 +5,7 @@ import typing
 from typing import TYPE_CHECKING, Any, Dict, List, Union, cast
 
 from mongoz.core.db.datastructures import Order
+from mongoz.exceptions import FieldDefinitionError, OperatorInvalid
 from mongoz.utils.enums import ExpressionOperator
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -69,7 +70,10 @@ class Expression:
                 # Logical operators need a {"$or": [...]} query
                 if key in ["$and", "$nor", "$or"]:
                     list_value = value.get(key, value.get("$eq"))
-                    assert isinstance(list_value, (list, tuple))
+                    if not isinstance(list_value, (list, tuple)):
+                        raise OperatorInvalid(
+                            f"Logical operator {key!r} requires a list or tuple of expressions."
+                        )
                     values = [v.compile() if isinstance(v, Expression) else v for v in list_value]
                     compiled_lists[key] = values
                 else:
@@ -102,6 +106,18 @@ class Expression:
                 expr = Expression(key=key, operator="$eq", value=value)
                 expressions.append(expr)
         return expressions
+
+
+def parse_query_argument(value: object, *, operation: str) -> List[Expression]:
+    """Validate and normalize one public query argument."""
+    if isinstance(value, dict):
+        return Expression.unpack(value)
+    if isinstance(value, Expression):
+        return [value]
+    raise FieldDefinitionError(
+        f"{operation} arguments must be dictionaries or Expression instances; "
+        f"got {type(value).__name__}."
+    )
 
 
 class SortExpression:

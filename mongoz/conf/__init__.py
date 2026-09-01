@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from mongoz.conf.functional import LazyObject, empty
 from mongoz.conf.module_import import import_string
+from mongoz.exceptions import ImproperlyConfigured
 
 if TYPE_CHECKING:
     from mongoz.conf.global_settings import MongozSettings
@@ -32,7 +33,8 @@ class MongozLazySettings(LazyObject):
         settings: type[MongozSettings] = import_string(settings_module)
 
         for setting, _ in settings().model_dump().items():
-            assert setting.islower(), "%s should be in lowercase." % setting
+            if not setting.islower():
+                raise ImproperlyConfigured(f"Setting {setting!r} must be lowercase.")
 
         self._wrapped = settings()
 

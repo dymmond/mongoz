@@ -37,7 +37,11 @@ from mongoz.core.db.querysets.core.protocols import (
     AwaitableQuery,
 )
 from mongoz.core.db.querysets.core.runtime import SessionBoundQuery
-from mongoz.core.db.querysets.expressions import Expression, SortExpression
+from mongoz.core.db.querysets.expressions import (
+    Expression,
+    SortExpression,
+    parse_query_argument,
+)
 from mongoz.core.utils.cursors import closing_cursor
 from mongoz.exceptions import (
     DocumentNotFound,
@@ -409,18 +413,13 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
         manager = self.clone()
         return manager.filter_query(**kwargs)
 
-    def raw(self, *values: Union[bool, Dict, Expression]) -> Self:
+    def raw(self, *values: Union[bool, Dict[str, Any], Expression]) -> Self:
         """
         Runs a raw query against the database.
         """
         manager = self.clone()
         for value in values:
-            assert isinstance(value, (dict, Expression)), "Invalid argument to Raw"
-            if isinstance(value, dict):
-                query_expressions = Expression.unpack(value)
-                manager._filter.extend(query_expressions)
-            else:
-                manager._filter.append(value)
+            manager._filter.extend(parse_query_argument(value, operation="Raw query"))
         return manager
 
     def all(self, **kwargs: Any) -> Self:
@@ -465,9 +464,11 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
         manager = self.clone()
 
         if kwargs:
-            assert len(kwargs) == 1, (
-                "`sort` only allows one field per sort. Use `sort(field).sort(field) for multiple fields instead"
-            )
+            if len(kwargs) != 1:
+                raise FieldDefinitionError(
+                    "sort() accepts one keyword field per call; chain sort() calls for "
+                    "multiple fields."
+                )
             return manager.filter_query(**kwargs)
 
         direction = direction or Order.ASCENDING
@@ -666,9 +667,10 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
 
         E.g.: Movie.objects.where('this.a < (this.b + this.c)')
         """
-        assert isinstance(condition, (str, Code)), (
-            "The where clause must be a string or a bson.Code"
-        )
+        if not isinstance(condition, (str, Code)):
+            raise OperatorInvalid(
+                f"The where clause must be a string or bson.Code; got {type(condition).__name__}."
+            )
 
         manager = self.clone()
 

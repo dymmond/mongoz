@@ -22,12 +22,17 @@ from typing_extensions import Literal, Self
 from mongoz.core.db.datastructures import Order
 from mongoz.core.db.fields import base
 from mongoz.core.db.querysets.core.runtime import SessionBoundQuery
-from mongoz.core.db.querysets.expressions import Expression, SortExpression
+from mongoz.core.db.querysets.expressions import (
+    Expression,
+    SortExpression,
+    parse_query_argument,
+)
 from mongoz.core.utils.cursors import closing_cursor
 from mongoz.exceptions import (
     DocumentNotFound,
     FieldDefinitionError,
     MultipleDocumentsReturned,
+    OperatorInvalid,
 )
 
 if TYPE_CHECKING:
@@ -135,15 +140,10 @@ class BaseQuerySet(SessionBoundQuery, Generic[T]):
             queryset._sort.append(key)
         return queryset
 
-    def query(self, *args: Union[bool, Dict, Expression]) -> Self:
+    def query(self, *args: Union[bool, Dict[str, Any], Expression]) -> Self:
         queryset = self.clone()
         for arg in args:
-            assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
-            if isinstance(arg, dict):
-                query_expressions = Expression.unpack(arg)
-                queryset._filter.extend(query_expressions)
-            else:
-                queryset._filter.append(arg)
+            queryset._filter.extend(parse_query_argument(arg, operation="Query"))
         return queryset
 
 
@@ -280,9 +280,10 @@ class QuerySet(BaseQuerySet[T]):
 
         E.g.: Movie.query().where('this.a < (this.b + this.c)')
         """
-        assert isinstance(condition, (str, Code)), (
-            "The where clause must be a string or a bson.Code"
-        )
+        if not isinstance(condition, (str, Code)):
+            raise OperatorInvalid(
+                f"The where clause must be a string or bson.Code; got {type(condition).__name__}."
+            )
 
         filter_query = Expression.compile_many(self._filter)
         cursor = self._collection.find(filter_query, **self._driver_options).where(condition)
