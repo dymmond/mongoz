@@ -4,7 +4,7 @@ from tests.conftest import client
 
 db = client.get_database("test_db")
 collection = db.get_collection("movies")
-pytestmark = pytest.mark.asyncio
+pytestmark = pytest.mark.anyio
 
 
 async def test_client_class() -> None:

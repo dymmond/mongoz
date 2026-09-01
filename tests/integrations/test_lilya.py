@@ -10,9 +10,10 @@ from lilya.testclient import TestClient
 
 import mongoz
 from mongoz import Document
-from tests.conftest import client
+from tests.settings import TEST_DATABASE_URL
 
 pytestmark = pytest.mark.anyio
+registry = mongoz.Registry(TEST_DATABASE_URL)
 
 
 class Movie(Document):
@@ -20,13 +21,17 @@ class Movie(Document):
     year: int = mongoz.Integer()
 
     class Meta:
-        registry = client
+        registry = registry
         database = "test_db"
 
 
-@pytest.fixture(scope="module", autouse=True)
 async def prepare_database() -> None:
     await Movie.query().delete()
+
+
+async def close_database() -> None:
+    await Movie.query().delete()
+    await registry.close()
 
 
 async def create_movies(request: Request):
@@ -43,28 +48,44 @@ async def get_movies(request: Request):
     return Ok(json.loads(movie.model_dump_json()))
 
 
+async def clear_movies(request: Request):
+    await Movie.query().delete()
+    return Ok({})
+
+
 app = Lilya(
     routes=[
         Path("/all", handler=get_movies),
+        Path("/clear", handler=clear_movies, methods=["POST"]),
         Path("/create", handler=create_movies, methods=["POST"]),
-    ]
+    ],
+    on_startup=[prepare_database],
+    on_shutdown=[close_database],
 )
 
 
-async def test_lilya_integration_create() -> None:
+@pytest.fixture(scope="module")
+def integration_client():
     with TestClient(app) as client:
-        response = client.post("/create", json={"name": "Barbie", "year": 2023})
-
-        assert response.json()["name"] == "Barbie"
-        assert response.json()["year"] == 2023
-        assert response.status_code == 201
+        yield client
 
 
-async def test_lilya_integration_read() -> None:
-    with TestClient(app) as client:
-        client.post("/create", json={"name": "Barbie", "year": 2023})
-        response = client.get("/all")
+async def test_lilya_integration_create(integration_client: TestClient) -> None:
+    integration_client.post("/clear")
+    response = integration_client.post(
+        "/create", json={"name": "Barbie", "year": 2023}
+    )
 
-        assert response.json()["name"] == "Barbie"
-        assert response.json()["year"] == 2023
-        assert response.status_code == 200
+    assert response.json()["name"] == "Barbie"
+    assert response.json()["year"] == 2023
+    assert response.status_code == 201
+
+
+async def test_lilya_integration_read(integration_client: TestClient) -> None:
+    integration_client.post("/clear")
+    integration_client.post("/create", json={"name": "Barbie", "year": 2023})
+    response = integration_client.get("/all")
+
+    assert response.json()["name"] == "Barbie"
+    assert response.json()["year"] == 2023
+    assert response.status_code == 200
