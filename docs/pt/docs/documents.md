@@ -6,15 +6,15 @@ Isso também significa que, com documentos e NoSQL, **não existem joins e chave
 
 O **Mongoz** implementa esses documentos numa interface mais amigável, caso ainda esteja familiarizado com ORMs ou mesmo se estiver a utilizar algo como o [Edgy][edgy]. Não há motivo para complicar muito, certo?
 
-## Declaração de documentos
+## Declaração de documentos {#declaring-documents}
 
 Ao declarar documentos, basta herdar do objeto `mongoz.Document` e definir os atributos usando os [Campos](./fields.md) do Mongoz.
 
 Para cada documento definido, também precisa definir **um** campo obrigatório, o `registry`, que também é uma instância de `Registry` do Mongoz.
 
-Existem mais parâmetros que pode usar e passar para o documento, como [tablename](#metaclass) entre outros, mas falaremos mais sobre isto nesta secção.
+Existem mais parâmetros que pode usar e passar para o documento, como [tablename](#the-meta-class) entre outros, mas falaremos mais sobre isto nesta secção.
 
-Como o **Mongoz** inspirou-se na interface do [Edgy][edgy], isto também significa que uma classe [Meta](#a-classe-meta) deve ser declarada.
+Como o **Mongoz** inspirou-se na interface do [Edgy][edgy], isto também significa que uma classe [Meta](#the-meta-class) deve ser declarada.
 
 Embora isto pareça muito simples, na verdade o **Mongoz** está a fazer muito trabalho por detrás.
 
@@ -26,7 +26,7 @@ Embora isto pareça muito simples, na verdade o **Mongoz** está a fazer muito t
 
 Existe uma secção especial [aqui](./embedded-documents.md) dedicada a explicar o que são e como é simples usá-los com os documentos atuais.
 
-## A classe Meta
+## A classe Meta {#the-meta-class}
 
 Ao declarar um documento, é **crucial** ter a classe `Meta` declarada. É nela que declara os `metadados` necessários para seus documentos.
 
@@ -64,7 +64,7 @@ Vamos ver alguns exemplos de como usar o registro com um design simples e com ab
 
 Como pode ver, ao declarar o `registry` e atribuí-lo ao `registry`, esse mesmo `registry` é usado no `Meta` do documento.
 
-#### Com herança
+#### Com herança {#with-inheritance}
 
 Sim, também pode usar a herança de documentos para ajudá-lo com seus documentos e evitar repetições.
 
@@ -217,7 +217,7 @@ A maneira mais simples e limpa de declarar um índice com o **Mongoz**. Declara 
 
 Trabalhar com índices é bastante fácil e existem algumas operações que pode executar manualmente nos seus documentos e outras que **precisa executar manualmente**.
 
-#### Criando índices
+#### Criando índices {#create-indexes}
 
 Quando os índices forem declarados com `autogenerate_index=True`, execute
 `await registry.document_checks()` durante o arranque da aplicação.
@@ -260,7 +260,7 @@ await User.create_index("name")
 
 #### Excluindo índices
 
-Agora, vamos para o oposto da [criação de índices](#criando-índices) e isso **deve ser feito manualmente**.
+Agora, vamos para o oposto da [criação de índices](#create-indexes) e isso **deve ser feito manualmente**.
 
 A função `drop_indexes()` é usada para excluir todos os índices declarados no documento.
 
@@ -294,7 +294,7 @@ await User.drop_index("name")
 !!! Warning
     Se tentar excluir um índice com um nome de campo não declarado no documento ou não declarado como índice, pelo menos, um `InvalidKeyError` será lançado.
 
-#### Verificações do documento
+#### Verificações do documento {#document-checks}
 
 Se também deseja garantir que executa as verificações adequadas para os índices, por exemplo, se um índice foi excluído do documento e deseja garantir que isso seja refletido, também é possível faze-lo.
 
@@ -312,7 +312,7 @@ await User.check_indexes()
 
 Isto pode ser útil se quiser garantir que, para cada [registry](./registry.md), todos os documentos tenham os índices verificados antecipadamente.
 
-#### Criar índices para várias bases de dados
+#### Criar índices para várias bases de dados {#create-indexes-for-multiple-databases}
 
 E se você tiver o mesmo documento em várias bases de dados (multi-tenancy, por exemplo) e quiser refletir os índices em todo o lado? O Mongoz também oferece essa opção.
 
@@ -330,7 +330,7 @@ Por exemplo:
 await User.create_indexes_for_multiple_databases(["db_um", "db_dois", "db_tres"])
 ```
 
-#### Excluir índices para várias bases de dados
+#### Excluir índices para várias bases de dados {#drop-indexes-for-multiple-databases}
 
 E se você tiver o mesmo documento em várias bases de dados (multilocação, por exemplo) e quiser excluir os índices todo o lado? O Mongoz também oferece essa opção.
 

@@ -40,7 +40,7 @@ e definitivo; um registo fechado não cria outro cliente. Para trabalho delimita
 {!> ../../../docs_src/registry/custom_registry.py !}
 ```
 
-## Executar algumas verificações de documentos
+## Executar algumas verificações de documentos {#run-some-document-checks}
 
 Por vezes, pode ser útil garantir que todos os documentos têm os índices atualizados antecipadamente. Isso pode ser especialmente útil se já tiver um documento e alguns índices foram atualizados, adicionados ou removidos. Esta funcionalidade executa essas verificações para todos os documentos do registo fornecido.
 

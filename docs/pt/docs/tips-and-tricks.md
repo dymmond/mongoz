@@ -53,7 +53,7 @@ Usando o exemplo acima, vamos agora criar um novo ficheiro chamado `utils.py`, o
 
 Isto garantirá que a partir de agora irá usar sempre a mesma conecção e registro dentro da aplicação, importando o `get_db_connection()` sempre que for necessário.
 
-## Exemplo prático
+## Exemplo prático {#practical-example}
 
 Para este exemplo, teremos a seguinte estrutura (não iremos usar todos os ficheiros).
 Não iremos criar *views* visto que este não é o propósito do exemplo.
@@ -116,7 +116,7 @@ Agora podemos começar a criar os nossos [documentos](./documents.md) e garantir
 {!> ../../../docs_src/tips/models.py !}
 ```
 
-Aqui aplicamos a [herança](./documents.md#com-herança) para torná-lo mais limpo e legível
+Aqui aplicamos a [herança](./documents.md#with-inheritance) para torná-lo mais limpo e legível
 caso queiramos ainda mais documentos.
 
 Como também pode notar, estamos a importar o `get_db_connection()` previamente criado. Agora é
@@ -124,7 +124,7 @@ o que usaremos em todos os lugares.
 
 ## Notas
 
-O [exemplo](#exemplo-prático) acima mostra como pode aproveitar local centralizado para gerir suas conecções e usá-las em toda a aplicação,
+O [exemplo](#practical-example) acima mostra como pode aproveitar local centralizado para gerir suas conecções e usá-las em toda a aplicação,
 mantendo o código sempre limpo, não redundante e bonito.
 
 Este exemplo pode ser aplicado a qualquer uma das frameworks preferidas e pode usar tantas técnicas diferentes

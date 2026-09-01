@@ -10,7 +10,7 @@ async def is_verified_user(id: str):
     Checks if user is verified and sends notification
     if true.
     """
-    user = await User.get_document_by_id(id))
+    user = await User.get_document_by_id(id)
 
     if user.is_verified:
         # triggers the custom signal

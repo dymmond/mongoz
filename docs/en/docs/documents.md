@@ -16,7 +16,7 @@ using the mongoz [Fields](./fields.md).
 For each document defined you also need to set **one** mandatory field, the `registry` which is also
 an instance of `Registry` from Mongoz.
 
-There are more parameters you can use and pass into the document such as [tablename](#metaclass) and
+There are more parameters you can use and pass into the document such as [tablename](#the-meta-class) and
 a few more but more on this in this document.
 
 Since **Mongoz** took inspiration from the interface of [Edgy][edgy], that also means that a [Meta](#the-meta-class)

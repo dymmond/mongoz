@@ -14,7 +14,7 @@ Sinais são mecanismos usados para acionar ações específicas quando ocorre um
 
 Da mesma forma que o Django aborda os sinais em termos de registro, o Mongoz faz isso de maneira semelhante.
 
-## Sinais padrão
+## Sinais padrão {#standard-signals}
 
 O Mongoz possui receptores padrão para cada documento criado no ecossistema. Eles podem ser usados prontamente a qualquer momento.
 
@@ -103,7 +103,7 @@ Como pode ver, o decorador `post_save` está a apontar para o documento `User`, 
 
 Isso é chamado de **receptor**.
 
-Pode usar qualquer um dos [sinais padrão](#sinais-padrão) disponíveis ou até mesmo criar seu próprio [sinal personalizado](#sinais-personalizados).
+Pode usar qualquer um dos [sinais padrão](#standard-signals) disponíveis ou até mesmo criar seu próprio [sinal personalizado](#sinais-personalizados).
 
 ### Requisitos
 
@@ -152,7 +152,7 @@ Se deseja desconectar o receptor e impedi-lo de ser executado para um determinad
 
 ## Sinais Personalizados
 
-Aqui é onde as coisas ficam interessantes. Muitas vezes, você querer ter o seu próprio `Sinal` e não depender apenas dos [padrões](#sinais-padrão) fornecidos, e isso é perfeitamente natural e comum.
+Aqui é onde as coisas ficam interessantes. Muitas vezes, você querer ter o seu próprio `Sinal` e não depender apenas dos [padrões](#standard-signals) fornecidos, e isso é perfeitamente natural e comum.
 
 O Mongoz permite que os sinais personalizados sejam usados de acordo com o seu próprio design.
 

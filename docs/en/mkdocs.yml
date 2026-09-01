@@ -99,3 +99,6 @@ extra:
     name: pt - português
 hooks:
 - ../../scripts/hooks.py
+validation:
+  links:
+    anchors: warn

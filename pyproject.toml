@@ -78,15 +78,16 @@ packaging = [
 ]
 
 docs = [
-    "griffe-typingdoc>=0.2.2,<1.0",
-    "mdx-include>=1.4.2,<2.0.0",
-    "mkautodoc>=0.2.0,<0.3.0",
-    "mkdocs>=1.6.1,<2.0.0",
-    "mkdocs-macros-plugin>=0.4.0",
-    "mkdocs-material>=9.4.4,<10.0.0",
-    "mkdocs-meta-descriptions-plugin>=2.3.0",
-    "mkdocstrings[python]>=0.23.0,<0.30.0",
-    "pyyaml>=6.0,<7.0.0",
+    "email-validator==2.3.0",
+    "griffe-typingdoc==0.3.1",
+    "mdx-include==1.4.2",
+    "mkautodoc==0.2.0",
+    "mkdocs==1.6.1",
+    "mkdocs-macros-plugin==1.5.0",
+    "mkdocs-material==9.7.7",
+    "mkdocs-meta-descriptions-plugin==4.1.0",
+    "mkdocstrings[python]==0.29.1",
+    "pyyaml==6.0.3",
 ]
 
 [tool.hatch.envs.default]
@@ -113,6 +114,8 @@ quality = [
     "hatch run format-check",
     "hatch run typing",
     "hatch run test:coverage",
+    "hatch run docs:validate",
+    "hatch run package:validate",
 ]
 mongodb-standalone-up = "docker compose -p mongoz-standalone -f compose.yml up -d --wait"
 mongodb-standalone-down = "docker compose -p mongoz-standalone -f compose.yml down --volumes --remove-orphans"
@@ -128,6 +131,7 @@ dependencies = []
 [tool.hatch.envs.docs.scripts]
 update_languages = "scripts/docs.py update-languages"
 build = "hatch run docs:update_languages; scripts/docs.py build-all"
+validate = "python scripts/validate_docs.py"
 build_lang = "hatch run docs:update_languages; scripts/docs.py build --lang {args}"
 serve = "hatch run docs:update_languages; scripts/docs.py live"
 dev = "hatch run docs:update_languages; scripts/docs.py serve"
@@ -154,6 +158,9 @@ python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
 [tool.hatch.envs.package]
 features = ["packaging"]
 dependencies = []
+
+[tool.hatch.envs.package.scripts]
+validate = "python scripts/validate_package.py {args}"
 
 
 [tool.mypy]
