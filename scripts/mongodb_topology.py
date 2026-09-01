@@ -6,7 +6,7 @@ import argparse
 import asyncio
 from typing import Any
 
-from pymongo import AsyncMongoClient
+from pymongo import AsyncMongoClient, InsertOne
 from pymongo.errors import DuplicateKeyError
 
 import mongoz
@@ -50,7 +50,8 @@ async def replica_set_smoke(uri: str) -> None:
             raise RuntimeError(f"replica set has no writable primary: {hello}")
 
         await database.drop_collection(TransactionRecord.meta.collection.name)
-        await TransactionRecord.create_indexes()
+        async with client.start_session() as session:
+            await TransactionRecord.create_indexes(session=session)
 
         async with client.start_session() as session:
             async with await session.start_transaction():
@@ -71,6 +72,19 @@ async def replica_set_smoke(uri: str) -> None:
                 )
                 if visible != 1:
                     raise RuntimeError(f"transactional read missed Mongoz writes: {visible}")
+                bulk_result = await TransactionRecord.bulk_write(
+                    [InsertOne({"status_value": "bulk-in-transaction"})], session=session
+                )
+                if bulk_result.inserted_count != 1:
+                    raise RuntimeError("transactional bulk write lost its native result")
+                aggregated = await TransactionRecord.aggregate(
+                    [{"$count": "total"}], session=session
+                )
+                if aggregated != [{"total": 2}]:
+                    raise RuntimeError(f"transactional aggregation was incomplete: {aggregated}")
+                outside = await TransactionRecord.objects.count()
+                if outside != 0:
+                    raise RuntimeError(f"uncommitted writes leaked outside transaction: {outside}")
 
         committed = await TransactionRecord.objects.filter(status_value="committed").count()
         if committed != 1:
@@ -97,6 +111,19 @@ async def replica_set_smoke(uri: str) -> None:
             async with client.start_session() as session:
                 async with await session.start_transaction():
                     await TransactionRecord.objects.using_session(session).create(
+                        status_value="rolled-back-on-exception"
+                    )
+                    raise RuntimeError("intentional transaction failure")
+        except RuntimeError as exc:
+            if str(exc) != "intentional transaction failure":
+                raise
+        if await TransactionRecord.objects.filter(status_value="rolled-back-on-exception").count():
+            raise RuntimeError("exception-triggered transaction abort persisted a write")
+
+        try:
+            async with client.start_session() as session:
+                async with await session.start_transaction():
+                    await TransactionRecord.objects.using_session(session).create(
                         status_value="rolled-back-on-error"
                     )
                     await TransactionRecord.objects.using_session(session).create(
@@ -112,6 +139,22 @@ async def replica_set_smoke(uri: str) -> None:
         ).count()
         if failed != 0:
             raise RuntimeError(f"failed transaction was not rolled back: {failed}")
+
+        async with client.start_session() as session:
+            async with await session.start_transaction():
+                await TransactionRecord.objects.using_session(session).create(
+                    status_value="sequential-first"
+                )
+            async with await session.start_transaction():
+                sequential = await (
+                    TransactionRecord.objects.using_session(session)
+                    .filter(status_value="sequential-first")
+                    .get()
+                )
+                await sequential.update(status_value="sequential-second", session=session)
+
+        if await TransactionRecord.objects.filter(status_value="sequential-second").count() != 1:
+            raise RuntimeError("registry/session reuse failed after transaction cleanup")
     finally:
         await client.drop_database(database.name)
         await runtime_registry.close()

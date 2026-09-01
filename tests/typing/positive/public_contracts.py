@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, Optional
+from typing import Any, ClassVar, Dict, Mapping, Optional
 
-from pymongo import AsyncMongoClient
+from pymongo import AsyncMongoClient, InsertOne
 from pymongo.asynchronous.client_session import AsyncClientSession
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.results import BulkWriteResult
 from typing_extensions import assert_type
 
 import mongoz
-from mongoz import Database, Document, Manager, QuerySet, Registry
+from mongoz import Database, Document, IndexPlan, Manager, QuerySet, Registry
 from mongoz.core.connection.collections import Collection
 
 registry = Registry("mongodb://localhost:27017")
@@ -100,6 +101,15 @@ async def verify_async_contracts(session: AsyncClientSession) -> None:
     assert_type(await query.get(), User)
     assert_type(await query.update(age=32), list[User])
     assert_type(await query.delete(), int)
+    assert_type(
+        await User.aggregate([{"$match": {}}], session=session),
+        list[Mapping[str, Any]],
+    )
+    assert_type(
+        await User.bulk_write([InsertOne({"name": "typed"})], session=session),
+        BulkWriteResult,
+    )
+    assert_type(await User.plan_indexes(session=session), IndexPlan)
 
 
 async def signal_receiver(sender: type[Document], **kwargs: object) -> None:

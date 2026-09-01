@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "typing" / "negative"
 EXPECTED_RULES = {
+    "bulk_write_request.py": ["invalid-argument-type"],
     "constructor_inference.py": ["invalid-assignment"],
     "field_assignment.py": ["invalid-assignment"],
     "projection_fields.py": ["invalid-argument-type"],
