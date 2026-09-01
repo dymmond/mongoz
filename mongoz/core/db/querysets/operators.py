@@ -54,14 +54,19 @@ class Equality:
     @classmethod
     def contains(cls, key: Any, value: Any) -> Expression:
         if isinstance(key, str) or key.pydantic_field.annotation is str:
-            return Expression(key=key, operator=ExpressionOperator.PATTERN, value=value)
+            return Expression(
+                key=key, operator=ExpressionOperator.PATTERN, value=re.escape(str(value))
+            )
         return Expression(key=key, operator=ExpressionOperator.EQUAL, value=value)
 
     @classmethod
     def icontains(cls, key: Any, value: Any) -> Expression:
         if isinstance(key, str) or key.pydantic_field.annotation is str:
             return Expression(
-                key=key, operator=ExpressionOperator.PATTERN, value=value, options="i"
+                key=key,
+                operator=ExpressionOperator.PATTERN,
+                value=re.escape(str(value)),
+                options="i",
             )
         return Expression(key=key, operator=ExpressionOperator.EQUAL, value=value)
 

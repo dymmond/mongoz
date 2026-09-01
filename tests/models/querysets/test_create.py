@@ -63,3 +63,14 @@ async def test_model_create() -> None:
 
     with pytest.raises(errors.DuplicateKeyError):
         await Movie(name="Barbie", year=2023).create()
+
+
+async def test_model_create_does_not_persist_undeclared_fields() -> None:
+    movie = Movie(name="Modeled", year=2026, internal_role="administrator")
+
+    await movie.create()
+
+    stored = await Movie.get_collection().find_one({"_id": movie.id})
+    assert stored is not None
+    assert "internal_role" not in stored
+    assert movie.model_extra == {"internal_role": "administrator"}

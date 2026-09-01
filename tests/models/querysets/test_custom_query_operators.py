@@ -103,3 +103,22 @@ async def test_custom_query_operators() -> None:
 
     with pytest.raises(FieldDefinitionError):
         await Movie.query(Q.pattern(Movie.year, r"\w+ The \w+")).all()
+
+
+async def test_literal_string_helpers_escape_regex_metacharacters() -> None:
+    await Movie(name="literal .* value", year=2026).create()
+    await Movie(name="literal expanded value", year=2025).create()
+    await Movie(name="[prefix] value$", year=2024).create()
+
+    contains = await Movie.query(Q.contains(Movie.name, ".*")).all()
+    starts = await Movie.query(Q.startswith(Movie.name, "[prefix]")).all()
+    ends = await Movie.query(Q.endswith(Movie.name, "value$")).all()
+    raw_pattern = await Movie.query(Q.pattern(Movie.name, r"literal .* value")).all()
+
+    assert [movie.name for movie in contains] == ["literal .* value"]
+    assert [movie.name for movie in starts] == ["[prefix] value$"]
+    assert [movie.name for movie in ends] == ["[prefix] value$"]
+    assert {movie.name for movie in raw_pattern} == {
+        "literal .* value",
+        "literal expanded value",
+    }

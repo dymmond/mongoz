@@ -25,8 +25,17 @@ class ValidatedUpdate:
 
 
 def dump_document(document: Document) -> Dict[str, Any]:
-    """Serialize a document using its MongoDB aliases and without its identifier."""
-    return document.model_dump(by_alias=True, exclude={"id"})
+    """Serialize declared model fields using their MongoDB aliases.
+
+    Hydration accepts undeclared fields so Mongoz can read schemaless MongoDB data and
+    lookup projections. Normal modeled writes do not persist those extras implicitly;
+    callers that intentionally need dynamic storage can use the native collection API.
+    """
+    return document.model_dump(
+        by_alias=True,
+        include=set(type(document).model_fields),
+        exclude={"id"},
+    )
 
 
 def get_or_create_values(expressions: Sequence[Expression]) -> Dict[str, Any]:

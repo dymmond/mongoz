@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import re
 import typing
 from typing import TYPE_CHECKING, Any, Dict, List, Union, cast
 
@@ -40,16 +41,16 @@ class Expression:
 
     def compile(self) -> Dict[str, Dict[str, Any]]:
         if self.operator == ExpressionOperator.STARTSWITH:
-            regex_value = f"^{self.compiled_value}"
+            regex_value = f"^{re.escape(str(self.compiled_value))}"
             return {self.key: {"$regex": regex_value}}
         elif self.operator == ExpressionOperator.ENDSWITH:
-            regex_value = f"{self.compiled_value}$"
+            regex_value = f"{re.escape(str(self.compiled_value))}$"
             return {self.key: {"$regex": regex_value}}
         elif self.operator == ExpressionOperator.ISTARTSWITH:
-            regex_value = f"^{self.compiled_value}"
+            regex_value = f"^{re.escape(str(self.compiled_value))}"
             return {self.key: {"$regex": regex_value, "$options": "i"}}
         elif self.operator == ExpressionOperator.IENDSWITH:
-            regex_value = f"{self.compiled_value}$"
+            regex_value = f"{re.escape(str(self.compiled_value))}$"
             return {self.key: {"$regex": regex_value, "$options": "i"}}
         if not self.options:
             return {self.key: {self.operator: self.compiled_value}}
