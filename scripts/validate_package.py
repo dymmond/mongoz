@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import ast
 import email.parser
 import os
 import re
@@ -14,6 +13,11 @@ import textwrap
 import venv
 import zipfile
 from pathlib import Path
+
+try:
+    from .release_metadata import read_canonical_version
+except ImportError:  # pragma: no cover - direct script execution
+    from release_metadata import read_canonical_version
 
 try:
     import tomllib
@@ -40,21 +44,7 @@ BANNED_ARCHIVE_PARTS = {
 
 def canonical_version() -> str:
     """Read the canonical version without importing the checkout."""
-    source = ROOT / "mongoz" / "__init__.py"
-    module = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
-    values = [
-        node.value.value
-        for node in module.body
-        if isinstance(node, ast.Assign)
-        and any(
-            isinstance(target, ast.Name) and target.id == "__version__" for target in node.targets
-        )
-        and isinstance(node.value, ast.Constant)
-        and isinstance(node.value.value, str)
-    ]
-    if len(values) != 1:
-        raise RuntimeError(f"expected one literal __version__ in {source}")
-    return values[0]
+    return read_canonical_version(ROOT / "mongoz" / "__init__.py")
 
 
 def get_ty_requirement() -> str:
@@ -87,7 +77,7 @@ def artifact_pair() -> tuple[Path, Path]:
 
 
 def assert_safe_members(names: list[str], *, archive: Path) -> None:
-    """Reject traversal, generated output, credentials, and campaign material."""
+    """Reject traversal, generated output, and non-package campaign material."""
     failures: list[str] = []
     for name in names:
         normalized = name.replace("\\", "/")
@@ -256,6 +246,7 @@ def build_smoke_source(checkout: Path) -> str:
         import asyncio
         import importlib.util
         import os
+        import re
         from importlib.metadata import metadata, version
         from pathlib import Path
 
@@ -270,15 +261,19 @@ def build_smoke_source(checkout: Path) -> str:
                 f"version mismatch: metadata={{version('mongoz')}} module={{mongoz.__version__}}"
             )
         requirements = metadata("mongoz").get_all("Requires-Dist") or []
-        if any(requirement.lower().startswith(("motor", "orjson")) for requirement in requirements):
+        requirement_names = {{
+            re.split(r"[ <>=!~;\\[]", requirement, maxsplit=1)[0]
+            .lower()
+            .replace("_", "-")
+            for requirement in requirements
+        }}
+        if {{"motor", "orjson"}} & requirement_names:
             raise RuntimeError(f"removed dependency remains: {{requirements}}")
         for removed in ("motor", "orjson"):
             if importlib.util.find_spec(removed) is not None:
                 raise RuntimeError(f"removed package unexpectedly installed: {{removed}}")
         for required_name in ("pydantic", "pydantic-settings", "pymongo"):
-            if not any(
-                requirement.lower().startswith(required_name) for requirement in requirements
-            ):
+            if required_name not in requirement_names:
                 raise RuntimeError(
                     f"missing direct runtime dependency {{required_name}}: {{requirements}}"
                 )

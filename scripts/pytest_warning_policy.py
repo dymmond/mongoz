@@ -27,8 +27,8 @@ WARNING_LIMITS = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf
 warning_counts: Counter[str] = Counter()
 
 
-def pytest_sessionstart(session: pytest.Session) -> None:
-    """Reset process-local counts before a pytest session starts."""
+def pytest_unconfigure(config: pytest.Config) -> None:
+    """Reset process-local counts only after config-time warnings were evaluated."""
     warning_counts.clear()
 
 

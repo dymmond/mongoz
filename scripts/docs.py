@@ -52,7 +52,7 @@ def _watch(stop: threading.Event, interval: float = 0.5) -> None:
         try:
             _prepare()
             click.echo("Documentation sources refreshed")
-        except DocsPipelineError as exc:
+        except (DocsPipelineError, OSError, UnicodeError) as exc:
             click.echo(f"Documentation refresh failed: {exc}", err=True)
 
 

@@ -13,7 +13,7 @@ pytestmark = pytest.mark.anyio
 
 @pytest.fixture(autouse=True)
 async def test_database() -> AsyncGenerator[None, None]:
-    """Keep model-definition warning tests independent from MongoDB availability."""
+    """Override shared database setup because these pure tests perform no MongoDB I/O."""
     yield
 
 

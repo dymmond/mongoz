@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import ast
 import re
 import subprocess
 import sys
@@ -11,10 +10,14 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+try:
+    from .release_metadata import read_canonical_version
+except ImportError:  # pragma: no cover - direct script execution
+    from release_metadata import read_canonical_version
+
 ROOT = Path(__file__).resolve().parents[1]
 VERSION_SOURCE = ROOT / "mongoz" / "__init__.py"
 RELEASE_NOTES = ROOT / "docs" / "en" / "docs" / "release-notes.md"
-VERSION_PATTERN = re.compile(r"0\.\d+\.\d+(?:rc[1-9]\d*)?\Z")
 HEADING_PATTERN = re.compile(r"^## (?P<title>[^\n]+)$", re.MULTILINE)
 REQUIRED_RELEASE_TOPICS = {
     "0.14.0": (
@@ -43,25 +46,7 @@ REQUIRED_RELEASE_TOPICS = {
 
 def canonical_version() -> str:
     """Read the sole package version without importing repository code."""
-    module = ast.parse(VERSION_SOURCE.read_text(encoding="utf-8"), filename=str(VERSION_SOURCE))
-    assignments = [
-        node.value.value
-        for node in module.body
-        if isinstance(node, ast.Assign)
-        and any(
-            isinstance(target, ast.Name) and target.id == "__version__" for target in node.targets
-        )
-        and isinstance(node.value, ast.Constant)
-        and isinstance(node.value.value, str)
-    ]
-    if len(assignments) != 1:
-        raise RuntimeError(f"expected one literal __version__ in {VERSION_SOURCE}")
-    version = assignments[0]
-    if not VERSION_PATTERN.fullmatch(version):
-        raise RuntimeError(
-            f"canonical version {version!r} must follow 0.MINOR.PATCH or 0.MINOR.PATCHrcN"
-        )
-    return version
+    return read_canonical_version(VERSION_SOURCE)
 
 
 def release_notes(version: str) -> str:
@@ -70,6 +55,9 @@ def release_notes(version: str) -> str:
     headings = list(HEADING_PATTERN.finditer(content))
     if not headings or headings[0].group("title") != "Unreleased":
         raise RuntimeError("release notes must begin with an Unreleased section")
+    unreleased_end = headings[1].start() if len(headings) > 1 else len(content)
+    if content[headings[0].end() : unreleased_end].strip():
+        raise RuntimeError("Unreleased release notes must be empty before publication")
     matches = [heading for heading in headings if heading.group("title") == version]
     if len(matches) != 1:
         raise RuntimeError(
@@ -86,7 +74,12 @@ def release_notes(version: str) -> str:
     missing = [
         topic
         for topic in REQUIRED_RELEASE_TOPICS.get(version, ())
-        if topic.casefold() not in body.casefold()
+        if re.search(
+            rf"(?<![A-Za-z0-9_]){re.escape(topic)}s?(?![A-Za-z0-9_])",
+            body,
+            flags=re.IGNORECASE,
+        )
+        is None
     ]
     if missing:
         raise RuntimeError(f"release-note section for {version} is missing topics: {missing}")

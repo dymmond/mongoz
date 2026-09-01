@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import uuid
 from typing import Any
 
 from pymongo import AsyncMongoClient, InsertOne
@@ -39,7 +40,7 @@ async def replica_set_smoke(uri: str) -> None:
 
         class Meta:
             registry = runtime_registry
-            database = "mongoz_topology_smoke"
+            database = f"mongoz_topology_smoke_{uuid.uuid4().hex}"
             collection = "transactions"
 
     database = client[TransactionRecord.meta.database.name]

@@ -17,7 +17,11 @@ services:
           mongosh --quiet --port 27018 --eval
           "try {
             if (db.hello().isWritablePrimary) { quit(0) };
-            rs.initiate({_id: 'mongoz-rs', members: [{_id: 0, host: 'localhost:27018'}]});
+            try { rs.status() } catch (statusError) {
+              if (statusError.codeName == 'NotYetInitialized') {
+                rs.initiate({_id: 'mongoz-rs', members: [{_id: 0, host: 'localhost:27018'}]})
+              }
+            };
             quit(1)
           } catch (error) { quit(1) }"
       interval: 2s

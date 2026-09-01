@@ -59,11 +59,15 @@ async def measure(operation: Callable[[], Awaitable[Any]]) -> dict[str, float]:
         await operation()
         samples.append((time.perf_counter_ns() - started) / 1_000_000)
     ordered = sorted(samples)
+    percentile_index = (len(ordered) - 1) * 0.95
+    lower = int(percentile_index)
+    upper = min(lower + 1, len(ordered) - 1)
+    p95 = ordered[lower] + (ordered[upper] - ordered[lower]) * (percentile_index - lower)
     return {
         "median_ms": round(statistics.median(samples), 4),
         "min_ms": round(min(samples), 4),
         "max_ms": round(max(samples), 4),
-        "p95_ms": round(ordered[-1], 4),
+        "p95_ms": round(p95, 4),
         "rsd_percent": round(statistics.stdev(samples) / statistics.mean(samples) * 100, 2),
     }
 

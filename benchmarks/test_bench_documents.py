@@ -42,7 +42,7 @@ class Student(mongoz.Document):
 
 def measure(benchmark: Any, function: Any) -> None:
     """Run a fixed warmup/repeat schedule through pytest-codspeed."""
-    benchmark.pedantic(function, rounds=100, iterations=1, warmup_rounds=20)
+    benchmark.pedantic(function, rounds=100, warmup_rounds=20)
 
 
 @pytest.mark.benchmark(group="model-construction")

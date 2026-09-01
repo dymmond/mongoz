@@ -11,7 +11,8 @@ services:
       test:
         - CMD-SHELL
         - >-
-          mongosh --quiet --username root --password mongoadmin
+          mongosh --quiet --username "$${MONGO_INITDB_ROOT_USERNAME}"
+          --password "$${MONGO_INITDB_ROOT_PASSWORD}"
           --authenticationDatabase admin
           --eval "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"
       interval: 2s

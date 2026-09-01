@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "typing" / "negative"
 EXPECTED_RULES = {
-    "bulk_write_request.py": ["invalid-argument-type"],
+    "bulk_write_request.py": ["unused-awaitable", "invalid-argument-type"],
     "constructor_inference.py": ["invalid-assignment"],
     "field_assignment.py": ["invalid-assignment"],
     "projection_fields.py": ["invalid-argument-type"],
@@ -33,12 +33,12 @@ def main() -> None:
             text=True,
         )
         output = result.stdout + result.stderr
-        actual_rules = re.findall(r"error\[([^]]+)]", output)
+        actual_diagnostics = re.findall(r"(?:error|warning)\[([^]]+)]", output)
         if result.returncode == 0:
             failures.append(f"{name}: ty unexpectedly accepted the fixture")
-        elif actual_rules != expected_rules:
+        elif actual_diagnostics != expected_rules:
             failures.append(
-                f"{name}: expected rules {expected_rules}, got {actual_rules}\n{output}"
+                f"{name}: expected rules {expected_rules}, got {actual_diagnostics}\n{output}"
             )
 
     if failures:

@@ -41,10 +41,11 @@ def _language(path: Path) -> str:
 
 
 def _resolve(expression: str, source: Path, roots: tuple[Path, ...]) -> Path:
+    resolved_roots = tuple(root.resolve() for root in roots)
     candidates = [(source.parent / expression).resolve()]
     candidates.extend((root / expression).resolve() for root in roots)
     for candidate in candidates:
-        if candidate.is_file():
+        if candidate.is_file() and any(candidate.is_relative_to(root) for root in resolved_roots):
             return candidate
     rendered = ", ".join(str(candidate) for candidate in candidates)
     raise DocsPipelineError(f"Include not found in {source}: {expression!r} (tried {rendered})")
@@ -160,3 +161,5 @@ def run_zensical(
         raise DocsPipelineError(
             f"Zensical failed with exit code {exc.returncode}: {' '.join(arguments)}"
         ) from exc
+    except OSError as exc:
+        raise DocsPipelineError(f"Could not execute Zensical: {exc}") from exc

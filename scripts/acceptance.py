@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 
 
 def run(script: str, *, check: bool = True) -> None:
@@ -15,6 +16,7 @@ def run(script: str, *, check: bool = True) -> None:
 
 def main() -> None:
     """Execute all acceptance gates and always tear down test topologies."""
+    primary_error: BaseException | None = None
     try:
         run("lint")
         run("format-check")
@@ -30,9 +32,27 @@ def main() -> None:
         run("package:validate")
         run("mongodb-replica-set-up")
         run("mongodb-replica-set-smoke")
+    except BaseException as exc:
+        primary_error = exc
     finally:
-        run("mongodb-replica-set-down", check=False)
-        run("mongodb-standalone-down", check=False)
+        cleanup_errors = []
+        for script in ("mongodb-replica-set-down", "mongodb-standalone-down"):
+            try:
+                run(script)
+            except BaseException as exc:
+                cleanup_errors.append(exc)
+        if primary_error is not None:
+            if cleanup_errors:
+                print(
+                    "Acceptance cleanup also failed: "
+                    + "; ".join(str(error) for error in cleanup_errors),
+                    file=sys.stderr,
+                )
+            raise primary_error
+        if cleanup_errors:
+            raise RuntimeError(
+                "Acceptance cleanup failed: " + "; ".join(str(error) for error in cleanup_errors)
+            )
 
 
 if __name__ == "__main__":

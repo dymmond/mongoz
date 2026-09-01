@@ -34,6 +34,20 @@ def test_release_version_rejects_other_release_lines(
         release.canonical_version()
 
 
+def test_release_version_accepts_rc_zero(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    version_source = tmp_path / "__init__.py"
+    version_source.write_text('__version__ = "0.14.0rc0"\n', encoding="utf-8")
+    monkeypatch.setattr(release, "VERSION_SOURCE", version_source)
+    monkeypatch.setattr(package_validation, "ROOT", tmp_path)
+
+    package = tmp_path / "mongoz"
+    package.mkdir()
+    (package / "__init__.py").write_text('__version__ = "0.14.0rc0"\n', encoding="utf-8")
+
+    assert release.canonical_version() == "0.14.0rc0"
+    assert package_validation.canonical_version() == "0.14.0rc0"
+
+
 def test_release_notes_reject_missing_version(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -42,6 +56,36 @@ def test_release_notes_reject_missing_version(
     monkeypatch.setattr(release, "RELEASE_NOTES", notes)
 
     with pytest.raises(RuntimeError, match="expected one release-note section"):
+        release.release_notes("0.14.0")
+
+
+def test_release_notes_reject_non_empty_unreleased_section(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    notes = tmp_path / "release-notes.md"
+    body = "\n".join(release.REQUIRED_RELEASE_TOPICS["0.14.0"])
+    notes.write_text(
+        f"# Release Notes\n\n## Unreleased\n\nPending fix.\n\n## 0.14.0\n\n{body}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(release, "RELEASE_NOTES", notes)
+
+    with pytest.raises(RuntimeError, match="Unreleased release notes must be empty"):
+        release.release_notes("0.14.0")
+
+
+def test_release_notes_require_topics_as_tokens(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    notes = tmp_path / "release-notes.md"
+    body = "\n".join(topic for topic in release.REQUIRED_RELEASE_TOPICS["0.14.0"] if topic != "ty")
+    notes.write_text(
+        f"# Release Notes\n\n## Unreleased\n\n## 0.14.0\n\n{body}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(release, "RELEASE_NOTES", notes)
+
+    with pytest.raises(RuntimeError, match=r"missing topics: \['ty'\]"):
         release.release_notes("0.14.0")
 
 
@@ -92,3 +136,13 @@ def test_workflow_actions_use_immutable_commits() -> None:
 
     assert references
     assert all(re.fullmatch(r"[0-9a-f]{40}", reference) for reference in references)
+
+
+def test_pull_request_benchmarks_do_not_receive_oidc() -> None:
+    workflows = release.ROOT / ".github" / "workflows"
+    codspeed = (workflows / "codspeed.yml").read_text(encoding="utf-8")
+    publish = (workflows / "publish.yml").read_text(encoding="utf-8")
+
+    assert "id-token: write" not in codspeed
+    benchmark_job = publish[publish.index("  benchmarks:") : publish.index("  attest:")]
+    assert "id-token: write" not in benchmark_job

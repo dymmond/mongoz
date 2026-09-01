@@ -97,6 +97,16 @@ def validate_preparation() -> None:
         if _tree_digest(output) != valid:
             raise RuntimeError("failed preparation replaced the last valid generated tree")
 
+        outside = fixture / "outside.txt"
+        outside.write_text("must not be included", encoding="utf-8")
+        (source / "escape.md").write_text("{!> ../outside.txt !}\n", encoding="utf-8")
+        try:
+            prepare_docs_tree(source, output, include_roots=(source,))
+        except DocsPipelineError:
+            pass
+        else:
+            raise RuntimeError("documentation include escaped its configured roots")
+
 
 def validate_source_examples() -> tuple[int, int, int]:
     """Compile every snippet and execute the intentionally runnable subset."""

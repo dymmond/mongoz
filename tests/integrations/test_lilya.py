@@ -25,12 +25,7 @@ class Movie(Document):
         database = "test_db"
 
 
-async def prepare_database() -> None:
-    await Movie.query().delete()
-
-
 async def close_database() -> None:
-    await Movie.query().delete()
     await registry.close()
 
 
@@ -48,18 +43,11 @@ async def get_movies(request: Request):
     return Ok(json.loads(movie.model_dump_json()))
 
 
-async def clear_movies(request: Request):
-    await Movie.query().delete()
-    return Ok({})
-
-
 app = Lilya(
     routes=[
         Path("/all", handler=get_movies),
-        Path("/clear", handler=clear_movies, methods=["POST"]),
         Path("/create", handler=create_movies, methods=["POST"]),
     ],
-    on_startup=[prepare_database],
     on_shutdown=[close_database],
 )
 
@@ -71,7 +59,6 @@ def integration_client():
 
 
 async def test_lilya_integration_create(integration_client: TestClient) -> None:
-    integration_client.post("/clear")
     response = integration_client.post("/create", json={"name": "Barbie", "year": 2023})
 
     assert response.json()["name"] == "Barbie"
@@ -80,7 +67,6 @@ async def test_lilya_integration_create(integration_client: TestClient) -> None:
 
 
 async def test_lilya_integration_read(integration_client: TestClient) -> None:
-    integration_client.post("/clear")
     integration_client.post("/create", json={"name": "Barbie", "year": 2023})
     response = integration_client.get("/all")
 
