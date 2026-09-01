@@ -213,7 +213,7 @@ output = "coverage.json"
 [tool.mongoz.warning-ratchet]
 # Pydantic deprecations are intentionally absent. Unknown categories fail the gate,
 # so any reintroduced Pydantic deprecation is rejected rather than allowlisted.
-"builtins.UserWarning" = 91
+"builtins.UserWarning" = 0
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]

@@ -99,8 +99,10 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         E.g.: DateTime(auto_now=True) will generate the default for automatic
         dates.
         """
-        fields: Dict[str, Any] = kwargs if is_proxy else self.model_dump()
         model_fields = type(self).model_fields
+        fields: Dict[str, Any] = (
+            kwargs if is_proxy else {key: getattr(self, key) for key in model_fields}
+        )
 
         kwargs = {k: v for k, v in fields.items() if k in model_fields}
         for key, value in kwargs.items():
