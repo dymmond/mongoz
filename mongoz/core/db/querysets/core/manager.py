@@ -153,8 +153,8 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
         manager._skip_count = self._skip_count
         manager._sort = list(self._sort)
         manager._collection = self._collection
-        manager._only_fields = list(self._only_fields)
-        manager._defer_fields = list(self._defer_fields)
+        manager._only_fields = self._only_fields[:]
+        manager._defer_fields = self._defer_fields[:]
         manager._lookups_on = None if self._lookups_on is None else dict(self._lookups_on)
         manager._lookup_queries = (
             None if self._lookup_queries is None else list(self._lookup_queries)
