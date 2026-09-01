@@ -34,6 +34,7 @@ from mongoz.core.db.querysets.core.protocols import (
     MongozDocument,
 )
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
+from mongoz.core.utils.cursors import closing_cursor
 from mongoz.exceptions import (
     DocumentNotFound,
     FieldDefinitionError,
@@ -481,11 +482,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         filter_query = Expression.compile_many(self._filter)
         cursor = self._collection.find(filter_query)
 
-        try:
+        async with closing_cursor(cursor):
             async for document in cursor:
                 yield self.model_class(**document)
-        finally:
-            await cursor.close()
 
     def __await__(
         self,
@@ -536,7 +535,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         is_only_fields = True if manager._only_fields else False
         is_defer_fields = True if manager._defer_fields else False
 
-        try:
+        async with closing_cursor(cursor):
             results: List[T] = [
                 manager.model_class.from_row(
                     document,
@@ -548,8 +547,6 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 )
                 async for document in cursor
             ]
-        finally:
-            await cursor.close()
 
         return results
 
@@ -686,10 +683,8 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
         filter_query = Expression.compile_many(manager._filter)
         cursor = manager._collection.find(filter_query).where(condition)
-        try:
+        async with closing_cursor(cursor):
             return [manager.model_class(**document) async for document in cursor]
-        finally:
-            await cursor.close()
 
     async def update(self, **kwargs: Any) -> List["Document"]:
         """

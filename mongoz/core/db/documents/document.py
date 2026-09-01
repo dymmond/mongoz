@@ -25,6 +25,7 @@ from mongoz.core.db.documents._internal import ModelDump
 from mongoz.core.db.documents.document_row import DocumentRow
 from mongoz.core.db.documents.metaclasses import EmbeddedModelMetaClass
 from mongoz.core.db.fields.base import MongozField
+from mongoz.core.utils.cursors import closing_cursor
 from mongoz.core.utils.hashable import make_hashable
 from mongoz.exceptions import InvalidKeyError, MongozException
 from mongoz.utils.mixins import is_operation_allowed
@@ -296,11 +297,9 @@ class Document(DocumentRow):
             collection = cls.meta.collection._collection  # type: ignore
 
         cursor = await collection.list_indexes()
-        try:
+        async with closing_cursor(cursor):
             async for index in cursor:
                 collection_indexes.append(index)
-        finally:
-            await cursor.close()
         return collection_indexes
 
     @classmethod

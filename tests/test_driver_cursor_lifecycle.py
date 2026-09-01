@@ -19,9 +19,15 @@ class DummyDocument:
 
 
 class RecordingCursor:
-    def __init__(self, documents: List[Dict[str, Any]], block: bool = False) -> None:
+    def __init__(
+        self,
+        documents: List[Dict[str, Any]],
+        block: bool = False,
+        close_error: BaseException | None = None,
+    ) -> None:
         self.documents = iter(documents)
         self.block = block
+        self.close_error = close_error
         self.started = asyncio.Event()
         self.close_count = 0
 
@@ -39,6 +45,8 @@ class RecordingCursor:
 
     async def close(self) -> None:
         self.close_count += 1
+        if self.close_error is not None:
+            raise self.close_error
 
 
 class FindCollection:
@@ -110,6 +118,37 @@ async def test_cursor_cancellation_is_not_swallowed_and_releases_cursor() -> Non
 
     with pytest.raises(asyncio.CancelledError):
         await operation
+    assert cursor.close_count == 1
+
+
+async def test_cleanup_failure_does_not_replace_cursor_cancellation() -> None:
+    cleanup_error = RuntimeError("cursor cleanup failed")
+    cursor = RecordingCursor([], block=True, close_error=cleanup_error)
+    manager = make_manager(AggregateCollection(cursor))
+    operation = asyncio.create_task(manager._all())
+    await cursor.started.wait()
+    operation.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await operation
+    assert cursor.close_count == 1
+
+
+async def test_cleanup_failure_is_chained_to_materialization_failure() -> None:
+    cleanup_error = RuntimeError("cursor cleanup failed")
+    cursor = RecordingCursor([{"value": 1}], close_error=cleanup_error)
+    manager = make_manager(AggregateCollection(cursor))
+
+    class FailingDocument:
+        @classmethod
+        def from_row(cls, row: Dict[str, Any], **kwargs: Any) -> None:
+            raise LookupError("materialization failed")
+
+    manager.model_class = FailingDocument
+
+    with pytest.raises(LookupError, match="materialization failed") as raised:
+        await manager._all()
+    assert raised.value.__cause__ is cleanup_error
     assert cursor.close_count == 1
 
 
