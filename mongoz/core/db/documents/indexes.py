@@ -21,6 +21,7 @@ class IndexAction(str, Enum):
     CREATE = "create"
     RECREATE = "recreate"
     RETAIN = "retain_unmanaged"
+    DELETE = "candidate_for_deletion"
     CONFLICT = "name_conflict"
 
 
@@ -74,7 +75,10 @@ def _desired_document(index: Index) -> Dict[str, Any]:
 
 
 def plan_indexes(
-    desired_indexes: Sequence[Index], existing_indexes: Sequence[Mapping[str, Any]]
+    desired_indexes: Sequence[Index],
+    existing_indexes: Sequence[Mapping[str, Any]],
+    *,
+    delete_unmanaged: bool = False,
 ) -> IndexPlan:
     """Compare desired and observed definitions without performing any writes."""
     existing_by_name = {str(index["name"]): index for index in existing_indexes}
@@ -132,8 +136,33 @@ def plan_indexes(
     for name, existing in existing_by_name.items():
         if name in desired_names:
             continue
-        reason = "driver-managed identifier index" if name == "_id_" else "not declared by model"
-        entries.append(IndexPlanEntry(IndexAction.RETAIN, name, reason, existing=existing))
+        if name == "_id_":
+            entries.append(
+                IndexPlanEntry(
+                    IndexAction.RETAIN,
+                    name,
+                    "driver-managed identifier index",
+                    existing=existing,
+                )
+            )
+        elif delete_unmanaged:
+            entries.append(
+                IndexPlanEntry(
+                    IndexAction.DELETE,
+                    name,
+                    "explicit unmanaged-index deletion policy",
+                    existing=existing,
+                )
+            )
+        else:
+            entries.append(
+                IndexPlanEntry(
+                    IndexAction.RETAIN,
+                    name,
+                    "not declared by model",
+                    existing=existing,
+                )
+            )
 
     return IndexPlan(tuple(entries))
 
@@ -143,11 +172,13 @@ async def execute_index_plan(
     plan: IndexPlan,
     *,
     allow_recreate: bool = False,
+    allow_delete: bool = False,
     session: Union["AsyncClientSession", None] = None,
 ) -> None:
-    """Execute creates and explicitly authorized same-name recreations only."""
+    """Execute non-destructive changes and explicitly authorized destructive actions."""
     conflicts = plan.actions(IndexAction.CONFLICT)
     recreates = plan.actions(IndexAction.RECREATE)
+    deletions = plan.actions(IndexAction.DELETE)
     if conflicts:
         details = "; ".join(f"{entry.name}: {entry.reason}" for entry in conflicts)
         raise IndexError(f"Index reconciliation has unresolved name conflicts: {details}")
@@ -156,6 +187,12 @@ async def execute_index_plan(
         raise IndexError(
             f"Indexes require destructive same-name recreation: {names}. "
             "Pass force_drop=True to check_indexes() to authorize it."
+        )
+    if deletions and not allow_delete:
+        names = ", ".join(entry.name for entry in deletions)
+        raise IndexError(
+            f"Indexes are candidates for deletion: {names}. "
+            "Pass drop_unmanaged=True to check_indexes() to authorize it."
         )
 
     for entry in recreates:
@@ -168,3 +205,6 @@ async def execute_index_plan(
     ]
     if creates:
         await collection.create_indexes(creates, session=session)
+
+    for entry in deletions:
+        await collection.drop_index(entry.name, session=session)

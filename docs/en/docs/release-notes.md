@@ -12,7 +12,9 @@
   atomic upsert while preserving duplicate-key errors.
 - Index reconciliation now exposes a side-effect-free `IndexPlan`, retains unmanaged and `_id_`
   indexes, scopes all inspection/execution to the selected collection, and requires explicit
-  authorization for same-name destructive recreation.
+  authorization for same-name destructive recreation. An opt-in plan can label unmanaged indexes
+  as deletion candidates, while a separate `drop_unmanaged=True` execution policy is required to
+  delete them; `_id_` remains protected.
 - `Document.aggregate()` and `Document.bulk_write()` provide session-aware, collection-targeted
   PyMongo-compatible escape hatches with native results and errors.
 

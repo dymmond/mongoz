@@ -92,7 +92,7 @@ async def test_changed_definition_requires_explicit_same_name_recreation() -> No
     assert observed["email"]["unique"] is True
 
 
-async def test_unmanaged_and_driver_indexes_are_never_reconciliation_drop_candidates() -> None:
+async def test_unmanaged_indexes_require_an_explicit_deletion_policy() -> None:
     collection = SafeIndexDocument.get_collection()
     await collection.create_index("status", name="manual_status")
 
@@ -101,6 +101,17 @@ async def test_unmanaged_and_driver_indexes_are_never_reconciliation_drop_candid
     retained = {entry.name for entry in plan.actions(IndexAction.RETAIN)}
     assert retained == {"_id_", "manual_status"}
     assert {index["name"] for index in await SafeIndexDocument.list_indexes()} >= retained
+
+    deletion_plan = await SafeIndexDocument.plan_indexes(delete_unmanaged=True)
+    assert [entry.name for entry in deletion_plan.actions(IndexAction.DELETE)] == ["manual_status"]
+    assert [entry.name for entry in deletion_plan.actions(IndexAction.RETAIN)] == ["_id_"]
+
+    executed = await SafeIndexDocument.check_indexes(drop_unmanaged=True)
+    assert [entry.name for entry in executed.actions(IndexAction.DELETE)] == ["manual_status"]
+    assert {index["name"] for index in await SafeIndexDocument.list_indexes()} == {
+        "_id_",
+        *(index.name for index in SafeIndexDocument.meta.indexes),
+    }
 
 
 async def test_alternate_collection_plan_and_execution_are_isolated() -> None:

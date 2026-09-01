@@ -356,12 +356,17 @@ class Document(DocumentRow):
         cls,
         collection: Union[Collection, AsyncCollection, None] = None,
         *,
+        delete_unmanaged: bool = False,
         session: Union["AsyncClientSession", None] = None,
     ) -> IndexPlan:
         """Inspect one collection and return a side-effect-free reconciliation plan."""
         is_operation_allowed(cls)
         existing = await cls.list_indexes(collection, session=session)
-        return build_index_plan(cls.meta.indexes, existing)
+        return build_index_plan(
+            cls.meta.indexes,
+            existing,
+            delete_unmanaged=delete_unmanaged,
+        )
 
     @classmethod
     async def check_indexes(
@@ -369,18 +374,30 @@ class Document(DocumentRow):
         force_drop: bool = False,
         collection: Union[Collection, AsyncCollection, None] = None,
         *,
+        drop_unmanaged: bool = False,
         session: Union["AsyncClientSession", None] = None,
     ) -> IndexPlan:
         """Plan and execute safe reconciliation for one collection.
 
-        Missing indexes are created and unmanaged indexes are retained. Same-name definition
-        changes require ``force_drop=True``; even then, unrelated names are never deleted.
+        Missing indexes are created and unmanaged indexes are retained by default. Same-name
+        definition changes require ``force_drop=True``. Unmanaged indexes are deleted only when
+        ``drop_unmanaged=True`` explicitly selects that policy; ``_id_`` is always retained.
         """
         is_operation_allowed(cls)
 
         target = cls.get_collection(collection)
-        plan = await cls.plan_indexes(target, session=session)
-        await execute_index_plan(target, plan, allow_recreate=force_drop, session=session)
+        plan = await cls.plan_indexes(
+            target,
+            delete_unmanaged=drop_unmanaged,
+            session=session,
+        )
+        await execute_index_plan(
+            target,
+            plan,
+            allow_recreate=force_drop,
+            allow_delete=drop_unmanaged,
+            session=session,
+        )
         return plan
 
     async def delete(

@@ -109,7 +109,8 @@ async def verify_async_contracts(session: AsyncClientSession) -> None:
         await User.bulk_write([InsertOne({"name": "typed"})], session=session),
         BulkWriteResult,
     )
-    assert_type(await User.plan_indexes(session=session), IndexPlan)
+    assert_type(await User.plan_indexes(delete_unmanaged=True, session=session), IndexPlan)
+    assert_type(await User.check_indexes(drop_unmanaged=True, session=session), IndexPlan)
 
 
 async def signal_receiver(sender: type[Document], **kwargs: object) -> None:

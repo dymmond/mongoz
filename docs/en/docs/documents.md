@@ -275,14 +275,19 @@ await User.create_indexes()
 
 Index reconciliation has separate inspection, planning, and execution stages. Use
 `await User.plan_indexes()` to inspect a collection without changing it. Each `IndexPlanEntry`
-reports `already_correct`, `create`, `recreate`, `retain_unmanaged`, or `name_conflict`.
-`create_indexes()` and `check_indexes()` create missing declarations but never delete `_id_` or an
-unmanaged/manual index.
+reports `already_correct`, `create`, `recreate`, `retain_unmanaged`,
+`candidate_for_deletion`, or `name_conflict`. `create_indexes()` and `check_indexes()` create
+missing declarations but retain `_id_` and unmanaged/manual indexes by default.
 
 If a declared name exists with a different specification, normal reconciliation stops before
 mutation. `await User.check_indexes(force_drop=True)` explicitly authorizes dropping and recreating
 that same declared name only. An equivalent specification under a different name is an explicit
 conflict because Mongoz cannot safely infer ownership of the existing index.
+
+To audit an explicit cleanup policy without applying it, use
+`await User.plan_indexes(delete_unmanaged=True)`. Only
+`await User.check_indexes(drop_unmanaged=True)` authorizes execution of those deletion candidates;
+the driver-managed `_id_` index is always retained.
 
 #### Create individual indexes
 
