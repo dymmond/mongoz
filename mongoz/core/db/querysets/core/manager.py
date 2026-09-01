@@ -37,7 +37,7 @@ from mongoz.core.db.querysets.core.constants import (
 from mongoz.core.db.querysets.core.protocols import (
     AwaitableQuery,
 )
-from mongoz.core.db.querysets.core.runtime import SessionBoundQuery
+from mongoz.core.db.querysets.core.runtime import SessionBoundQuery, normalize_projection_fields
 from mongoz.core.db.querysets.expressions import (
     Expression,
     SortExpression,
@@ -85,8 +85,8 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
         self._limit_count = 0
         self._skip_count = 0
         self._sort: List[SortExpression] = [] if sort_by is None else sort_by
-        self._only_fields = [] if only_fields is None else list(only_fields)
-        self._defer_fields = [] if defer_fields is None else list(defer_fields)
+        self._only_fields = normalize_projection_fields(only_fields)
+        self._defer_fields = normalize_projection_fields(defer_fields)
         self._lookups_on: Union[Dict[str, str], None] = lookups_on
         self._lookup_queries: Union[List[Any], None] = lookup_queries
         self._unwound_fields: Union[Dict[str, Any], None] = unwound_fields
@@ -197,7 +197,7 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
         manager = self.clone()
         manager.validate_only_and_defer()
 
-        document_fields = list(fields)
+        document_fields = normalize_projection_fields(fields)
 
         id_attribute = manager.model_class.meta.id_attribute
         if not isinstance(id_attribute, str):
@@ -527,6 +527,7 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
                     only_fields=self._only_fields,
                     is_defer_fields=is_defer_fields,
                     defer_fields=self._defer_fields,
+                    lookup_fields=tuple((self._unwound_fields or {}).keys()),
                     from_collection=self._collection,
                 )
 
@@ -554,6 +555,7 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
                     only_fields=manager._only_fields,
                     is_defer_fields=is_defer_fields,
                     defer_fields=manager._defer_fields,
+                    lookup_fields=tuple((manager._unwound_fields or {}).keys()),
                     from_collection=manager._collection,
                 )
                 async for document in cursor
@@ -615,6 +617,7 @@ class Manager(SessionBoundQuery, AwaitableQuery[T], Generic[T]):
             only_fields=manager._only_fields,
             is_defer_fields=bool(manager._defer_fields),
             defer_fields=manager._defer_fields,
+            lookup_fields=tuple((manager._unwound_fields or {}).keys()),
             from_collection=manager._collection,
         )
 

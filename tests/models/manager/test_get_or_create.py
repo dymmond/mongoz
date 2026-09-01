@@ -59,3 +59,12 @@ async def test_model_get_or_create() -> None:
 
     with pytest.raises(ValidationError):
         await movie.objects.filter(name="Venom 2").get_or_create({"year": "year 2021"})
+
+
+async def test_get_or_create_ignores_invalid_defaults_when_document_exists() -> None:
+    existing = await Movie(name="Arrival", year=2016).create()
+
+    resolved = await Movie.objects.filter(name="Arrival").get_or_create({"year": "invalid"})
+
+    assert resolved.id == existing.id
+    assert resolved.year == 2016

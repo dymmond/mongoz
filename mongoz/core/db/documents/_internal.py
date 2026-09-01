@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import copy
 from decimal import Decimal
 from typing import Any, Dict, Mapping, Tuple, Type
 
 import bson
 import pydantic
 from bson.decimal128 import Decimal128
-from pydantic import BaseModel, ConfigDict, SerializerFunctionWrapHandler, field_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    SerializerFunctionWrapHandler,
+    field_serializer,
+)
 
 from mongoz.core.signals.signal import Signal
 
@@ -71,7 +77,7 @@ class ModelDump(BaseModel):
     ) -> Any:
         """Preserve BSON and signal JSON output while delegating all other serialization."""
         converted, changed = _convert_supported_json_values(value)
-        return converted if changed else handler(value)
+        return handler(converted if changed else value)
 
     def convert_decimal(self, model_dump_dict: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -103,11 +109,27 @@ class ModelDump(BaseModel):
         Args:
             show_pk: bool - Enforces showing the id in the model_dump.
         """
-        model = super().model_dump(**kwargs)
+        instance = self
+        if kwargs.get("mode") == "json" and self.__pydantic_extra__:
+            converted, changed = _convert_supported_json_values(self.__pydantic_extra__)
+            if changed:
+                instance = copy.copy(self)
+                object.__setattr__(instance, "__pydantic_extra__", converted)
+        model = BaseModel.model_dump(instance, **kwargs)
         if "id" not in model and show_id:
             model = {**{"id": getattr(self, "id", None)}, **model}
         model_dump = self.convert_decimal(model)
         return model_dump
+
+    def model_dump_json(self, **kwargs: Any) -> str:
+        """Serialize JSON after converting supported values in allowed extra fields."""
+        instance = self
+        if self.__pydantic_extra__:
+            converted, changed = _convert_supported_json_values(self.__pydantic_extra__)
+            if changed:
+                instance = copy.copy(self)
+                object.__setattr__(instance, "__pydantic_extra__", converted)
+        return BaseModel.model_dump_json(instance, **kwargs)
 
 
 def create_validation_model(

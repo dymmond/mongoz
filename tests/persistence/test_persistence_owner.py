@@ -39,14 +39,13 @@ class PersistenceRecord(BaseRecord):
 
 @pytest.fixture(autouse=True)
 async def prepare_database() -> AsyncGenerator[None, None]:
-    alternate = client.get_database("test_persistence_alternate").get_collection(
-        "persistence_owner"
-    )
-    await PersistenceRecord.objects.delete()
-    await alternate._collection.delete_many({})
+    default = client.driver["test_db"]
+    alternate = client.driver["test_persistence_alternate"]
+    await default.drop_collection("persistence_owner")
+    await alternate.drop_collection("persistence_owner")
     yield
-    await PersistenceRecord.objects.delete()
-    await alternate._collection.delete_many({})
+    await default.drop_collection("persistence_owner")
+    await alternate.drop_collection("persistence_owner")
 
 
 async def test_instance_update_is_a_validated_atomic_patch() -> None:

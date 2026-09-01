@@ -111,7 +111,7 @@ def make_queryset(collection: Any) -> QuerySet:
     return queryset
 
 
-async def test_find_returns_cursor_without_await_and_early_close_releases_it() -> None:
+async def test_manager_aggregate_cursor_early_close_releases_it() -> None:
     cursor = RecordingCursor([{"value": 1}, {"value": 2}])
     collection = AggregateCollection(cursor)
     iterator = make_manager(collection).__aiter__()

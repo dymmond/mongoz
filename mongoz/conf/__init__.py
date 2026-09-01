@@ -4,6 +4,7 @@ import os
 from typing import cast
 
 from pydantic import ValidationError
+from pydantic_settings import SettingsError
 
 from mongoz.conf.functional import LazyObject, empty
 from mongoz.conf.global_settings import MongozSettings
@@ -44,10 +45,14 @@ class MongozLazySettings(LazyObject):
 
         try:
             configured_settings = settings_class()
-        except (TypeError, ValidationError) as exc:
+        except ValidationError as exc:
             raise ImproperlyConfigured(
-                f"Could not configure settings class {settings_module!r}: {exc}"
+                f"Could not configure settings class {settings_module!r}."
             ) from exc
+        except (SettingsError, TypeError):
+            raise ImproperlyConfigured(
+                f"Could not configure settings class {settings_module!r}."
+            ) from None
 
         for setting in configured_settings.model_dump():
             if not setting.islower():
@@ -60,6 +65,10 @@ class MongozLazySettings(LazyObject):
         if self._wrapped is empty:
             return "<MongozLazySettings [Unevaluated]>"
         return f'<MongozLazySettings "{self._wrapped.__class__.__name__}">'
+
+    def __str__(self: MongozLazySettings) -> str:
+        """Render settings without exposing values held by the wrapped model."""
+        return self.__repr__()
 
     @property
     def configured(self) -> bool:

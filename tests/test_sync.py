@@ -12,7 +12,7 @@ pytestmark = pytest.mark.anyio
 
 @pytest.fixture(autouse=True)
 async def test_database() -> AsyncGenerator[None, None]:
-    """Keep pure run_sync contract tests independent from MongoDB availability."""
+    """Override shared database setup because these pure tests perform no MongoDB I/O."""
     yield
 
 
@@ -62,7 +62,7 @@ async def test_run_sync_accepts_non_coroutine_awaitables() -> None:
     assert await asyncio.to_thread(run_sync, AwaitableValue()) == 42
 
 
-async def test_run_sync_reused_coroutine_failure_is_not_retried() -> None:
+async def test_run_sync_reused_coroutine_raises() -> None:
     coroutine = value()
 
     assert await asyncio.to_thread(run_sync, coroutine) == "complete"
@@ -110,3 +110,11 @@ async def test_run_sync_preserves_runtime_error_under_a_running_loop() -> None:
 
     assert raised.value is failure
     assert calls == 1
+
+
+async def test_run_sync_rejects_loop_bound_futures_clearly() -> None:
+    future = asyncio.get_running_loop().create_future()
+    future.set_result("complete")
+
+    with pytest.raises(RuntimeError, match="Future or Task bound to another event loop"):
+        run_sync(future)

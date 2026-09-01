@@ -72,6 +72,11 @@ async def test_decimal_128_with_max() -> None:
         await ArchiveD.objects.create(name="Batman", price=51.246)
 
 
+async def test_decimal_128_hydration_still_applies_numeric_bounds() -> None:
+    with pytest.raises(ValidationError):
+        ArchiveD.from_row({"name": "Batman", "price": Decimal128("51.246")})
+
+
 async def test_decimal_128_max_digit() -> None:
     with pytest.raises(ValidationError):
         await Archive.objects.create(name="Batman", price=2442.246)

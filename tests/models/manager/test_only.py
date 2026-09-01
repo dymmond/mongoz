@@ -5,6 +5,8 @@ import pytest
 
 import mongoz
 from mongoz import Document, Index, IndexType, ObjectId, Order
+from mongoz.core.db.querysets.core.manager import Manager
+from mongoz.exceptions import FieldDefinitionError
 from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
@@ -62,6 +64,20 @@ async def test_model_only() -> None:
     )
     movies = await Movie.objects.only("name", "tags")
     assert len(movies) == 1
+    assert isinstance(movies[0], Movie)
+
+
+async def test_manager_constructor_treats_one_projection_name_as_one_field() -> None:
+    manager = Manager(Movie, only_fields="name")
+
+    assert manager._only_fields == ["name"]
+    assert manager.clone()._only_fields == ["name"]
+
+
+@pytest.mark.parametrize("method", (Movie.objects.only, Movie.objects.defer))
+async def test_manager_projection_fields_must_be_strings(method) -> None:
+    with pytest.raises(FieldDefinitionError, match="must be strings"):
+        method(1)
 
 
 async def test_model_only_attribute_error():
@@ -69,6 +85,7 @@ async def test_model_only_attribute_error():
     movies = await Movie.objects.only("name", "tags")
 
     assert len(movies) == 1
+    assert isinstance(movies[0], Movie)
     assert movies[0].id == barbie.id
 
     with pytest.raises(AttributeError):

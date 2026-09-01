@@ -139,12 +139,18 @@ def _check_document_inherited_indexes(bases: Tuple[Type, ...]) -> List[Any]:
     Checks if there are any indexes from the inherited document.
     """
     found_indexes: List[Any] = []
+    inherited_by_name: Dict[str, Index] = {}
     for base in bases:
         meta = getattr(base, "meta", None)
         if not isinstance(meta, MetaInfo):
             continue
 
-        found_indexes.extend(copy.deepcopy(meta.indexes))
+        for index in copy.deepcopy(meta.indexes):
+            inherited = inherited_by_name.get(index.name)
+            if inherited is not None and inherited.document == index.document:
+                continue
+            found_indexes.append(index)
+            inherited_by_name[index.name] = index
 
     return found_indexes
 
@@ -241,6 +247,7 @@ class BaseModelMeta(ModelMetaclass):
         base_annotations: Dict[str, Any] = {}
 
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
+        declared_managers = [key for key, value in attrs.items() if isinstance(value, Manager)]
 
         # Searching for fields "Field" in the class hierarchy.
         def __search_for_fields(base: Type, attrs: Any) -> None:
@@ -314,8 +321,7 @@ class BaseModelMeta(ModelMetaclass):
 
         # Abstract classes do not allow multiple managers. This make sure it is enforced.
         if meta.abstract:
-            managers = [k for k, v in attrs.items() if isinstance(v, Manager)]
-            if len(managers) > 1:
+            if len(declared_managers) > 1:
                 raise ImproperlyConfigured(
                     "Multiple managers are not allowed in abstract classes."
                 )
@@ -382,8 +388,10 @@ class BaseModelMeta(ModelMetaclass):
                 field.alias = field_name
             elif field_name == id_attribute:
                 field.alias = id_attribute_alias
-            field.validation_alias = field.alias
-            field.serialization_alias = field.alias
+            if field.validation_alias is None:
+                field.validation_alias = field.alias
+            if field.serialization_alias is None:
+                field.serialization_alias = field.alias
             new_field = MongozField(pydantic_field=field, model_class=field.annotation)
             mongoz_fields[field_name] = new_field
 

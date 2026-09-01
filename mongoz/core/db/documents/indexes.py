@@ -55,7 +55,15 @@ def _normalized_spec(index: Mapping[str, Any]) -> Tuple[Any, Any]:
         keys = tuple((name, "text") for name in index.get("weights", {}))
     else:
         keys = raw_keys
-    ignored = {"background", "key", "name", "ns", "textIndexVersion", "v"}
+    ignored = {
+        "2dsphereIndexVersion",
+        "background",
+        "key",
+        "name",
+        "ns",
+        "textIndexVersion",
+        "v",
+    }
     options: List[Tuple[str, Any]] = []
     for name, value in sorted(index.items()):
         if name in ignored or value is False or value is None:

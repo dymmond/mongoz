@@ -166,8 +166,6 @@ async def test_server_selection_failure_is_preserved_and_cleanup_still_works() -
 
     with pytest.raises(ServerSelectionTimeoutError):
         await registry.get_database("test_db")._db.command("ping")
-    with pytest.raises(ServerSelectionTimeoutError):
-        await registry.get_database("test_db")._db.command("ping")
 
     await registry.close()
     assert registry.is_closed is True

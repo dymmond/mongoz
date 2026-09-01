@@ -1,11 +1,24 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Dict
 
 from typing_extensions import Self
 
+from mongoz.exceptions import FieldDefinitionError
+
 if TYPE_CHECKING:
     from pymongo.asynchronous.client_session import AsyncClientSession
+
+
+def normalize_projection_fields(fields: Sequence[str] | str | None) -> list[str]:
+    """Normalize projection state without treating one field name as characters."""
+    if fields is None:
+        return []
+    normalized = [fields] if isinstance(fields, str) else list(fields)
+    if not all(isinstance(field, str) for field in normalized):
+        raise FieldDefinitionError("only/defer fields must be strings")
+    return normalized
 
 
 class SessionBoundQuery:

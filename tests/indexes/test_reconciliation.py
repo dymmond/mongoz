@@ -42,14 +42,26 @@ class RenamedIndexDocument(Document):
         indexes = [Index("value", name="declared_value")]
 
 
+class GeospatialIndexDocument(Document):
+    location: list[float] = mongoz.Array(float)
+
+    class Meta:
+        registry = client
+        database = "test_db"
+        collection = "geospatial_index_owner"
+        indexes = [Index(keys=[("location", IndexType.GEOSPHERE)], name="location_sphere")]
+
+
 @pytest.fixture(autouse=True)
 async def prepare_database() -> AsyncGenerator[None, None]:
     await client.driver["test_db"].drop_collection("safe_index_owner")
     await client.driver["test_db"].drop_collection("renamed_index_owner")
+    await client.driver["test_db"].drop_collection("geospatial_index_owner")
     await client.driver["test_index_alternate"].drop_collection("safe_index_owner")
     yield
     await client.driver["test_db"].drop_collection("safe_index_owner")
     await client.driver["test_db"].drop_collection("renamed_index_owner")
+    await client.driver["test_db"].drop_collection("geospatial_index_owner")
     await client.driver["test_index_alternate"].drop_collection("safe_index_owner")
 
 
@@ -90,6 +102,15 @@ async def test_changed_definition_requires_explicit_same_name_recreation() -> No
     await SafeIndexDocument.check_indexes(force_drop=True)
     observed = {index["name"]: index for index in await SafeIndexDocument.list_indexes()}
     assert observed["email"]["unique"] is True
+
+
+async def test_server_materialized_geosphere_version_is_not_a_recreate() -> None:
+    await GeospatialIndexDocument.check_indexes()
+
+    plan = await GeospatialIndexDocument.plan_indexes()
+
+    assert [entry.name for entry in plan.actions(IndexAction.CORRECT)] == ["location_sphere"]
+    assert plan.actions(IndexAction.RECREATE) == ()
 
 
 async def test_unmanaged_indexes_require_an_explicit_deletion_policy() -> None:
@@ -175,3 +196,27 @@ async def test_index_inheritance_is_additive_and_isolated_between_siblings() -> 
         "second_only",
         "base_tenant",
     ]
+
+
+async def test_diamond_inheritance_deduplicates_the_same_ancestor_index() -> None:
+    class Root(Document):
+        tenant: str = mongoz.String()
+
+        class Meta:
+            abstract = True
+            registry = client
+            database = "test_db"
+            indexes = [Index("tenant", name="root_tenant")]
+
+    class Left(Root):
+        class Meta:
+            abstract = True
+
+    class Right(Root):
+        class Meta:
+            abstract = True
+
+    class Leaf(Left, Right):
+        pass
+
+    assert [index.name for index in Leaf.meta.indexes].count("root_tenant") == 1

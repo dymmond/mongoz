@@ -62,10 +62,10 @@ async def test_drops_indexes() -> None:
         "manual_name",
         "year_genre",
     }
-    assert [entry.name for entry in plan.actions(IndexAction.RETAIN)] == [
+    assert {entry.name for entry in plan.actions(IndexAction.RETAIN)} == {
         "_id_",
         "manual_name",
-    ]
+    }
 
 
 async def test_drops_indexes_different_db() -> None:

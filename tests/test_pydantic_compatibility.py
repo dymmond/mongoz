@@ -1,5 +1,6 @@
 import json
 import warnings
+from datetime import datetime, timezone
 
 import bson
 import pytest
@@ -41,8 +42,11 @@ async def test_model_construction_and_json_serialization_use_supported_pydantic_
                 "set": {object_id},
                 "frozenset": frozenset({object_id}),
                 "plain": "unchanged",
+                "mixed": [object_id, datetime(2026, 1, 2, tzinfo=timezone.utc)],
             },
             signal=Signal(),
+            extra_object_id=object_id,
+            extra_mixed=[object_id, datetime(2026, 1, 3, tzinfo=timezone.utc)],
         )
         unsupported = UnsupportedPayload(value=Unsupported())
 
@@ -55,7 +59,14 @@ async def test_model_construction_and_json_serialization_use_supported_pydantic_
             "set": [str(object_id)],
             "frozenset": [str(object_id)],
             "plain": "unchanged",
+            "mixed": [str(object_id), "2026-01-02T00:00:00Z"],
         }
         assert isinstance(serialized_json["signal"], str)
+        assert serialized_json["extra_object_id"] == str(object_id)
+        assert serialized_json["extra_mixed"] == [str(object_id), "2026-01-03T00:00:00Z"]
         with pytest.raises(PydanticSerializationError, match="Unable to serialize unknown type"):
             unsupported.model_dump_json()
+
+        unsupported_extra = ModelDump(extra_value=Unsupported())
+        with pytest.raises(PydanticSerializationError, match="Unable to serialize unknown type"):
+            unsupported_extra.model_dump_json()

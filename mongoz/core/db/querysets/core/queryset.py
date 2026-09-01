@@ -22,7 +22,7 @@ from typing_extensions import Literal, Self
 
 from mongoz.core.db.datastructures import Order
 from mongoz.core.db.fields import base
-from mongoz.core.db.querysets.core.runtime import SessionBoundQuery
+from mongoz.core.db.querysets.core.runtime import SessionBoundQuery, normalize_projection_fields
 from mongoz.core.db.querysets.expressions import (
     Expression,
     SortExpression,
@@ -49,8 +49,8 @@ class BaseQuerySet(SessionBoundQuery, Generic[T]):
         self,
         model_class: Type[T],
         filter_by: Union[List[Expression], None] = None,
-        only_fields: Union[str, None] = None,
-        defer_fields: Union[str, None] = None,
+        only_fields: Union[Sequence[str], str, None] = None,
+        defer_fields: Union[Sequence[str], str, None] = None,
         session: Union["AsyncClientSession", None] = None,
     ) -> None:
         self.model_class = model_class
@@ -59,8 +59,8 @@ class BaseQuerySet(SessionBoundQuery, Generic[T]):
         self._limit_count = 0
         self._skip_count = 0
         self._sort: List[SortExpression] = []
-        self._only_fields = [] if only_fields is None else only_fields
-        self._defer_fields = [] if defer_fields is None else defer_fields
+        self._only_fields = normalize_projection_fields(only_fields)
+        self._defer_fields = normalize_projection_fields(defer_fields)
         self._session = session
 
     def clone(self) -> Self:
@@ -88,7 +88,7 @@ class BaseQuerySet(SessionBoundQuery, Generic[T]):
         queryset = self.clone()
         queryset.validate_only_and_defer()
 
-        document_fields = list(fields)
+        document_fields = normalize_projection_fields(fields)
 
         id_attribute = self.model_class.meta.id_attribute
         if not isinstance(id_attribute, str):

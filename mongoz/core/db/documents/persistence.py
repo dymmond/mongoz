@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Sequence, Tuple, Type, TypeVar
 
+from pydantic import ValidationError
 from pymongo import ReturnDocument
 from pymongo.asynchronous.collection import AsyncCollection
 
@@ -86,7 +87,13 @@ async def get_or_create_document(
         key: value for key, value in lookup_equalities.items() if key not in {"_id", "id"}
     }
     creation_values = {**normalized_defaults, **equality_values}
-    candidate = model_class(**creation_values)
+    try:
+        candidate = model_class(**creation_values)
+    except ValidationError:
+        existing = await collection.find_one(lookup, **driver_options)
+        if existing is not None:
+            return model_class.from_row(existing, from_collection=collection)
+        raise
     model = await collection.find_one_and_update(
         lookup,
         {"$setOnInsert": dump_document(candidate)},

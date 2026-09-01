@@ -16,6 +16,11 @@ def run_sync(async_function: Awaitable[T]) -> T:
     variables. Exceptions raised by the awaitable are propagated unchanged.
     """
 
+    if isinstance(async_function, asyncio.Future):
+        raise RuntimeError(
+            "run_sync cannot consume an asyncio Future or Task bound to another event loop"
+        )
+
     async def consume() -> T:
         return await async_function
 

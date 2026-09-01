@@ -16,6 +16,7 @@ QueryOperator = Callable[..., Union["Expression", "SortExpression"]]
 class MongozSettings(BaseSettings):
     model_config = SettingsConfigDict(
         extra="allow",
+        hide_input_in_errors=True,
         ignored_types=(cached_property,),
         arbitrary_types_allowed=True,
     )

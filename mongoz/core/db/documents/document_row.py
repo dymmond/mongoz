@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Sequence, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Sequence, Type, TypeVar, Union
 
 from pymongo.asynchronous.collection import AsyncCollection
 
@@ -27,6 +27,7 @@ class DocumentRow(MongozBaseModel):
         is_defer_fields: bool = False,
         only_fields: Union[Sequence[str], None] = None,
         defer_fields: Union[Sequence[str], None] = None,
+        lookup_fields: Sequence[str] = (),
         from_collection: Union[AsyncCollection, None] = None,
     ) -> T:
         """
@@ -56,19 +57,27 @@ class DocumentRow(MongozBaseModel):
                 if column not in item:
                     item[column] = value
 
-            # We need to generify the document fields to make sure we can populate the
-            # model without mandatory fields
-            model = cast(T, cls.proxy_document(**item))
+            # Projection results intentionally omit required fields. Constructing the concrete
+            # class without validation preserves that partial shape and keeps the runtime type
+            # aligned with the public generic return contract.
+            model = cls.model_construct(_fields_set=set(item), **item)
+            for field_name in cls.model_fields:
+                if field_name not in item:
+                    model.__dict__.pop(field_name, None)
             model._mongoz_collection = from_collection
             return model
-        elif not any(settings.lookup_prefix in column for column in row):
-            item = {cls.validate_id_field(column): value for column, value in row.items()}
-        else:
+        elif not any(column in lookup_fields for column in row):
             for column, value in row.items():
                 column = cls.validate_id_field(column)
                 if column not in item:
-                    if settings.lookup_prefix in column:
-                        loopkup_field = column.split(settings.lookup_prefix)[-1]
+                    item[column] = value
+        else:
+            for column, value in row.items():
+                source_column = column
+                column = cls.validate_id_field(source_column)
+                if column not in item:
+                    if source_column in lookup_fields:
+                        loopkup_field = source_column.removeprefix(settings.lookup_prefix)
                         values = []
                         for data in value:
                             if data.get("_id"):

@@ -342,11 +342,15 @@ class Decimal(Number[decimal.Decimal], decimal.Decimal):
 
     @staticmethod
     def validate_field_value(field: BaseField, value: object) -> object:
-        if not isinstance(value, (int, float, str, decimal.Decimal)):
+        if isinstance(value, Decimal128):
+            validation_value: Union[int, float, str, decimal.Decimal] = value.to_decimal()
+        elif isinstance(value, (int, float, str, decimal.Decimal)):
+            validation_value = value
+        else:
             return value
         errors: List[InitErrorDetails] = []
         alias = field.alias or field.name or ""
-        dec = decimal.Decimal(str(value))
+        dec = decimal.Decimal(str(validation_value))
 
         def get_decimal_parts(
             value: Union[int, float, str, decimal.Decimal],
@@ -388,7 +392,7 @@ class Decimal(Number[decimal.Decimal], decimal.Decimal):
 
         # Rule 1: Fractional digits <= scale
 
-        int_digits, frac_digit, digits_count = get_decimal_parts(value)
+        int_digits, frac_digit, digits_count = get_decimal_parts(validation_value)
         assert field.decimal_places is not None
         if frac_digit > field.decimal_places:
             value = float(
@@ -397,9 +401,10 @@ class Decimal(Number[decimal.Decimal], decimal.Decimal):
                     rounding=decimal.ROUND_DOWN,
                 )
             )
+            validation_value = value
 
         # Rule 2: Total digits <= precision
-        int_digits, frac_digit, digits_count = get_decimal_parts(value)
+        int_digits, frac_digit, digits_count = get_decimal_parts(validation_value)
         assert field.max_digits is not None
         if digits_count > field.max_digits:
             errors.append(
