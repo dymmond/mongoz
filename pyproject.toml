@@ -67,7 +67,7 @@ testing = [
     "pydantic-settings==2.15.0",
     "pymongo==4.17.0",
     "pytest==9.1.1",
-    "pytest-codspeed>=4.3.0",
+    "pytest-codspeed>=5.0.3",
     "pytest-cov==7.1.0",
     "ravyn[standard]==0.4.1",
     "tomli>=2.0.0; python_version < '3.11'",
