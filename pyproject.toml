@@ -109,6 +109,7 @@ format = [
     "ruff format mongoz tests scripts {args}",
 ]
 typing = "mypy -p mongoz {args}"
+pre-commit-check = "pre-commit run --all-files"
 quality = [
     "hatch run lint",
     "hatch run format-check",
@@ -123,10 +124,15 @@ mongodb-standalone-smoke = "python scripts/mongodb_topology.py standalone {args}
 mongodb-replica-set-up = "docker compose -p mongoz-replica-set -f compose.replica-set.yml up -d --wait"
 mongodb-replica-set-down = "docker compose -p mongoz-replica-set -f compose.replica-set.yml down --volumes --remove-orphans"
 mongodb-replica-set-smoke = "python scripts/mongodb_topology.py replica-set {args}"
+acceptance = "python scripts/acceptance.py"
 
 [tool.hatch.envs.docs]
 features = ["docs"]
 dependencies = []
+
+[tool.hatch.envs.docs.env-vars]
+# Suppress only Material's promotional MkDocs 2 notice; strict build warnings remain fatal.
+NO_MKDOCS_2_WARNING = "1"
 
 [tool.hatch.envs.docs.scripts]
 update_languages = "scripts/docs.py update-languages"
