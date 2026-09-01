@@ -83,16 +83,8 @@ packaging = [
 ]
 
 docs = [
-    "email-validator==2.3.0",
-    "griffe-typingdoc==0.3.1",
-    "mdx-include==1.4.2",
-    "mkautodoc==0.2.0",
-    "mkdocs==1.6.1",
-    "mkdocs-macros-plugin==1.5.0",
-    "mkdocs-material==9.7.7",
     "mkdocs-meta-descriptions-plugin==4.1.0",
-    "mkdocstrings[python]==0.29.1",
-    "pyyaml==6.0.3",
+    "zensical==0.0.57",
 ]
 
 [tool.hatch.envs.default]
@@ -137,19 +129,13 @@ acceptance = "python scripts/acceptance.py"
 features = ["docs"]
 dependencies = []
 
-[tool.hatch.envs.docs.env-vars]
-# Suppress only Material's promotional MkDocs 2 notice; strict build warnings remain fatal.
-NO_MKDOCS_2_WARNING = "1"
-
 [tool.hatch.envs.docs.scripts]
-update_languages = "scripts/docs.py update-languages"
-build = "hatch run docs:update_languages; scripts/docs.py build-all"
+prepare = "python scripts/docs.py prepare"
+clean = "python scripts/docs.py clean"
+build = "python scripts/docs.py build --clean-cache"
 validate = "python scripts/validate_docs.py"
-build_lang = "hatch run docs:update_languages; scripts/docs.py build --lang {args}"
-serve = "hatch run docs:update_languages; scripts/docs.py live"
-dev = "hatch run docs:update_languages; scripts/docs.py serve"
-serve_lang = "hatch run docs:update_languages; scripts/docs.py live --lang {args}"
-new_lang = "hatch run docs:update_languages; scripts/docs.py new-lang --lang {args}"
+serve = "python scripts/docs.py serve {args}"
+dev = "python scripts/docs.py serve {args}"
 
 [tool.hatch.envs.test]
 features = ["testing"]

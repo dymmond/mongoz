@@ -57,8 +57,18 @@ tasks:
 
   # ---------------------------- DOCS -----------------------------------
 
+  docs-prepare:
+    desc: Prepares the ephemeral Zensical documentation tree
+    cmds:
+      - hatch run docs:prepare
+
+  docs-clean:
+    desc: Removes generated documentation and build output
+    cmds:
+      - hatch run docs:clean
+
   docs-build:
-    desc: Builds all documentation languages
+    desc: Builds the documentation with Zensical in strict mode
     cmds:
       - hatch run docs:build
 
@@ -68,7 +78,7 @@ tasks:
       - hatch run docs:validate
 
   docs-serve:
-    desc: Serves the documentation locally
+    desc: Serves the documentation locally with source watching
     cmds:
       - hatch run docs:serve
 

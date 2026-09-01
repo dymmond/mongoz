@@ -4,8 +4,15 @@
 
 ### Changed
 
+- Rebuilt the documentation around a strict Zensical pipeline with deterministic include
+  preparation, focused Start/Concept/Tutorial/Guide/Reference/Migration/Operations navigation,
+  compatibility routes for established URLs, an explicitly archived Portuguese surface, and a
+  distinct responsive Mongoz visual system.
+- A missing acknowledged instance `delete()` now raises `DocumentNotFound`, matching the established
+  missing-write contract for instance `update()` and `save()`; `post_delete` is not dispatched for a
+  document that was not deleted.
 - Streaming managers and querysets now preserve sort, skip, limit, projection, lookup, and session
-  state. `last()` retains one raw row instead of hydrating the complete result set, and ordinary
+  state. `last()` retains one raw document instead of hydrating the complete result set, and ordinary
   BSON hydration uses a measured fast path when no lookup projection is present.
 - Literal string helpers now escape regex metacharacters; `Q.pattern()` remains the explicit raw
   regex escape hatch. Modeled writes serialize declared fields only, while raw query dictionaries,
@@ -216,7 +223,7 @@ Mongoz remains pre-1.0, but public API corrections follow these rules:
 
 ### Added
 
-- Support for [NullableObjectId](./fields.md#nullableobjectid) allowing special object ids to
+- Support for [NullableObjectId](./reference/fields.md) allowing special object ids to
 be declared in the document and null.
 
 ## 0.10.7
@@ -240,7 +247,7 @@ be declared in the document and null.
 
 ### Added
 
-- [exists()](./queries.md#exists) allowing to query for a document existance in the database.
+- [`exists()`](./reference/querying.md#evaluation-and-writes) allowing a bounded document existence query.
 
 ## 0.10.4
 
@@ -284,11 +291,11 @@ This was missed from the version 0.10.1
 
 - `create_indexes_for_multiple_databases` allowing to iterate for each document
 the creating of the indexes in multiple databases.
-- [Registry document checks](./registry.md#run-some-document-checks) allowing to check beforehand all the
+- [Registry document checks](./reference/connections-indexes.md#registry) allowing to check beforehand all the
 index changes in a document.
-- [Model check indexes](./documents.md#document-checks) to do the same checks for the indexes but for each document.
-- [create_indexes_for_multiple_databases](./documents.md#create-indexes-for-multiple-databases).
-- [drop_indexes_for_multiple_databases](./documents.md#drop-indexes-for-multiple-databases).
+- [Model index checks](./guides/indexes.md#execute) to do the same checks for each document.
+- [`create_indexes_for_multiple_databases()`](./tutorials/multiple-databases-indexes.md#apply-an-explicit-policy).
+- [`drop_indexes_for_multiple_databases()`](./tutorials/multiple-databases-indexes.md#apply-an-explicit-policy).
 
 ### Changed
 
