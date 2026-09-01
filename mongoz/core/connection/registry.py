@@ -71,7 +71,12 @@ class Registry:
         exc_value: Union[BaseException, None],
         traceback: Union[TracebackType, None],
     ) -> None:
-        await self.close()
+        try:
+            await self.close()
+        except BaseException as cleanup_error:
+            if exc_value is not None:
+                raise exc_value.with_traceback(traceback) from cleanup_error
+            raise
 
     async def drop_database(self, database: Union[str, Database]) -> None:
         """
