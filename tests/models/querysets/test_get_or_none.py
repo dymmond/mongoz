@@ -40,13 +40,9 @@ async def prepare_database() -> AsyncGenerator:
 
 
 async def test_model_get_or_none() -> None:
-    movie = await Movie.query({Movie.name: "Barbie"}).get_or_create(
-        {Movie.year: 2023}
-    )
+    movie = await Movie.query({Movie.name: "Barbie"}).get_or_create({Movie.year: 2023})
     assert movie.name == "Barbie"
     assert movie.year == 2023
 
-    movie = await Movie.query(
-        {Movie.name: "Barbie", Movie.year: 2025}
-    ).get_or_none()
+    movie = await Movie.query({Movie.name: "Barbie", Movie.year: 2025}).get_or_none()
     assert movie is None

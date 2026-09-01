@@ -1,217 +1,99 @@
-# MongoZ
+# Mongoz
 
 <p align="center">
-  <a href="https://mongoz.dymmond.com"><img src="https://res.cloudinary.com/tarsild/image/upload/v1695724284/packages/mongoz/nwtcudxmncgoyw4em0th.png" alt='mongoz'></a>
+  <a href="https://mongoz.dymmond.com"><img src="https://res.cloudinary.com/tarsild/image/upload/v1695724284/packages/mongoz/nwtcudxmncgoyw4em0th.png" alt="Mongoz"></a>
 </p>
+
+<p align="center"><strong>Typed asynchronous MongoDB documents and queries for Python.</strong></p>
 
 <p align="center">
-    <em>🔥 ODM with Pydantic made it simple 🔥</em>
+  <a href="https://github.com/dymmond/mongoz/actions/workflows/test-suite.yml"><img src="https://github.com/dymmond/mongoz/actions/workflows/test-suite.yml/badge.svg?event=push&branch=main" alt="Test Suite"></a>
+  <a href="https://pypi.org/project/mongoz"><img src="https://img.shields.io/pypi/v/mongoz?color=%234b4fd8&label=pypi%20package" alt="Package version"></a>
+  <a href="https://pypi.org/project/mongoz"><img src="https://img.shields.io/pypi/pyversions/mongoz.svg?color=%23087f9d" alt="Supported Python versions"></a>
+  <a href="https://codspeed.io/dymmond/mongoz?utm_source=badge"><img src="https://img.shields.io/endpoint?url=https://codspeed.io/badge/dymmond/mongoz" alt="CodSpeed"></a>
 </p>
 
-<p align="center">
-<a href="https://github.com/dymmond/mongoz/actions/workflows/test-suite.yml/badge.svg?event=push&branch=main" target="_blank">
-    <img src="https://github.com/dymmond/mongoz/actions/workflows/test-suite.yml/badge.svg?event=push&branch=main" alt="Test Suite">
-</a>
+Mongoz is an asynchronous object-document mapper for MongoDB, built on native
+[PyMongo Async](https://pymongo.readthedocs.io/en/stable/async-tutorial.html) and
+[Pydantic](https://docs.pydantic.dev/). It combines typed documents, composable clone-on-write
+queries, deliberate persistence semantics, inspectable index reconciliation, sessions,
+transactions, aggregation, bulk writes, and direct native-driver escape hatches.
 
-<a href="https://pypi.org/project/mongoz" target="_blank">
-    <img src="https://img.shields.io/pypi/v/mongoz?color=%2334D058&label=pypi%20package" alt="Package version">
-</a>
-
-<a href="https://pypi.org/project/mongoz" target="_blank">
-    <img src="https://img.shields.io/pypi/pyversions/mongoz.svg?color=%2334D058" alt="Supported Python versions">
-</a>
-
-<a href="https://codspeed.io/dymmond/mongoz?utm_source=badge" target="_blank">
-    <img src="https://img.shields.io/endpoint?url=https://codspeed.io/badge/dymmond/mongoz" alt="CodSpeed">
-</a>
-</p>
-
----
-
-**Documentation**: [https://mongoz.dymmond.com][mongoz] 📚
-
-**Source Code**: [https://github.com/dymmond/mongoz](https://github.com/dymmond/mongoz)
-
----
-
-## Motivation
-
-MongoZ is an async Python ODM (Object Document Mapper) for MongoDB built on top of [Motor][motor] and
-[Pydantic][pydantic].
-
-MongoZ is also inspired by the great work of [Aminalee](https://aminalaee.dev/mongox/) from the
-MongoX.
-
-So why a MongoZ if there is a MongoX? Well, MongoZ is from the same author of [Esmerald][esmerald],
-[Saffier][saffier], [Mongoz][mongoz] and many other tools out there and they all follow a specific need
-and pattern of development.
-
-Mongox implements really well some operations with MongoDB but for use cases where [Signals](https://mongoz.dymmond.com/sinals.md),
-for example, are needed, Mongox was not aiming at it and also since the creator of Mongoz is the
-same as [Saffier][saffier] and [Saffier][saffier], the friendly interface to interact is also a must.
-
-In the end, there was a need to add Pydantic 2+ with some more extras that was not coming in the
-Mongox.
-
-## Mongoz
-
-This is some sort of a fork of Mongox with a rewritten core but reusing some of its best features
-while adding additional ones and a common and friendly interface as well as intuitive.
-
-This ODM is designed for **async** which means flexibility and compatibility with various frameworks
-out there such as [Esmerald][esmerald], FastAPI, Sanic, Starlette and many others making MongoZ
-**framework agnostic**.
-
-## Features
-
-While adopting a familiar interface, it offers some cool and powerful features using Pydantic and
-Motor.
-
-### Syntax
-
-**Mongoz allows two different types of syntax to be used**.
-
-* With a familiar interface inspired by Django.
-* With a familiar interface inspired by Mongox.
-
-**The documentation follows a more familiar interface inspired by [Edgy][edgy] but will also show**
-**how you could also use the other allowed syntax as well**
-
-### Key features
-
-* **Document inheritance** - For those cases where you don't want to repeat yourself while maintaining integrity of the documents.
-* **Abstract classes** - That's right! Sometimes you simply want a document that holds common fields that doesn't need to created as
-a document in the database.
-* **Meta classes** - If you are familiar with Django, this is not new to you and Mongoz offers this in the same fashion.
-* **Filters** - Filter by any field you want and need.
-* **Model operators** - Classic operations such as `update`, `get`, `get_or_none` and many others.
-* **Indexes** - Unique indexes through meta fields.
-* **Signals** - Quite useful feature if you want to "listen" to what is happening with your documents.
-
-And a lot more you can do here.
+- **Documentation:** [mongoz.dymmond.com](https://mongoz.dymmond.com)
+- **Source:** [github.com/dymmond/mongoz](https://github.com/dymmond/mongoz)
+- **Migration:** [modernization guide](https://mongoz.dymmond.com/migration/modernization/)
 
 ## Installation
 
-To install Mongoz, run:
-
-```shell
-$ pip install mongoz
+```console
+python -m pip install mongoz
 ```
+
+Mongoz supports Python 3.10–3.14, PyMongo `>=4.13,<5.0`, and Pydantic 2. The package ships
+`py.typed` for PEP 561 consumers.
 
 ## Quickstart
 
-The following is an example how to start with Mongoz and more details and examples can be found throughout the documentation.
-
-Use `ipython` to run the following from the console, since it supports `await`.
-
 ```python
-import asyncio
+from mongoz import Boolean, Document, Registry, String
 
-import mongoz
-
-database_uri = "mongodb://localhost:27017"
-registry = mongoz.Registry(database_uri, event_loop=asyncio.get_running_loop)
+registry = Registry("mongodb://localhost:27017")
 
 
-class User(mongoz.Document):
-    name: str = mongoz.String(max_length=255)
-    email: str = mongoz.Email(max_length=255)
-    is_verified: bool = mongoz.Boolean(default=False)
+class User(Document):
+    name: str = String(min_length=1, max_length=80)
+    email: str = String(unique=True)
+    active: bool = Boolean(default=True)
 
     class Meta:
         registry = registry
-        database = "my_db"
+        database = "app"
+
+
+async def main() -> None:
+    async with registry:
+        user = await User.objects.create(name="Ada", email="ada@example.com")
+
+        found = await User.objects.get(id=user.id)
+        active_users = await User.objects.filter(active=True).sort("name")
+
+        await found.update(name="Ada Lovelace")
+        await found.delete()
+
+        assert active_users[0].email == "ada@example.com"
 ```
 
-Now you can generate some documents and insert them into the database.
+A Registry owns one PyMongo `AsyncMongoClient`. Reuse it for the application lifecycle and close it
+during shutdown; a closed Registry is final. Document declaration performs no database or index I/O.
 
-=== "Simple"
+## Why Mongoz
 
-    ```python
-    user = await User.objects.create(name="Mongoz", email="mongoz@mongoz.com")
-    ```
+- Pydantic-backed `Document` and `EmbeddedDocument` models
+- familiar Manager filters and explicit `Q`/field expressions
+- immutable query derivation for safe reuse
+- atomic patch updates and explicit full-model save behavior
+- index planning before reviewed reconciliation
+- PyMongo Async sessions, transactions, aggregation, and bulk writes
+- deterministic async-only document signals
+- typed native client, database, collection, cursor, and session boundaries
+- security guidance for raw queries, regex, credentials, and destructive indexes
 
-=== "Alternative"
+Mongoz does not replace PyMongo's ownership of topology, pooling, timeouts, retries, read/write
+concerns, native errors, or transaction lifecycle. Use `registry.driver`, `database.driver`, and
+`collection.driver` when the driver is the right abstraction.
 
-    ```python
-    user = await User(name="Mongoz", email="mongoz@mongoz.com").create()
-    ```
+## Documentation
 
-This will return an instance of a `User` in a Pydantic model and `mypy` will understand this is a
-`User` instance automatically which meand the type hints and validations will work everywhere.
+New users should begin with the [Quickstart](https://mongoz.dymmond.com/start/quickstart/). Existing
+applications should review the [migration guide](https://mongoz.dymmond.com/migration/modernization/).
+Production deployments should use the
+[operations checklist](https://mongoz.dymmond.com/operations/) and
+[security guide](https://mongoz.dymmond.com/guides/security/).
 
-### Fetching
+## Contributing and security
 
-Since Mongoz was built on the top of Motor, means you can also use the same pattern to query as used
-in PyMongo/Motor.
+The [contributor guide](https://mongoz.dymmond.com/project/contributing/) documents the Zensical
+documentation workflow, quality gates, real MongoDB topologies, typing checks, and package proof.
 
-=== "Simple"
-
-    ```python
-    user = await User.objects.get(name="Mongoz")
-    ```
-
-=== "Alternative"
-
-    ```python
-    user = await User.query({"name": "Mongoz"}).get()
-    ```
-
-Or you can use the `User` fields instead of dictionaries (check the "Alternative" for this option).
-
-=== "Simple"
-
-    ```python
-    user = await User.objects.get(name="Mongoz")
-    ```
-
-=== "Alternative"
-
-    ```python
-    user = await User.query({User.name: "Mongoz"}).get()
-    ```
-
-Or a more python similar approach (check the "Alternative" for this option).
-
-=== "Simple"
-
-    ```python
-    user = await User.objects.get(name="Mongoz")
-    ```
-
-=== "Alternative"
-
-    ```python
-    user = await User.query(User.name == "Mongoz").get()
-    ```
-
-There are plenty of operations you can do with Mongoz and you can see them all throughout the
-documentation or in the [Queries](./queries.md) section.
-
-**Mongoz** praises simplicity and there is no preference in the syntax used within the queries.
-You can use what we called "Mongoz" option and the "Alternative" at the same time as both work
-really well combined.
-
-**Both are Mongoz syntaxes but for the sake of the documentation, we classify them with different names for representation purposes only**.
-
-## Note
-
-Mongoz document declaration with typing is merely visual. The validations of the fields are not done by the typing of
-the attribute of the documents but from the mongoz fields.
-
-Which means you don't need to worry about the wrong typing as long as you declare the correct field type.
-
-So does that mean Pydantic won't work if you don't declare the type? Absolutely not.
-Internally Mongoz runs those validations through the declared fields and the Pydantic validations
-are done exactly in the same way you do a normal Pydantic model.
-
-Nothing to worry about!
-
-
-[mongoz]: https://mongoz.dymmond.com
-[motor]: https://github.com/mongodb/motor
-[pydantic]: https://pydantic.dev/
-[mongoz]: https://mongoz.dymmond.com
-[saffier]: https://saffier.tarsild.io
-[edgy]: https://edgy.tarsild.io
-[esmerald]: https://esmerald.dev
+Report suspected vulnerabilities privately through the repository Security tab according to
+[`SECURITY.md`](SECURITY.md), not through a public issue.

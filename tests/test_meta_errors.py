@@ -1,10 +1,11 @@
-from typing import List, Optional
+from typing import ClassVar, List, Optional
 
 import pydantic
 import pytest
 
 import mongoz
 from mongoz import Document, ObjectId
+from mongoz.core.db.querysets.core.manager import Manager
 from mongoz.exceptions import ImproperlyConfigured
 from tests.conftest import client
 
@@ -29,3 +30,28 @@ async def test_improperly_configured_for_missing_database():
         raised.value.args[0]
         == "'database' for the table not found in the Meta class or any of the superclasses. You must set the database in the Meta."
     )
+
+
+async def test_abstract_custom_manager_does_not_count_inherited_objects() -> None:
+    class AbstractRecord(Document):
+        custom: ClassVar[Manager] = Manager()
+
+        class Meta:
+            abstract = True
+            registry = client
+            database = "test_db"
+
+    assert isinstance(AbstractRecord.custom, Manager)
+
+
+async def test_abstract_document_rejects_two_declared_managers() -> None:
+    with pytest.raises(ImproperlyConfigured, match="Multiple managers"):
+
+        class InvalidAbstractRecord(Document):
+            first: ClassVar[Manager] = Manager()
+            second: ClassVar[Manager] = Manager()
+
+            class Meta:
+                abstract = True
+                registry = client
+                database = "test_db"

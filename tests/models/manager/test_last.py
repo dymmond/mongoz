@@ -57,3 +57,20 @@ async def test_model_last_two() -> None:
     movie = await Movie.objects.last()
     assert movie is not None
     assert movie.name == "Barbie"
+
+
+async def test_async_iteration_preserves_sort_skip_limit_and_projection() -> None:
+    await Movie.objects.create(name="First", year=2022)
+    await Movie.objects.create(name="Second", year=2023)
+    await Movie.objects.create(name="Third", year=2024)
+
+    movies = [
+        movie
+        async for movie in Movie.objects.sort("year", Order.DESCENDING)
+        .skip(1)
+        .limit(1)
+        .only("name")
+    ]
+
+    assert [movie.name for movie in movies] == ["Second"]
+    assert movies[0].model_fields_set == {"id", "name"}

@@ -5,6 +5,8 @@ import pytest
 
 import mongoz
 from mongoz import Document, Index, IndexType, ObjectId, Order
+from mongoz.core.db.querysets.core.manager import Manager
+from mongoz.exceptions import FieldDefinitionError
 from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
@@ -62,15 +64,28 @@ async def test_model_only() -> None:
     )
     movies = await Movie.objects.only("name", "tags")
     assert len(movies) == 1
+    assert isinstance(movies[0], Movie)
+
+
+async def test_manager_constructor_treats_one_projection_name_as_one_field() -> None:
+    manager = Manager(Movie, only_fields="name")
+
+    assert manager._only_fields == ["name"]
+    assert manager.clone()._only_fields == ["name"]
+
+
+@pytest.mark.parametrize("method", (Movie.objects.only, Movie.objects.defer))
+async def test_manager_projection_fields_must_be_strings(method) -> None:
+    with pytest.raises(FieldDefinitionError, match="must be strings"):
+        method(1)
 
 
 async def test_model_only_attribute_error():
-    barbie = await Movie.objects.create(
-        name="Barbie", year=2023, tags=["movie", "hollywood"]
-    )
+    barbie = await Movie.objects.create(name="Barbie", year=2023, tags=["movie", "hollywood"])
     movies = await Movie.objects.only("name", "tags")
 
     assert len(movies) == 1
+    assert isinstance(movies[0], Movie)
     assert movies[0].id == barbie.id
 
     with pytest.raises(AttributeError):
@@ -79,9 +94,7 @@ async def test_model_only_attribute_error():
 
 async def test_model_only_with_all():
     await User.objects.create(name="John", language="PT")
-    await User.objects.create(
-        name="Jane", language="EN", description="Another simple description"
-    )
+    await User.objects.create(name="Jane", language="EN", description="Another simple description")
 
     users = await User.objects.only("name", "language").all()
 
@@ -123,18 +136,12 @@ async def test_model_only_save():
 
 
 async def test_model_only_save_without_nullable_field():
-    user = await User.objects.create(
-        name="John", language="PT", description="John"
-    )
+    user = await User.objects.create(name="John", language="PT", description="John")
 
     assert user.description == "John"
     assert user.language == "PT"
 
-    user = (
-        await User.objects.filter(pk=user.id)
-        .only("description", "language")
-        .get()
-    )
+    user = await User.objects.filter(pk=user.id).only("description", "language").get()
     user.language = "EN"
     user.description = "A new description"
     await user.save()
@@ -147,9 +154,7 @@ async def test_model_only_save_without_nullable_field():
 
 
 async def test_model_only_model_dump():
-    user = await User.objects.create(
-        name="John", language="PT", description="A description"
-    )
+    user = await User.objects.create(name="John", language="PT", description="A description")
     user = await User.objects.filter(pk=user.id).only("name", "language").get()
 
     data = user.model_dump()

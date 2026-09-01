@@ -37,7 +37,7 @@ async def prepare_database() -> AsyncGenerator:
     await Movie.create_indexes()
 
 
-def test_model_class() -> None:
+async def test_model_class() -> None:
     class Product(Document):
         sku: str = mongoz.String()
 

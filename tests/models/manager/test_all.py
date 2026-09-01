@@ -44,9 +44,7 @@ async def test_model_all() -> None:
     movies = await Movie.objects.all()
     assert len(movies) == 0
 
-    await Movie.objects.create(
-        name="Forrest Gump", year=2003, is_published=True
-    )
+    await Movie.objects.create(name="Forrest Gump", year=2003, is_published=True)
 
     movies = await Movie.objects.all()
     assert len(movies) == 1

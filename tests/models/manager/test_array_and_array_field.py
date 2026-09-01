@@ -54,9 +54,7 @@ async def test_array() -> None:
         assert movie.name == "Barbie"
         assert movie.tags == ["barbie"]
 
-    await Movie.objects.create(
-        name="Batman", year=2022, tags=["detective", "dc"]
-    )
+    await Movie.objects.create(name="Batman", year=2022, tags=["detective", "dc"])
 
     movies = await Movie.objects.all()
 
@@ -70,9 +68,7 @@ async def test_array_error() -> None:
     assert len(movies) == 0
 
     with pytest.raises(ValidationError):
-        await Movie.objects.create(
-            name="Barbie", year=2003, tags=["barbie", 1]
-        )
+        await Movie.objects.create(name="Barbie", year=2003, tags=["barbie", 1])
 
 
 async def test_model_nested_inherited() -> None:
@@ -91,9 +87,7 @@ async def test_model_nested_inherited() -> None:
         assert movie.name == "Paul Rudd"
         assert movie.movies[0] == "Only Murders in the Building"
 
-    await Actor.objects.create(
-        name="Margot Robbie", year=1990, movies=["Barbie", 3, 2.25]
-    )
+    await Actor.objects.create(name="Margot Robbie", year=1990, movies=["Barbie", 3, 2.25])
 
     actors = await Actor.objects.all()
     actor = actors[1]

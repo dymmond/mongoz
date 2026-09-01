@@ -6,7 +6,6 @@ from mongoz.core.db.querysets.core.manager import Manager as BaseManager
 
 
 class QuerySetManager:
-
     def __init__(self, model_class: Any = None):
         self.model_class = model_class
 

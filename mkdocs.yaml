@@ -1,0 +1,144 @@
+site_name: Mongoz
+site_description: Typed asynchronous MongoDB documents, queries, indexes, and transactions for Python.
+site_url: https://mongoz.dymmond.com
+docs_dir: docs/generated
+site_dir: site
+strict: true
+
+theme:
+  name: material
+  language: en
+  favicon: statics/images/favicon.ico
+  logo: statics/images/white.png
+  palette:
+    - scheme: default
+      media: "(prefers-color-scheme: light)"
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      media: "(prefers-color-scheme: dark)"
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+    - content.code.annotate
+    - content.code.select
+    - navigation.indexes
+    - navigation.path
+    - navigation.tabs
+    - navigation.top
+
+repo_name: dymmond/mongoz
+repo_url: https://github.com/dymmond/mongoz
+edit_uri: edit/main/docs/en/docs/
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search
+  - meta-descriptions:
+      export_csv: false
+      quiet: false
+      enable_checks: false
+      min_length: 50
+      max_length: 160
+      trim: false
+
+nav:
+  - Home: index.md
+  - Start:
+      - Introduction: start/introduction.md
+      - Installation: start/installation.md
+      - Quickstart: start/quickstart.md
+      - Registry lifecycle: start/lifecycle.md
+  - Concepts:
+      - Overview: concepts/index.md
+      - Documents: concepts/documents.md
+      - Embedded documents: concepts/embedded-documents.md
+      - Fields and validation: concepts/fields-validation.md
+      - Registry, database, and collection: concepts/registry-boundaries.md
+      - Managers and QuerySets: concepts/managers-querysets.md
+      - BSON and serialization: concepts/bson-serialization.md
+  - Tutorials:
+      - Overview: tutorials/index.md
+      - CRUD application: tutorials/crud.md
+      - Multiple databases and indexes: tutorials/multiple-databases-indexes.md
+      - Aggregation and bulk writes: tutorials/aggregation-bulk.md
+      - Sessions and transactions: tutorials/sessions-transactions.md
+      - Production setup: tutorials/production.md
+  - Guides:
+      - Overview: guides/index.md
+      - Querying: guides/querying.md
+      - Operators and raw queries: guides/operators.md
+      - Sorting, pagination, and projections: guides/sorting-projections.md
+      - Updates and persistence: guides/persistence.md
+      - Index planning and reconciliation: guides/indexes.md
+      - Inheritance and relations: guides/inheritance-relations.md
+      - Signals: guides/signals.md
+      - Testing applications: guides/testing.md
+      - Concurrency and streaming: guides/concurrency-streaming.md
+      - Performance: guides/performance.md
+      - Security: guides/security.md
+      - PyMongo configuration and resilience: guides/pymongo-configuration.md
+  - Reference:
+      - Public API: reference/api.md
+      - Fields: reference/fields.md
+      - Query methods and operators: reference/querying.md
+      - Connections and indexes: reference/connections-indexes.md
+      - Signals, exceptions, and settings: reference/signals-errors-settings.md
+      - Compatibility: reference/compatibility.md
+  - Migration:
+      - Upgrade overview: migration/index.md
+      - Modernization migration guide: migration/modernization.md
+  - Operations:
+      - Production checklist: operations/index.md
+      - Troubleshooting: operations/troubleshooting.md
+  - Project:
+      - Contributing: project/contributing.md
+      - Releasing: project/releasing.md
+      - Portuguese documentation: project/portuguese.md
+      - Release notes: release-notes.md
+      - Sponsorship: project/sponsorship.md
+
+markdown_extensions:
+  - attr_list
+  - admonition
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      use_pygments: true
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+  - pymdownx.tabbed:
+      alternate_style: true
+
+validation:
+  invalid_links: true
+  invalid_link_anchors: true
+  unresolved_references: true
+  unresolved_footnotes: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/dymmond/mongoz
+  alternate:
+    - link: /
+      name: English
+      lang: en
+    - link: /pt/
+      name: Português (archived)
+      lang: pt

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Sequence, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Sequence, Type, TypeVar, Union
 
-from motor.motor_asyncio import AsyncIOMotorCollection
+from pymongo.asynchronous.collection import AsyncCollection
 
 from mongoz import settings
 from mongoz.core.db.documents.base import MongozBaseModel
+from mongoz.core.db.documents.metaclasses import MetaInfo
 
 if TYPE_CHECKING:  # pragma: no cover
     from mongoz import Document
+
+T = TypeVar("T", bound="Document")
 
 
 class DocumentRow(MongozBaseModel):
@@ -18,14 +21,15 @@ class DocumentRow(MongozBaseModel):
 
     @classmethod
     def from_row(
-        cls: "Document",
+        cls: Type[T],
         row: Dict[str, Any],
         is_only_fields: bool = False,
         is_defer_fields: bool = False,
         only_fields: Union[Sequence[str], None] = None,
         defer_fields: Union[Sequence[str], None] = None,
-        from_collection: Union[AsyncIOMotorCollection, None] = None,
-    ) -> Union[Type["Document"], None]:
+        lookup_fields: Sequence[str] = (),
+        from_collection: Union[AsyncCollection, None] = None,
+    ) -> T:
         """
         Class method to convert a dictionary row result into a Document row type.
         :return: Document class.
@@ -37,50 +41,61 @@ class DocumentRow(MongozBaseModel):
                 only_fields
                 if is_only_fields
                 else [
-                    cls.validate_id_field(name) for name in row.keys() if name not in defer_fields  # type: ignore
+                    cls.validate_id_field(name)
+                    for name in row.keys()
+                    if name not in (defer_fields or ())
                 ]
             )
+            assert mapping is not None
 
             for column, value in row.items():
                 column = cls.validate_id_field(column)
 
-                if column not in mapping:  # type: ignore
+                if column not in mapping:
                     continue
 
                 if column not in item:
                     item[column] = value
 
-            # We need to generify the document fields to make sure we can populate the
-            # model without mandatory fields
-            model = cast("Type[Document]", cls.proxy_document(**item))
+            # Projection results intentionally omit required fields. Constructing the concrete
+            # class without validation preserves that partial shape and keeps the runtime type
+            # aligned with the public generic return contract.
+            model = cls.model_construct(_fields_set=set(item), **item)
+            for field_name in cls.model_fields:
+                if field_name not in item:
+                    model.__dict__.pop(field_name, None)
+            model._mongoz_collection = from_collection
             return model
-        else:
+        elif not any(column in lookup_fields for column in row):
             for column, value in row.items():
                 column = cls.validate_id_field(column)
                 if column not in item:
-                    if settings.lookup_prefix in column:
-                        loopkup_field = column.split(settings.lookup_prefix)[
-                            -1
-                        ]
+                    item[column] = value
+        else:
+            for column, value in row.items():
+                source_column = column
+                column = cls.validate_id_field(source_column)
+                if column not in item:
+                    if source_column in lookup_fields:
+                        loopkup_field = source_column.removeprefix(settings.lookup_prefix)
                         values = []
                         for data in value:
                             if data.get("_id"):
                                 data["id"] = data.pop("_id", None)
-                            values.append(
-                                cls.model_fields[loopkup_field].refer_to(
-                                    **data
-                                )
-                            )
-                        item[
-                            cls.model_fields[
-                                loopkup_field
-                            ].refer_to.meta.collection.name
-                        ] = values
+                            related_model = cls.meta.fields[loopkup_field].refer_to
+                            assert isinstance(related_model, type)
+                            values.append(related_model(**data))
+                        related_model = cls.meta.fields[loopkup_field].refer_to
+                        assert isinstance(related_model, type)
+                        related_meta = getattr(related_model, "meta", None)
+                        assert isinstance(related_meta, MetaInfo)
+                        assert related_meta.collection is not None
+                        item[related_meta.collection.name] = values
                     else:
                         item[column] = value
 
-        model = cast("Type[Document]", cls(**item))  # type: ignore
-        model.Meta.from_collection = from_collection
+        model = cls(**item)
+        model._mongoz_collection = from_collection
         return model
 
     @classmethod

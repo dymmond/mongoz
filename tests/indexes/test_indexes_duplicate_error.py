@@ -28,13 +28,9 @@ class AnotherMovie(Document):
 
 async def test_raises_duplicate_error() -> None:
     await AnotherMovie.create_indexes()
-    movie = await AnotherMovie.objects.create(
-        name="Mongoz", email="mongoz@mongoz.com", year=2023
-    )
+    movie = await AnotherMovie.objects.create(name="Mongoz", email="mongoz@mongoz.com", year=2023)
 
     assert movie is not None
 
     with pytest.raises(DuplicateKeyError):
-        await AnotherMovie.objects.create(
-            name="Mongoz", email="mongoz@mongoz.com", year=2023
-        )
+        await AnotherMovie.objects.create(name="Mongoz", email="mongoz@mongoz.com", year=2023)

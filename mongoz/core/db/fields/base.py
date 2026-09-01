@@ -5,7 +5,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    ClassVar,
     Dict,
     Optional,
     Pattern,
@@ -29,12 +28,13 @@ if TYPE_CHECKING:
 mongoz_setattr = object.__setattr__
 
 
-class BaseField(FieldInfo, _repr.Representation):
+# Pydantic marks FieldInfo final for typing, but Mongoz's established runtime field API subclasses it.
+class BaseField(FieldInfo, _repr.Representation):  # ty: ignore[subclass-of-final-class]
     """
     The base field for all Mongoz data model fields.
     """
 
-    __namespace__: ClassVar[Union[Dict[str, Any], None]] = None
+    __namespace__: Optional[Dict[str, Any]] = None
 
     def __init__(
         self,
@@ -43,11 +43,11 @@ class BaseField(FieldInfo, _repr.Representation):
         title: Optional[str] = None,
         description: Optional[str] = None,
         parent: Union[Type["FieldInfo"], None] = None,
-        model_class: Union["Document", "EmbeddedDocument", None] = None,
+        model_class: Union[Type["Document"], Type["EmbeddedDocument"], None] = None,
         **kwargs: Any,
     ) -> None:
-        self.max_digits: str = kwargs.pop("max_digits", None)
-        self.decimal_places: str = kwargs.pop("decimal_places", None)
+        self.max_digits: Optional[int] = kwargs.pop("max_digits", None)
+        self.decimal_places: Optional[int] = kwargs.pop("decimal_places", None)
 
         super().__init__(**kwargs)
 
@@ -61,39 +61,38 @@ class BaseField(FieldInfo, _repr.Representation):
 
         self.parent = parent
         self.model_class = model_class
+        self.refer_to: Union[str, Type["Document"], Type["EmbeddedDocument"], None] = kwargs.pop(
+            "refer_to", None
+        )
         self.defaulf_factory: Optional[Callable[..., Any]] = kwargs.pop(
             "defaulf_factory", Undefined
         )
         self.field_type: Any = kwargs.pop("__type__", None)
-        self.__original_type__: type = kwargs.pop("__original_type__", None)
+        self.__original_type__: Optional[type] = kwargs.pop("__original_type__", None)
         self.title = title
         self.description = description
         self.read_only: bool = kwargs.pop("read_only", False)
-        self.help_text: str = kwargs.pop("help_text", None)
-        self.pattern: Pattern = kwargs.pop("pattern", None)
+        self.help_text: Optional[str] = kwargs.pop("help_text", None)
+        self.pattern: Optional[Pattern[str]] = kwargs.pop("pattern", None)
         self.unique: bool = kwargs.pop("unique", False)
         self.index: bool = kwargs.pop("index", False)
-        self.choices: Sequence = kwargs.pop("choices", None)
+        self.choices: Optional[Sequence[Any]] = kwargs.pop("choices", None)
         self.owner: Any = kwargs.pop("owner", None)
-        self.name: str = kwargs.pop("name", None)
-        self.alias: str = kwargs.pop("alias", None)
-        self.min_length: Optional[Union[int, float, decimal.Decimal]] = (
-            kwargs.pop("min_length", None)
+        self.name: Optional[str] = kwargs.pop("name", None)
+        self.alias: Optional[str] = kwargs.pop("alias", None)
+        self.min_length: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop(
+            "min_length", None
         )
-        self.max_length: Optional[Union[int, float, decimal.Decimal]] = (
-            kwargs.pop("max_length", None)
+        self.max_length: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop(
+            "max_length", None
         )
-        self.minimum: Optional[Union[int, float, decimal.Decimal]] = (
-            kwargs.pop("minimum", None)
+        self.minimum: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop("minimum", None)
+        self.maximum: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop("maximum", None)
+        self.multiple_of: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop(
+            "multiple_of", None
         )
-        self.maximum: Optional[Union[int, float, decimal.Decimal]] = (
-            kwargs.pop("maximum", None)
-        )
-        self.multiple_of: Optional[Union[int, float, decimal.Decimal]] = (
-            kwargs.pop("multiple_of", None)
-        )
-        self.registry: Registry = kwargs.pop("registry", None)
-        self.database: Database = kwargs.pop("database", None)
+        self.registry: Optional[Registry] = kwargs.pop("registry", None)
+        self.database: Optional[Database] = kwargs.pop("database", None)
         self.comment = kwargs.pop("comment", None)
         self.parent = kwargs.pop("parent", None)
         self.sparse = kwargs.pop("sparse", False)
@@ -110,9 +109,7 @@ class BaseField(FieldInfo, _repr.Representation):
         if isinstance(self.default, bool):
             self.null = True
 
-        self.__namespace__ = {
-            k: v for k, v in self.__dict__.items() if k != "__namespace__"
-        }
+        self.__namespace__ = {k: v for k, v in self.__dict__.items() if k != "__namespace__"}
 
     @property
     def namespace(self) -> Any:
@@ -137,16 +134,16 @@ class BaseField(FieldInfo, _repr.Representation):
             return default()
         return default
 
-    def validate_field_value(self, value: Any) -> None:
+    def validate_field_value(self, value: Any) -> Any:
         return value
 
 
 class MongozField:
     def __init__(
         self,
-        pydantic_field: "BaseField",
+        pydantic_field: "FieldInfo",
         parent: Optional["MongozField"] = None,
-        model_class: Union["Document", "EmbeddedDocument", None] = None,
+        model_class: Union[Type["Document"], Type["EmbeddedDocument"], None] = None,
     ) -> None:
         self.model_class = model_class
         self.parent = parent
@@ -154,9 +151,11 @@ class MongozField:
 
     @property
     def _name(self) -> str:
+        alias = self.pydantic_field.alias
+        assert alias is not None
         if self.parent:
-            return self.parent._name + "." + self.pydantic_field.alias
-        return self.pydantic_field.alias
+            return self.parent._name + "." + alias
+        return alias
 
     def __lt__(self, other: Any) -> Expression:
         return Expression(self._name, "$lt", other)
@@ -164,10 +163,11 @@ class MongozField:
     def __le__(self, other: Any) -> Expression:
         return Expression(self._name, "$lte", other)
 
-    def __eq__(self, other: Any) -> Expression:
+    # Rich comparisons intentionally build MongoDB expressions instead of booleans.
+    def __eq__(self, other: Any) -> Expression:  # ty: ignore[invalid-method-override]
         return Expression(self._name, "$eq", other)
 
-    def __ne__(self, other: Any) -> Expression:
+    def __ne__(self, other: Any) -> Expression:  # ty: ignore[invalid-method-override]
         return Expression(self._name, "$ne", other)
 
     def __gt__(self, other: Any) -> Expression:
@@ -180,16 +180,20 @@ class MongozField:
         return super().__hash__()
 
     def __getattr__(self, name: str) -> Any:
-        assert self.model_class is not None
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
 
-        if name not in self.model_class.__mongoz_fields__:
+        model_class = self.model_class
+        model_fields = getattr(model_class, "__mongoz_fields__", None)
+        if model_class is None or not isinstance(model_fields, dict):
             raise InvalidKeyError(
-                f"Model '{self.model_class.__class__.__name__}' has no attribute '{name}'"
+                f"Field {self._name!r} has no related document attribute {name!r}."
             )
 
-        child_field: Type[MongozField] = self.model_class.__mongoz_fields__[
-            name
-        ]
+        if name not in model_fields:
+            raise InvalidKeyError(f"Model {model_class.__name__!r} has no attribute {name!r}.")
+
+        child_field: MongozField = model_fields[name]
         return MongozField(
             pydantic_field=child_field.pydantic_field,
             model_class=child_field.model_class,

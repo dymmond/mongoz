@@ -2,7 +2,6 @@
 *.egg-info/
 .hypothesis/
 .idea/
-.mypy_cache/
 .pytest_cache/
 .scannerwork/
 .tox/
@@ -16,6 +15,8 @@ node_modules/
 results/
 site/
 site_lang/
+docs/generated/
+.cache/
 target/
 
 # files

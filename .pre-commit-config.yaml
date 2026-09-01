@@ -1,22 +1,29 @@
-# See https://pre-commit.com for more information.
-# See https://pre-commit.com/hooks.html for more hooks.
+exclude: ^(docs_src/|\.pdbrc$)
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
       - id: check-toml
       - id: check-yaml
-        args:
-          - --unsafe
+        args: [--unsafe]
       - id: end-of-file-fixer
+        exclude: ^mongoz/py\.typed$
       - id: debug-statements
       - id: trailing-whitespace
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.3.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.5
     hooks:
-      - id: ruff
-        args: ["--fix", "--line-length=99"]
-ci:
-  autofix_commit_msg: 🎨 [pre-commit.ci] Auto format from pre-commit.com hooks
-  autoupdate_commit_msg: ⬆ [pre-commit.ci] pre-commit autoupdate
+      - id: ruff-check
+        files: ^(mongoz|tests|scripts)/.*\.py$
+      - id: ruff-format
+        files: ^(mongoz|tests|scripts)/.*\.py$
+        args: [--check]
+  - repo: local
+    hooks:
+      - id: ty-check
+        name: ty check
+        entry: hatch run typing
+        language: system
+        pass_filenames: false
+        always_run: true

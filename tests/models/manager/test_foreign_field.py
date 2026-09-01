@@ -57,20 +57,23 @@ async def test_foreign_field() -> None:
     producer = await Producer.objects.create(
         name="Harshali Zode", mobile_no="9990099000", email="example.gmail.com"
     )
-    movie = await Movie.objects.create(
-        name="Barbie", year=2025, producer_id=producer.id
-    )
-    assert movie.model_fields["producer_id"].to == Producer
-    assert (
-        movie.model_fields["producer_id"].to.Meta.collection.name
-        == "producers"
-    )
-    ForeignModel = movie.model_fields["producer_id"].to
+    movie = await Movie.objects.create(name="Barbie", year=2025, producer_id=producer.id)
+    assert type(movie).model_fields["producer_id"].to == Producer
+    assert type(movie).model_fields["producer_id"].to.Meta.collection.name == "producers"
+    ForeignModel = type(movie).model_fields["producer_id"].to
 
     result = await ForeignModel.objects.get(id=movie.producer_id)
     assert result.name == producer.name
     assert result.mobile_no == producer.mobile_no
     assert result.email == producer.email
+
+    replacement = await Producer.objects.create(
+        name="Replacement", mobile_no="111222333", email="replacement@example.com"
+    )
+    await movie.update(producer_id=replacement.id)
+    assert (await Movie.objects.get(id=movie.id)).producer_id == replacement.id
+    updated = await Movie.objects.filter(id=movie.id).update_many(producer_id=producer.id)
+    assert updated[0].producer_id == producer.id
 
     with pytest.raises(ValidationError):
         await Movie.objects.create(
@@ -81,8 +84,5 @@ async def test_foreign_field() -> None:
 
 async def test_nullable_foreign_field() -> None:
     movie = await AnotherMovie.objects.create(name="Barbie", year=2025)
-    assert movie.model_fields["producer_id"].to == Producer
-    assert (
-        movie.model_fields["producer_id"].to.Meta.collection.name
-        == "producers"
-    )
+    assert type(movie).model_fields["producer_id"].to == Producer
+    assert type(movie).model_fields["producer_id"].to.Meta.collection.name == "producers"

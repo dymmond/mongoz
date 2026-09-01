@@ -62,36 +62,22 @@ async def test_raw_queries() -> None:
     assert movie.year == 2002
 
     # movie = await Movie.query({"year": {"$gt": 2000}}).query({"year": {"$lt": 2003}}).get()
-    movie = (
-        await Movie.objects.raw({"year": {"$gt": 2000}})
-        .raw({"year": {"$lt": 2003}})
-        .get()
-    )
+    movie = await Movie.objects.raw({"year": {"$gt": 2000}}).raw({"year": {"$lt": 2003}}).get()
 
     assert movie.name == "The Two Towers"
     assert movie.year == 2002
 
-    movie = (
-        await Movie.objects.raw({"year": 1942})
-        .raw({"name": {"$regex": "Casa"}})
-        .get()
-    )
+    movie = await Movie.objects.raw({"year": 1942}).raw({"name": {"$regex": "Casa"}}).get()
 
     assert movie.name == "Casablanca"
     assert movie.year == 1942
 
-    movie = (
-        await Movie.objects.raw({"name": "Casablanca"})
-        .raw({"year": {"$lt": 1950}})
-        .get()
-    )
+    movie = await Movie.objects.raw({"name": "Casablanca"}).raw({"year": {"$lt": 1950}}).get()
 
     assert movie.name == "Casablanca"
     assert movie.year == 1942
 
-    movie = await Movie.objects.raw(
-        {"$and": [{"name": "Casablanca", "year": 1942}]}
-    ).get()
+    movie = await Movie.objects.raw({"$and": [{"name": "Casablanca", "year": 1942}]}).get()
 
     assert movie.name == "Casablanca"
     assert movie.year == 1942

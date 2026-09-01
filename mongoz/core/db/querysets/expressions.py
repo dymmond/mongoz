@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import collections
+import re
 import typing
 from typing import TYPE_CHECKING, Any, Dict, List, Union, cast
 
 from mongoz.core.db.datastructures import Order
+from mongoz.exceptions import FieldDefinitionError, OperatorInvalid
 from mongoz.utils.enums import ExpressionOperator
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -39,16 +41,16 @@ class Expression:
 
     def compile(self) -> Dict[str, Dict[str, Any]]:
         if self.operator == ExpressionOperator.STARTSWITH:
-            regex_value = f"^{self.compiled_value}"
+            regex_value = f"^{re.escape(str(self.compiled_value))}"
             return {self.key: {"$regex": regex_value}}
         elif self.operator == ExpressionOperator.ENDSWITH:
-            regex_value = f"{self.compiled_value}$"
+            regex_value = f"{re.escape(str(self.compiled_value))}$"
             return {self.key: {"$regex": regex_value}}
         elif self.operator == ExpressionOperator.ISTARTSWITH:
-            regex_value = f"^{self.compiled_value}"
+            regex_value = f"^{re.escape(str(self.compiled_value))}"
             return {self.key: {"$regex": regex_value, "$options": "i"}}
         elif self.operator == ExpressionOperator.IENDSWITH:
-            regex_value = f"{self.compiled_value}$"
+            regex_value = f"{re.escape(str(self.compiled_value))}$"
             return {self.key: {"$regex": regex_value, "$options": "i"}}
         if not self.options:
             return {self.key: {self.operator: self.compiled_value}}
@@ -60,22 +62,20 @@ class Expression:
         }
 
     @classmethod
-    def compile_many(
-        cls, expressions: List["Expression"]
-    ) -> Dict[str, Dict[str, Any]]:
+    def compile_many(cls, expressions: List["Expression"]) -> Dict[str, Dict[str, Any]]:
         compiled_dicts: Dict[Any, dict] = collections.defaultdict(dict)
         compiled_lists: Dict[Any, list] = collections.defaultdict(list)
 
         for expr in expressions:
             for key, value in expr.compile().items():
                 # Logical operators need a {"$or": [...]} query
-                if key in ["$and", "$or"]:
+                if key in ["$and", "$nor", "$or"]:
                     list_value = value.get(key, value.get("$eq"))
-                    assert isinstance(list_value, (list, tuple))
-                    values = [
-                        v.compile() if isinstance(v, Expression) else v
-                        for v in list_value
-                    ]
+                    if not isinstance(list_value, (list, tuple)):
+                        raise OperatorInvalid(
+                            f"Logical operator {key!r} requires a list or tuple of expressions."
+                        )
+                    values = [v.compile() if isinstance(v, Expression) else v for v in list_value]
                     compiled_lists[key] = values
                 else:
                     values_dict: Dict[str, Any] = {}
@@ -85,9 +85,7 @@ class Expression:
                             compiled_dicts[key].update(values_dict)
                         else:
                             compiled_dicts[key].update(value)
-        return cast(
-            Dict[str, Dict[str, Any]], {**compiled_dicts, **compiled_lists}
-        )
+        return cast(Dict[str, Dict[str, Any]], {**compiled_dicts, **compiled_lists})
 
     @classmethod
     def unpack(cls, d: Dict[str, Any]) -> "List[Expression]":
@@ -111,10 +109,20 @@ class Expression:
         return expressions
 
 
+def parse_query_argument(value: object, *, operation: str) -> List[Expression]:
+    """Validate and normalize one public query argument."""
+    if isinstance(value, dict):
+        return Expression.unpack(value)
+    if isinstance(value, Expression):
+        return [value]
+    raise FieldDefinitionError(
+        f"{operation} arguments must be dictionaries or Expression instances; "
+        f"got {type(value).__name__}."
+    )
+
+
 class SortExpression:
-    def __init__(
-        self, key: typing.Union[str, "MongozField"], direction: Order
-    ) -> None:
+    def __init__(self, key: typing.Union[str, "MongozField"], direction: Order) -> None:
         self.key = key if isinstance(key, str) else key._name
         self.direction = direction
 

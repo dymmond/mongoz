@@ -32,9 +32,7 @@ async def prepare_database() -> AsyncGenerator:
 
 async def test_model_using_create() -> None:
     await Movie.objects.create(name="Harshali", year=2024)
-    await Movie.objects.using("test_my_db").create(
-        name="Harshali Zode", year=2024
-    )
+    await Movie.objects.using("test_my_db").create(name="Harshali Zode", year=2024)
 
     movie = await Movie.objects.get()
     assert movie.name == "Harshali"
@@ -42,11 +40,7 @@ async def test_model_using_create() -> None:
     movie = await Movie.objects.using("test_my_db").get()
     assert movie.name == "Harshali Zode"
 
-    movie = (
-        await Movie.objects.using("test_my_db")
-        .filter(name="Harshali Zode")
-        .get()
-    )
+    movie = await Movie.objects.using("test_my_db").filter(name="Harshali Zode").get()
     assert movie.name == "Harshali Zode"
 
     movie = await Movie.objects.using("test_my_db").filter(_id=movie.id).get()
@@ -77,9 +71,7 @@ async def test_model_using_update() -> None:
 
 
 async def test_model_delete() -> None:
-    await Movie.objects.using("test_my_db").create(
-        name="Harshali Zode", year=2024
-    )
+    await Movie.objects.using("test_my_db").create(name="Harshali Zode", year=2024)
 
     movie = await Movie.objects.using("test_my_db").get()
     assert movie.name == "Harshali Zode"

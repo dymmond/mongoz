@@ -22,13 +22,11 @@ indexes = [
 
 
 class BiggerManager(QuerySetManager):
-
     def get_queryset(self) -> Manager:
         return super().get_queryset().filter(year__gte=2023)
 
 
 class SmallerManager(QuerySetManager):
-
     def get_queryset(self) -> Manager:
         return super().get_queryset().filter(year__lte=2022)
 
@@ -44,7 +42,6 @@ class BaseDocument(Document):
 
 
 class Producer(BaseDocument):
-
     name: str = mongoz.String()
     age: int = mongoz.Integer()
     movie_types: Optional[List[str]] = mongoz.Array(str, null=True)
@@ -126,29 +123,21 @@ async def test_embedded_filter():
         start_date="2025-09-22",
         end_date="2026-04-30",
     )
-    await Student.objects.create(
-        name="Harshali", roll_no=2022, courses=[cn, os, cs, pe]
-    )
-    await Student.objects.create(
-        name="Samit", roll_no=2023, courses=[cn, os, pe]
-    )
-    await Student.objects.create(
-        name="Tanaji", roll_no=2024, courses=[cn, os, ml, cs, pe]
-    )
+    await Student.objects.create(name="Harshali", roll_no=2022, courses=[cn, os, cs, pe])
+    await Student.objects.create(name="Samit", roll_no=2023, courses=[cn, os, pe])
+    await Student.objects.create(name="Tanaji", roll_no=2024, courses=[cn, os, ml, cs, pe])
 
     # Embedded search
-    roll_nos = await Student.objects.filter(
-        **{"courses.code": "CS"}
-    ).values_list(["roll_no"], flat=True)
+    roll_nos = await Student.objects.filter(**{"courses.code": "CS"}).values_list(
+        ["roll_no"], flat=True
+    )
 
     roll_nos.sort()
     assert roll_nos == [2022, 2024]
 
 
 async def test_reference_filter():
-    producer1 = await Producer.objects.create(
-        name="Jhon", age=56, movie_types=["Horror", "Anime"]
-    )
+    producer1 = await Producer.objects.create(name="Jhon", age=56, movie_types=["Horror", "Anime"])
     producer2 = await Producer.objects.create(
         name="Alok", age=46, movie_types=["Thriller", "Anime"]
     )
@@ -156,15 +145,9 @@ async def test_reference_filter():
         name="Prasad", age=36, movie_types=["Horror", "Action"]
     )
 
-    await Movie.objects.create(
-        name="Barbie", year=2022, producer_id=producer2.id
-    )
-    await Movie.objects.create(
-        name="Haunted House", year=2024, producer_id=producer1.id
-    )
-    await Movie.objects.create(
-        name="The Ghost", year=2023, producer_id=producer3.id
-    )
+    await Movie.objects.create(name="Barbie", year=2022, producer_id=producer2.id)
+    await Movie.objects.create(name="Haunted House", year=2024, producer_id=producer1.id)
+    await Movie.objects.create(name="The Ghost", year=2023, producer_id=producer3.id)
 
     # Fetch the movie object.
     movie = await Movie.objects.get(producer_id__age__gte=50)

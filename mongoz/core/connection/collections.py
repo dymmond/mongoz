@@ -1,13 +1,20 @@
 from __future__ import annotations
 
-from motor.motor_asyncio import AsyncIOMotorCollection
+from typing import Any, Dict
+
+from pymongo.asynchronous.collection import AsyncCollection
 
 
 class Collection:
     """
-    MongoDB collection object referencing Motor collection
+    MongoDB collection object referencing a PyMongo Async collection.
     """
 
-    def __init__(self, name: str, collection: AsyncIOMotorCollection) -> None:
-        self._collection: AsyncIOMotorCollection = collection
+    def __init__(self, name: str, collection: AsyncCollection[Dict[str, Any]]) -> None:
+        self._collection = collection
         self.name = name
+
+    @property
+    def driver(self) -> AsyncCollection[Dict[str, Any]]:
+        """Expose the registry-owned native PyMongo Async collection."""
+        return self._collection

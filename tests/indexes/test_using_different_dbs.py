@@ -48,13 +48,9 @@ class IdMap(Document):
 
 
 async def test_model_using() -> None:
-    await Movie.create_indexes_for_multiple_databases(
-        ["test_my_db", "test_second_db"]
-    )
+    await Movie.create_indexes_for_multiple_databases(["test_my_db", "test_second_db"])
 
-    await Movie.objects.create(
-        name="Mongoz", email="mongoz@mongoz.com", year=2023
-    )
+    await Movie.objects.create(name="Mongoz", email="mongoz@mongoz.com", year=2023)
     await Movie.objects.using("test_my_db").create(
         name="Mongoz", email="mongoz@mongoz.com", year=2023
     )
@@ -63,9 +59,7 @@ async def test_model_using() -> None:
         name="Mongoz", email="mongoz@mongoz.com", year=2023
     )
     with pytest.raises(DuplicateKeyError):
-        await Movie.objects.create(
-            name="Mongoz", email="mongoz@mongoz.com", year=2023
-        )
+        await Movie.objects.create(name="Mongoz", email="mongoz@mongoz.com", year=2023)
 
     with pytest.raises(DuplicateKeyError):
         await Movie.objects.using("test_my_db").create(
@@ -78,25 +72,17 @@ async def test_model_using() -> None:
 
 
 async def test_model_using_with_ids() -> None:
-    await IdMap.create_indexes_for_multiple_databases(
-        ["test_my_db", "test_second_db"]
-    )
+    await IdMap.create_indexes_for_multiple_databases(["test_my_db", "test_second_db"])
     objectid1 = ObjectId()
     objectid2 = ObjectId()
     await IdMap.objects.create(objectid1=objectid1, objectid2=objectid2)
-    await IdMap.objects.using("test_my_db").create(
-        objectid1=objectid1, objectid2=objectid2
-    )
+    await IdMap.objects.using("test_my_db").create(objectid1=objectid1, objectid2=objectid2)
 
-    await IdMap.objects.using("test_second_db").create(
-        objectid1=objectid1, objectid2=objectid2
-    )
+    await IdMap.objects.using("test_second_db").create(objectid1=objectid1, objectid2=objectid2)
     with pytest.raises(DuplicateKeyError):
         await IdMap.objects.create(objectid1=objectid1, objectid2=objectid2)
     with pytest.raises(DuplicateKeyError):
-        await IdMap.objects.using("test_my_db").create(
-            objectid1=objectid1, objectid2=objectid2
-        )
+        await IdMap.objects.using("test_my_db").create(objectid1=objectid1, objectid2=objectid2)
     with pytest.raises(DuplicateKeyError):
         await IdMap.objects.using("test_second_db").create(
             objectid1=objectid1, objectid2=objectid2

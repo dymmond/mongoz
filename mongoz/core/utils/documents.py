@@ -17,7 +17,7 @@ def create_mongoz_document(
     __name__: str,
     __module__: str,
     __definitions__: Optional[Dict[Any, Any]] = None,
-    __metadata__: Optional[Type["MetaInfo"]] = None,
+    __metadata__: Optional["MetaInfo"] = None,
     __qualname__: Optional[str] = None,
     __config__: Optional[ConfigDict] = None,
     __bases__: Optional[Tuple[Type["Document"]]] = None,

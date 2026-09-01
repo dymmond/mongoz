@@ -12,7 +12,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   benchmarks:
@@ -20,17 +19,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: "actions/checkout@v4"
-      - uses: "actions/setup-python@v5"
+      - uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" # v7.0.0
         with:
           python-version: "3.13"
       - name: Install dependencies
         run: |
-          pip install hatch
-          pip install -e .
-          pip install pytest-codspeed pytest-asyncio
+          python -m pip install "hatch==1.16.5"
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@v4
+        uses: CodSpeedHQ/action@e736f0d2aeb36da38e9f08eca4dff7967408d154 # v4.8.2
         with:
           mode: simulation
-          run: pytest benchmarks/ --codspeed
+          run: hatch run matrix.py3.13:focused benchmarks --codspeed

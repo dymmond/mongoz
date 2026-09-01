@@ -1,0 +1,135 @@
+version: 3
+
+tasks:
+  # --------------------------- SETUP ------------------------------------
+
+  activate:
+    desc: Activates the Hatch development environment
+    cmds:
+      - hatch shell
+
+  clean:
+    desc: Cleans Python bytecode and cache files
+    cmds:
+      - hatch run clean_pyc
+      - hatch run clean_pyi
+      - hatch run clean_pycache
+
+  lint:
+    desc: Runs Ruff lint checks
+    cmds:
+      - hatch run lint {{ .ARGS }}
+
+  format:
+    desc: Formats the project and applies safe lint fixes
+    cmds:
+      - hatch run format {{ .ARGS }}
+
+  format-check:
+    desc: Checks formatting without changing files
+    cmds:
+      - hatch run format-check {{ .ARGS }}
+
+  ty:
+    desc: Runs the canonical type checker and positive consumer fixtures
+    cmds:
+      - hatch run typing {{ .ARGS }}
+
+  typing-negative:
+    desc: Verifies intentional negative typing fixtures
+    cmds:
+      - hatch run typing-negative {{ .ARGS }}
+
+  pre-commit:
+    desc: Runs all pre-commit checks
+    cmds:
+      - hatch run pre-commit-check
+
+  quality:
+    desc: Runs the complete local quality gate
+    cmds:
+      - hatch run quality
+
+  acceptance:
+    desc: Runs the complete Mongoz acceptance suite
+    cmds:
+      - hatch run acceptance
+
+  release-validate:
+    desc: Validates canonical version and release-note ownership
+    cmds:
+      - hatch run release:validate {{ .ARGS }}
+
+  # ---------------------------- DOCS -----------------------------------
+
+  docs-prepare:
+    desc: Prepares the ephemeral Zensical documentation tree
+    cmds:
+      - hatch run docs:prepare
+
+  docs-clean:
+    desc: Removes generated documentation and build output
+    cmds:
+      - hatch run docs:clean
+
+  docs-build:
+    desc: Builds the documentation with Zensical in strict mode
+    cmds:
+      - hatch run docs:build
+
+  docs-validate:
+    desc: Validates documentation examples and builds
+    cmds:
+      - hatch run docs:validate
+
+  docs-serve:
+    desc: Serves the documentation locally with source watching
+    cmds:
+      - hatch run docs:serve
+
+  # ---------------------------- TEST -----------------------------------
+
+  test:
+    desc: Runs the runtime test suite (requires standalone MongoDB)
+    cmds:
+      - hatch run test:test {{ .ARGS }}
+
+  coverage:
+    desc: Runs coverage and the warning ratchet (requires standalone MongoDB)
+    cmds:
+      - hatch run test:coverage {{ .ARGS }}
+
+  test-matrix:
+    desc: Runs tests on Python 3.10 through 3.14 (requires standalone MongoDB)
+    cmds:
+      - hatch run matrix:test {{ .ARGS }}
+
+  package-validate:
+    desc: Validates distributions and installed-wheel typing
+    cmds:
+      - hatch run package:validate {{ .ARGS }}
+
+  mongodb-standalone-up:
+    desc: Starts the standalone MongoDB test service
+    cmds:
+      - hatch run mongodb-standalone-up
+
+  mongodb-standalone-down:
+    desc: Stops and removes the standalone MongoDB test service
+    cmds:
+      - hatch run mongodb-standalone-down
+
+  mongodb-replica-set-up:
+    desc: Starts the replica-set MongoDB test service
+    cmds:
+      - hatch run mongodb-replica-set-up
+
+  mongodb-replica-set-down:
+    desc: Stops and removes the replica-set MongoDB test service
+    cmds:
+      - hatch run mongodb-replica-set-down
+
+  mongodb-replica-set-smoke:
+    desc: Runs the transaction smoke test against the replica set
+    cmds:
+      - hatch run mongodb-replica-set-smoke {{ .ARGS }}

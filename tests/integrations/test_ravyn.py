@@ -6,9 +6,10 @@ from ravyn.testclient import RavynTestClient
 
 import mongoz
 from mongoz import Document
-from tests.conftest import client
+from tests.settings import TEST_DATABASE_URL
 
 pytestmark = pytest.mark.anyio
+registry = mongoz.Registry(TEST_DATABASE_URL)
 
 
 class Movie(Document):
@@ -16,13 +17,17 @@ class Movie(Document):
     year: int = mongoz.Integer()
 
     class Meta:
-        registry = client
+        registry = registry
         database = "test_db"
 
 
-@pytest.fixture(scope="module", autouse=True)
 async def prepare_database() -> None:
     await Movie.query().delete()
+
+
+async def close_database() -> None:
+    await Movie.query().delete()
+    await registry.close()
 
 
 @post("/create")
@@ -38,28 +43,47 @@ async def get_movies(request: Request) -> JSONResponse:
     return JSONResponse(json.loads(movie.model_dump_json()))
 
 
+@post("/clear")
+async def clear_movies(request: Request) -> JSONResponse:
+    await Movie.query().delete()
+    return JSONResponse({})
+
+
 app = Ravyn(
     routes=[
         Gateway(handler=get_movies),
+        Gateway(handler=clear_movies),
         Gateway(handler=create_movies),
-    ]
+    ],
+    on_startup=[prepare_database],
+    on_shutdown=[close_database],
 )
 
 
-async def test_ravyn_integration_create() -> None:
+@pytest.fixture(scope="module")
+def integration_client():
     with RavynTestClient(app) as client:
-        response = client.post("/create", json={"name": "Barbie", "year": 2023})
-
-        assert response.json()["name"] == "Barbie"
-        assert response.json()["year"] == 2023
-        assert response.status_code == 201
+        yield client
 
 
-async def test_ravyn_integration_read() -> None:
-    with RavynTestClient(app) as client:
-        client.post("/create", json={"name": "Barbie", "year": 2023})
-        response = client.get("/all")
+async def test_ravyn_integration_create(
+    integration_client: RavynTestClient,
+) -> None:
+    integration_client.post("/clear")
+    response = integration_client.post("/create", json={"name": "Barbie", "year": 2023})
 
-        assert response.json()["name"] == "Barbie"
-        assert response.json()["year"] == 2023
-        assert response.status_code == 200
+    assert response.json()["name"] == "Barbie"
+    assert response.json()["year"] == 2023
+    assert response.status_code == 201
+
+
+async def test_ravyn_integration_read(
+    integration_client: RavynTestClient,
+) -> None:
+    integration_client.post("/clear")
+    integration_client.post("/create", json={"name": "Barbie", "year": 2023})
+    response = integration_client.get("/all")
+
+    assert response.json()["name"] == "Barbie"
+    assert response.json()["year"] == 2023
+    assert response.status_code == 200

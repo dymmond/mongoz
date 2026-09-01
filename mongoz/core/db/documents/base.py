@@ -10,6 +10,7 @@ from typing import (
     List,
     Mapping,
     Type,
+    TypeVar,
     Union,
 )
 
@@ -17,14 +18,13 @@ import bson
 import pydantic
 from pydantic import BaseModel, ConfigDict
 
-from mongoz.core.db.documents._internal import DescriptiveMeta, ModelDump
+from mongoz.core.db.documents._internal import ModelDump
 from mongoz.core.db.documents.document_proxy import ProxyDocument
 from mongoz.core.db.documents.metaclasses import BaseModelMeta, MetaInfo
 from mongoz.core.db.fields.base import MongozField
 from mongoz.core.db.fields.core import ObjectId
-from mongoz.core.db.querysets.base import Manager, QuerySet
-from mongoz.core.db.querysets.expressions import Expression
-from mongoz.core.signals.signal import Signal
+from mongoz.core.db.querysets.base import QuerySet
+from mongoz.core.db.querysets.expressions import Expression, parse_query_argument
 from mongoz.core.utils.documents import generify_model_fields
 from mongoz.core.utils.hashable import make_hashable
 from mongoz.utils.mixins import is_operation_allowed
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from mongoz.core.signals import Broadcaster
 
 mongoz_setattr = object.__setattr__
+T = TypeVar("T", bound="Document")
 
 DOCUMENT_KEYS = {"id", "_id", "pk"}
 
@@ -49,21 +50,18 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     model_config = ConfigDict(
         extra="allow",
         arbitrary_types_allowed=True,
-        json_encoders={bson.ObjectId: str, Signal: str},
+        populate_by_name=True,
         validate_assignment=True,
     )
     __is_proxy_document__: ClassVar[bool] = False
     meta: ClassVar[MetaInfo] = MetaInfo(None)
-    Meta: ClassVar[DescriptiveMeta] = DescriptiveMeta()
-    objects: ClassVar[Manager] = Manager()
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         if self.__is_proxy_document__:
-            values = self.extract_default_values_from_field(
-                is_proxy=True, **data
-            )
-            self.__dict__ = values  # type: ignore
+            values = self.extract_default_values_from_field(is_proxy=True, **data)
+            assert values is not None
+            self.__dict__ = values
         else:
             self.extract_default_values_from_field()
         self.get_field_display()
@@ -85,16 +83,11 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                         partialmethod(cls._get_field_display, field=field),
                     )
 
-    def validate_fields_values(self, **data: Dict[str, Any]) -> None:
+    def validate_fields_values(self, **data: Any) -> None:
+        model_fields = type(self).model_fields
         for field_name, value in data.items():
-            if (
-                field_name in self.model_fields.keys()
-                and not isinstance(value, bson.ObjectId)  # type: ignore
-                and value
-            ):
-                validated_value = self.model_fields[
-                    field_name
-                ].validate_field_value(value)
+            if field_name in model_fields and not isinstance(value, bson.ObjectId) and value:
+                validated_value = model_fields[field_name].validate_field_value(value)
                 setattr(self, field_name, validated_value)
 
     def extract_default_values_from_field(
@@ -106,16 +99,16 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         E.g.: DateTime(auto_now=True) will generate the default for automatic
         dates.
         """
-        fields: Dict[str, Any] = kwargs if is_proxy else self.model_dump()
+        model_fields = type(self).model_fields
+        fields: Dict[str, Any] = (
+            kwargs if is_proxy else {key: getattr(self, key) for key in model_fields}
+        )
 
-        kwargs = {k: v for k, v in fields.items() if k in self.model_fields}
+        kwargs = {k: v for k, v in fields.items() if k in model_fields}
         for key, value in kwargs.items():
             if key not in self.meta.fields:
                 if not hasattr(self, key):
-                    raise ValueError(
-                        f"Invalid keyword {key} for class "
-                        f"{self.__class__.__name__}"
-                    )
+                    raise ValueError(f"Invalid keyword {key} for class {self.__class__.__name__}")
             # For non values. Example: bool
             if value is not None:
                 # Checks if the default is a callable and executes it.
@@ -123,11 +116,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                     setattr(self, key, value())
                 else:
                     field_obj = self.meta.fields.get(key)
-                    if (
-                        field_obj
-                        and hasattr(field_obj, "choices")
-                        and field_obj.choices
-                    ):
+                    if field_obj and hasattr(field_obj, "choices") and field_obj.choices:
                         is_matched = False
                         for option_key, option_value in field_obj.choices:
                             if isinstance(option_value, (list, tuple, set)):
@@ -146,15 +135,14 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                                 break
                         if is_matched is False:
                             raise ValueError(
-                                f"Invalid choice for field '{key}'. Input "
-                                f"provided as '{value}'"
+                                f"Invalid choice for field '{key}'. Input provided as '{value}'"
                             )
                     else:
                         setattr(self, key, value)
                 continue
 
             # Validate the default fields
-            field = self.model_fields[key]
+            field = model_fields[key]
             if hasattr(field, "has_default") and field.has_default():
                 setattr(self, key, field.get_default_value())
                 continue
@@ -179,9 +167,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         if cls.__proxy_document__:
             return cls.__proxy_document__
 
-        fields = {
-            key: copy.copy(field) for key, field in cls.meta.fields.items()
-        }
+        fields = {key: copy.copy(field) for key, field in cls.meta.fields.items()}
         proxy_document = ProxyDocument(
             name=cls.__name__,
             module=cls.__module__,
@@ -194,9 +180,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         return proxy_document.model
 
     @classmethod
-    def query(
-        cls: Type["BaseMongoz"], *values: Union[bool, Dict, Expression]
-    ) -> QuerySet["Document"]:
+    def query(cls: Type[T], *values: Union[bool, Dict[str, Any], Expression]) -> QuerySet[T]:
         """Filter query criteria nad blocks abstract class operations"""
         is_operation_allowed(cls)
 
@@ -205,20 +189,13 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
             return QuerySet(model_class=cls)
 
         for arg in values:
-            assert isinstance(
-                arg, (dict, Expression)
-            ), "Invalid argument to Query"
-            if isinstance(arg, dict):
-                query_expressions = Expression.unpack(arg)
-                filter_by.extend(query_expressions)
-            else:
-                filter_by.append(arg)
+            filter_by.extend(parse_query_argument(arg, operation="Query"))
 
         return QuerySet(model_class=cls, filter_by=filter_by)
 
     @property
     def signals(self) -> "Broadcaster":
-        return self.__class__.signals  # type: ignore
+        return self.__class__.signals
 
     @cached_property
     def proxy_document(self) -> Any:
@@ -234,5 +211,5 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
 
 
 class MongozBaseModel(BaseMongoz, ModelDump):
-    __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]
-    id: Union[ObjectId, None] = pydantic.Field(alias="_id")
+    __mongoz_fields__: ClassVar[Mapping[str, "MongozField"]]
+    id: Union[ObjectId, None] = pydantic.Field(default=None, alias="_id")

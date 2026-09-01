@@ -66,9 +66,7 @@ async def test_model_defer() -> None:
 
 @pytest.mark.parametrize("field", ["name", "tags"])
 async def test_model_defer_attribute_error(field):
-    barbie = await Movie.objects.create(
-        name="Barbie", year=2023, tags=["movie", "hollywood"]
-    )
+    barbie = await Movie.objects.create(name="Barbie", year=2023, tags=["movie", "hollywood"])
     movies = await Movie.objects.defer("name", "tags")
 
     assert len(movies) == 1
@@ -80,9 +78,7 @@ async def test_model_defer_attribute_error(field):
 
 async def test_model_defer_with_all():
     await User.objects.create(name="John", language="PT")
-    await User.objects.create(
-        name="Jane", language="EN", description="Another simple description"
-    )
+    await User.objects.create(name="Jane", language="EN", description="Another simple description")
 
     users = await User.objects.defer("name", "language").all()
 
@@ -115,9 +111,7 @@ async def test_model_defer_with_filter():
 async def test_model_defer_save():
     user = await User.objects.create(name="John", language="PT")
 
-    user = (
-        await User.objects.filter(pk=user.id).defer("name", "language").get()
-    )
+    user = await User.objects.filter(pk=user.id).defer("name", "language").get()
     user.name = "Edgy"
     user.language = "EN"
     user.description = "LOL"
@@ -131,18 +125,12 @@ async def test_model_defer_save():
 
 
 async def test_model_defer_save_without_nullable_field():
-    user = await User.objects.create(
-        name="John", language="PT", description="John"
-    )
+    user = await User.objects.create(name="John", language="PT", description="John")
 
     assert user.description == "John"
     assert user.language == "PT"
 
-    user = (
-        await User.objects.filter(pk=user.id)
-        .defer("description", "language")
-        .get()
-    )
+    user = await User.objects.filter(pk=user.id).defer("description", "language").get()
     user.language = "EN"
     user.description = "A new description"
     await user.save()
@@ -155,12 +143,8 @@ async def test_model_defer_save_without_nullable_field():
 
 
 async def test_model_defer_model_dump():
-    user = await User.objects.create(
-        name="John", language="PT", description="A description"
-    )
-    user = (
-        await User.objects.filter(pk=user.id).defer("name", "language").get()
-    )
+    user = await User.objects.create(name="John", language="PT", description="A description")
+    user = await User.objects.filter(pk=user.id).defer("name", "language").get()
 
     data = user.model_dump()
 

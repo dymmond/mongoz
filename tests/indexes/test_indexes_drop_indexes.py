@@ -3,7 +3,7 @@ from typing import AsyncGenerator, Optional
 import pytest
 
 import mongoz
-from mongoz import Document, Index, IndexType, ObjectId, Order
+from mongoz import Document, Index, IndexAction, IndexType, ObjectId, Order
 from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
@@ -50,42 +50,22 @@ async def prepare_database() -> AsyncGenerator:
 
 async def test_drops_indexes() -> None:
     await AnotherMovie.create_indexes()
-    await AnotherMovie.objects.create(
-        name="Mongoz", email="mongoz@mongoz.com", year=2023
-    )
+    await AnotherMovie.objects.create(name="Mongoz", email="mongoz@mongoz.com", year=2023)
+    await AnotherMovie.get_collection().create_index("name", name="manual_name")
+
+    plan = await AnotherMovie.check_indexes()
 
     total_indexes = await AnotherMovie.list_indexes()
-
-    assert len(total_indexes) == 3
-
-    # Change the indexes to be dropped
-    AnotherMovie.meta.fields["email"].index = False
-    AnotherMovie.meta.fields["email"].unique = False
-
-    await AnotherMovie.check_indexes()
-
-    total_indexes = await AnotherMovie.list_indexes()
-
-    assert len(total_indexes) == 2
-
-    # Complex
-    await AnotherMovie.create_indexes()
-
-    total_indexes = await AnotherMovie.list_indexes()
-
-    assert len(total_indexes) == 3
-
-    # Change the indexes to be dropped
-    AnotherMovie.meta.fields["email"].index = False
-    AnotherMovie.meta.fields["email"].unique = False
-
-    AnotherMovie.meta.indexes.pop(1)
-
-    await AnotherMovie.check_indexes()
-
-    total_indexes = await AnotherMovie.list_indexes()
-
-    assert len(total_indexes) == 1
+    assert {index["name"] for index in total_indexes} == {
+        "_id_",
+        "email",
+        "manual_name",
+        "year_genre",
+    }
+    assert {entry.name for entry in plan.actions(IndexAction.RETAIN)} == {
+        "_id_",
+        "manual_name",
+    }
 
 
 async def test_drops_indexes_different_db() -> None:

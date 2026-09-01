@@ -1,18 +1,42 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 from concurrent import futures
-from concurrent.futures import Future
-from typing import Any, Awaitable
+from typing import Awaitable, TypeVar
+
+T = TypeVar("T")
 
 
-def run_sync(async_function: Awaitable) -> Any:
+def run_sync(async_function: Awaitable[T]) -> T:
+    """Run one awaitable to completion from synchronous code.
+
+    When called while an event loop is already running in the current thread,
+    the awaitable runs once in a worker thread with the caller's context
+    variables. Exceptions raised by the awaitable are propagated unchanged.
     """
-    Runs the queries in sync mode
-    """
+
+    if isinstance(async_function, asyncio.Future):
+        raise RuntimeError(
+            "run_sync cannot consume an asyncio Future or Task bound to another event loop"
+        )
+
+    async def consume() -> T:
+        return await async_function
+
+    def runner() -> T:
+        return asyncio.run(consume())
+
     try:
-        return asyncio.run(async_function)
+        asyncio.get_running_loop()
     except RuntimeError:
-        with futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future: Future = executor.submit(asyncio.run, async_function)
-            return future.result()
+        return runner()
+
+    context = contextvars.copy_context()
+
+    def context_runner() -> T:
+        return context.run(runner)
+
+    with futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(context_runner)
+        return future.result()

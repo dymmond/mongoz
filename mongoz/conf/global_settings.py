@@ -1,19 +1,22 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, Dict, List, cast
+from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Union, cast
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from mongoz.exceptions import OperatorInvalid
 
 if TYPE_CHECKING:
-    from mongoz import Expression
+    from mongoz.core.db.querysets.expressions import Expression, SortExpression
+
+QueryOperator = Callable[..., Union["Expression", "SortExpression"]]
 
 
 class MongozSettings(BaseSettings):
     model_config = SettingsConfigDict(
         extra="allow",
+        hide_input_in_errors=True,
         ignored_types=(cached_property,),
         arbitrary_types_allowed=True,
     )
@@ -49,7 +52,7 @@ class MongozSettings(BaseSettings):
         "date": "date",
     }
 
-    def get_operator(self, name: str) -> "Expression":
+    def get_operator(self, name: str) -> QueryOperator:
         """
         Returns the operator associated to the given expression passed.
         """
@@ -57,7 +60,7 @@ class MongozSettings(BaseSettings):
 
         if name not in self.filter_operators:
             raise OperatorInvalid(f"`{name}` is not a valid operator.")
-        return cast("Expression", getattr(Q, self.filter_operators[name]))
+        return cast(QueryOperator, getattr(Q, self.filter_operators[name]))
 
     @cached_property
     def operators(self) -> List[str]:

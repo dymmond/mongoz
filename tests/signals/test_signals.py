@@ -49,20 +49,20 @@ class Log(Document):
         database = "test_db"
 
 
-@pytest.mark.parametrize("func", ["bad", 1, 3, [3], {"name": "test"}])
-def test_passing_not_callable(func):
+@pytest.mark.parametrize("candidate", ["bad", 1, 3, [3], {"name": "test"}])
+async def test_passing_not_callable(candidate):
     with pytest.raises(SignalError):
-        pre_save(User)(func)
+        pre_save(User)(candidate)
 
 
-def test_passing_no_kwargs():
+async def test_passing_no_kwargs():
     with pytest.raises(SignalError):
 
         @pre_save(User)
         def execute(sender, instance): ...
 
 
-def test_invalid_signal():
+async def test_invalid_signal():
     broadcaster = Broadcaster()
     with pytest.raises(SignalError):
         broadcaster.save = 1

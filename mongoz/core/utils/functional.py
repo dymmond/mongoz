@@ -8,7 +8,7 @@ mongoz_setattr = object.__setattr__
 
 
 def extract_field_annotations_and_defaults(
-    attrs: Dict[Any, Any]
+    attrs: Dict[Any, Any],
 ) -> Tuple[Dict[Any, Any], Dict[Any, Any]]:
     """
     Extracts annotations from class namespace dict and triggers

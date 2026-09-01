@@ -1,5 +1,87 @@
 # Release Notes
 
+## Unreleased
+
+## 0.14.0
+
+### Added
+
+- Added session-aware aggregation and bulk-write boundaries with native PyMongo results and
+  errors.
+- Added inspectable index plans, explicit policies for destructive reconciliation, and protected
+  unmanaged and `_id_` indexes.
+- Added documented native-driver access through `registry.driver`, `database.driver`, and
+  `collection.driver`, plus consistent top-level exports for public errors and `Collection`.
+
+### Changed
+
+- Replaced Motor with PyMongo Async and introduced an explicit Registry lifecycle. A Registry owns
+  one reusable `AsyncMongoClient`, supports `async with`, closes idempotently, and does not reopen
+  after closure. Mongoz now requires `pymongo>=4.13,<5.0`.
+- Made managers and querysets clone-on-write, preserving filters, sort, pagination, projection,
+  lookup, database, and session state without mutating sibling queries. Streaming cursors now close
+  reliably, and query hydration and `last()` use lower-overhead paths for improved performance.
+- Propagated sessions through queries, instance writes, transactions, aggregation, bulk writes,
+  and index operations while preserving native PyMongo transaction behavior.
+- Clarified persistence semantics: `update()` applies an atomic modeled patch, `save()` synchronizes
+  all modeled fields, and acknowledged update, save, and delete operations raise
+  `DocumentNotFound` when the persisted document is missing.
+- Migrated static analysis from mypy to `ty`, including typed native-driver boundaries and the
+  packaged `py.typed` marker. Modernized Pydantic integration and removed model-contract warnings
+  without warning filters.
+- Rebuilt the documentation with a strict Zensical pipeline, focused task-based navigation,
+  preserved compatibility routes, and a dedicated
+  [modernization migration guide](https://mongoz.dymmond.com/migration/modernization/).
+- Signals now accept async receivers only, dispatch sequentially in registration order, fail fast,
+  preserve cancellation, and remain isolated per document class. `run_sync()` accepts any
+  awaitable and executes it exactly once.
+
+### Removed
+
+- Removed Motor, the Registry `event_loop` argument, import-time index I/O, and the unused `orjson`
+  runtime dependency.
+
+### Fixed
+
+- Corrected literal string helpers to escape regular-expression metacharacters while retaining
+  `Q.pattern()` as the explicit raw-pattern boundary.
+- Corrected inherited-field and alias validation for modeled writes, atomic `get_or_create()`
+  behavior, missing-write errors, query validation under `python -O`, and cleanup failure
+  provenance.
+- Normalized public error, settings, signal, BSON serialization, and native compatibility
+  boundaries without wrapping PyMongo-owned failures.
+
+### Security
+
+- Hardened modeled serialization and literal query helpers, documented trusted-only raw query and
+  driver boundaries, and added private vulnerability reporting, dependency review and auditing,
+  CodeQL, immutable action references, and least-privilege release permissions.
+
+### Migrating from Motor
+
+- Remove Motor imports and dependencies, then use PyMongo `AsyncMongoClient`, `AsyncDatabase`,
+  `AsyncCollection`, async cursors, and `AsyncClientSession` for native boundaries.
+- Remove the `event_loop` argument from `Registry(...)`. Create one Registry per application
+  lifecycle, close it on the same application loop, and replace it rather than reopening it.
+- Move index reconciliation to application startup with `registry.document_checks()` or explicit
+  index planning, and propagate sessions explicitly for transactional work.
+- Review query reuse, update versus save behavior, missing-write handling, signal receivers, raw
+  query boundaries, and native escape hatches. The
+  [modernization migration guide](https://mongoz.dymmond.com/migration/modernization/) is the
+  canonical step-by-step guide.
+
+### API compatibility in the 0.x release line
+
+- Unsafe or internally contradictory behavior is corrected directly when the documented contract
+  is already clear.
+- A valid public API that is renamed or replaced should retain a deprecated alias and actionable
+  migration guidance for a reasonable window before removal.
+- Corrections to private attributes or undocumented internals receive migration guidance rather
+  than indefinite shims. Existing `_db` and `_collection` attributes remain usable, while new code
+  should use `database.driver` and `collection.driver`.
+- Native PyMongo exceptions and results remain compatibility boundaries and are not wrapped merely
+  to make Mongoz errors look uniform.
+
 ## 0.13.3
 
 ### Fixed
@@ -116,7 +198,7 @@
 
 ### Added
 
-- Support for [NullableObjectId](./fields.md#nullableobjectid) allowing special object ids to
+- Support for [NullableObjectId](./reference/fields.md) allowing special object ids to
 be declared in the document and null.
 
 ## 0.10.7
@@ -140,7 +222,7 @@ be declared in the document and null.
 
 ### Added
 
-- [exists()](./queries.md#exists) allowing to query for a document existance in the database.
+- [`exists()`](./reference/querying.md#evaluation-and-writes) allowing a bounded document existence query.
 
 ## 0.10.4
 
@@ -184,11 +266,11 @@ This was missed from the version 0.10.1
 
 - `create_indexes_for_multiple_databases` allowing to iterate for each document
 the creating of the indexes in multiple databases.
-- [Registry document checks](./registry.md#run-some-document-checks) allowing to check beforehand all the
+- [Registry document checks](./reference/connections-indexes.md#registry) allowing to check beforehand all the
 index changes in a document.
-- [Model check indexes](./documents.md#document-checks) to do the same checks for the indexes but for each document.
-- [create_indexes_for_multiple_databases](./documents.md#create-indexes-for-multiple-databases).
-- [drop_indexes_for_multiple_databases](./documents.md#drop-indexes-for-multiple-databases).
+- [Model index checks](./guides/indexes.md#execute) to do the same checks for each document.
+- [`create_indexes_for_multiple_databases()`](./tutorials/multiple-databases-indexes.md#apply-an-explicit-policy).
+- [`drop_indexes_for_multiple_databases()`](./tutorials/multiple-databases-indexes.md#apply-an-explicit-policy).
 
 ### Changed
 

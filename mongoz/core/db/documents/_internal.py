@@ -1,13 +1,40 @@
 from __future__ import annotations
 
+import copy
 from decimal import Decimal
-from typing import Any, Dict
+from typing import Any, Dict, Mapping, Tuple, Type
 
 import bson
+import pydantic
 from bson.decimal128 import Decimal128
-from pydantic import BaseModel, ConfigDict
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    SerializerFunctionWrapHandler,
+    field_serializer,
+)
 
 from mongoz.core.signals.signal import Signal
+
+
+def _convert_supported_json_values(value: Any) -> tuple[Any, bool]:
+    """Convert supported arbitrary values and report whether conversion was required."""
+    if isinstance(value, (bson.ObjectId, Signal)):
+        return str(value), True
+    if isinstance(value, dict):
+        converted = {}
+        changed = False
+        for key, item in value.items():
+            converted_item, item_changed = _convert_supported_json_values(item)
+            converted[key] = converted_item
+            changed = changed or item_changed
+        return converted, changed
+    if isinstance(value, (list, tuple, set, frozenset)):
+        converted_items = [_convert_supported_json_values(item) for item in value]
+        return [item for item, _ in converted_items], any(
+            changed for _, changed in converted_items
+        )
+    return value, False
 
 
 class DescriptiveMeta:
@@ -41,9 +68,16 @@ class ModelDump(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         arbitrary_types_allowed=True,
-        json_encoders={bson.ObjectId: str, Signal: str},
         validate_assignment=True,
     )
+
+    @field_serializer("*", mode="wrap", when_used="json", check_fields=False)
+    def serialize_supported_json_values(
+        self, value: Any, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Preserve BSON and signal JSON output while delegating all other serialization."""
+        converted, changed = _convert_supported_json_values(value)
+        return handler(converted if changed else value)
 
     def convert_decimal(self, model_dump_dict: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -75,8 +109,36 @@ class ModelDump(BaseModel):
         Args:
             show_pk: bool - Enforces showing the id in the model_dump.
         """
-        model = super().model_dump(**kwargs)
+        instance = self
+        if kwargs.get("mode") == "json" and self.__pydantic_extra__:
+            converted, changed = _convert_supported_json_values(self.__pydantic_extra__)
+            if changed:
+                instance = copy.copy(self)
+                object.__setattr__(instance, "__pydantic_extra__", converted)
+        model = BaseModel.model_dump(instance, **kwargs)
         if "id" not in model and show_id:
-            model = {**{"id": self.id}, **model}
+            model = {**{"id": getattr(self, "id", None)}, **model}
         model_dump = self.convert_decimal(model)
         return model_dump
+
+    def model_dump_json(self, **kwargs: Any) -> str:
+        """Serialize JSON after converting supported values in allowed extra fields."""
+        instance = self
+        if self.__pydantic_extra__:
+            converted, changed = _convert_supported_json_values(self.__pydantic_extra__)
+            if changed:
+                instance = copy.copy(self)
+                object.__setattr__(instance, "__pydantic_extra__", converted)
+        return BaseModel.model_dump_json(instance, **kwargs)
+
+
+def create_validation_model(
+    name: str, field_definitions: Mapping[str, Tuple[Any, Any]]
+) -> Type[ModelDump]:
+    """Create the transient Pydantic model used to validate partial updates."""
+    # Pydantic's overload cannot express dynamic field definitions until PEP 747.
+    return pydantic.create_model(  # ty: ignore[no-matching-overload]
+        name,
+        __base__=ModelDump,
+        **field_definitions,
+    )

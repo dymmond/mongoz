@@ -8,11 +8,14 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Dict,
     Generator,
+    Generic,
     List,
     Optional,
     Set,
     Type,
+    TypeVar,
     Union,
     cast,
 )
@@ -26,8 +29,9 @@ from pydantic._internal._schema_generation_shared import (
     GetJsonSchemaHandler as GetJsonSchemaHandler,
 )
 from pydantic.json_schema import JsonSchemaValue as JsonSchemaValue
-from pydantic_core.core_schema import CoreSchema
+from pydantic_core import InitErrorDetails
 from pydantic_core.core_schema import (
+    CoreSchema,
     with_info_plain_validator_function as general_plain_validator_function,
 )
 
@@ -41,15 +45,19 @@ if TYPE_CHECKING:
 
 
 CLASS_DEFAULTS = ["cls", "__class__", "kwargs"]
+FieldValue = TypeVar("FieldValue")
+NumberValue = TypeVar("NumberValue", int, float, decimal.Decimal)
+EmbeddedValue = TypeVar("EmbeddedValue", bound="EmbeddedDocument")
+ArrayValue = TypeVar("ArrayValue")
 
 
-class FieldFactory:
+class FieldFactory(Generic[FieldValue]):
     """The base for all model fields to be used with Mongoz"""
 
     _bases = (BaseField,)
     _type: Any = None
 
-    def __new__(cls, *args: Any, **kwargs: Any) -> BaseField:
+    def __new__(cls, *args: Any, **kwargs: Any) -> FieldValue:
         cls.validate_field(**kwargs)
 
         default = kwargs.pop("default", None)
@@ -87,13 +95,14 @@ class FieldFactory:
         Field = type(cls.__name__, cls._bases, {})
         # Monkey patch the validation functionality.
         Field.validate_field_value = cls.validate_field_value
-        return Field(**namespace)
+        return cast(FieldValue, Field(**namespace))
 
     @classmethod
     def validate_field(cls, **kwargs: Any) -> None:  # pragma no cover
         ...
 
-    def validate_field_value(self, value: Any) -> Any:
+    @staticmethod
+    def validate_field_value(field: BaseField, value: object) -> object:
         return value
 
 
@@ -108,8 +117,11 @@ class ObjectId(bson.ObjectId):
         self.name: Union[str, None] = None
 
     @classmethod
-    def __get_validators__(cls) -> Generator[bson.ObjectId, None, None]:
-        yield cls.validate
+    def __get_validators__(cls) -> Generator[Callable[..., Any], None, None]:
+        def validator(value: Any) -> Any:
+            return cls.validate(value)
+
+        yield validator
 
     @classmethod
     def validate(cls: Type["bson.ObjectId"], v: Any) -> Any:
@@ -138,26 +150,22 @@ class ObjectId(bson.ObjectId):
         return general_plain_validator_function(cls._validate)
 
 
-class NullableObjectId(FieldFactory, ObjectId):
+class NullableObjectId(FieldFactory[ObjectId], ObjectId):
     _type = ObjectId
 
     def __new__(
         cls,
         null: bool = True,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> ObjectId:
         kwargs = {
             **kwargs,
-            **{
-                key: value
-                for key, value in locals().items()
-                if key not in CLASS_DEFAULTS
-            },
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
         return super().__new__(cls, **kwargs)
 
 
-class ForeignKey(FieldFactory, ObjectId):
+class ForeignKey(FieldFactory[ObjectId], ObjectId):
     """
     Foregin field refresents the foreign refrenced Document or EmbeddedDocument.
     """
@@ -166,19 +174,15 @@ class ForeignKey(FieldFactory, ObjectId):
 
     def __new__(
         cls,
-        refer_to: Union["Document", "EmbeddedDocument"],
+        refer_to: Union[Type["Document"], Type["EmbeddedDocument"], str],
         null: bool = False,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> ObjectId:
         kwargs = {
             **kwargs,
-            **{
-                key: value
-                for key, value in locals().items()
-                if key not in CLASS_DEFAULTS
-            },
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
-        field = super().__new__(cls, **kwargs)
+        field = cast(BaseField, super().__new__(cls, **kwargs))
 
         def lazy_resolve_model(
             self: BaseField,
@@ -188,15 +192,16 @@ class ForeignKey(FieldFactory, ObjectId):
                 module = importlib.import_module(module_path)
                 model = getattr(module, class_name)
                 return model
-            else:
-                return field.refer_to
+            assert field.refer_to is not None
+            return field.refer_to
 
         # Monkey-patch `.to`  as a property
-        field.__class__.to = property(lazy_resolve_model)
-        return field
+        property_name = "to"
+        setattr(field.__class__, property_name, property(lazy_resolve_model))
+        return cast(ObjectId, field)
 
 
-class String(FieldFactory, str):
+class String(FieldFactory[str], str):
     """String field representation that constructs the Field class and populates the values"""
 
     _type = str
@@ -207,69 +212,63 @@ class String(FieldFactory, str):
         max_length: Optional[int] = None,
         min_length: Optional[int] = None,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> str:
         kwargs = {
             **kwargs,
-            **{
-                key: value
-                for key, value in locals().items()
-                if key not in CLASS_DEFAULTS
-            },
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
 
         return super().__new__(cls, **kwargs)
 
 
-class Number(FieldFactory):
+class Number(FieldFactory[NumberValue], Generic[NumberValue]):
     @classmethod
     def validate_field(cls, **kwargs: Any) -> None:
         minimum = kwargs.get("minimum", None)
         maximum = kwargs.get("maximum", None)
 
         if (minimum is not None and maximum is not None) and minimum > maximum:
-            raise FieldDefinitionError(
-                detail="'minimum' cannot be bigger than 'maximum'"
-            )
+            raise FieldDefinitionError(detail="'minimum' cannot be bigger than 'maximum'")
 
-    def validate_field_value(self, value: int) -> Union[Type["Number"], int]:
-        errors = []
-        if self.minimum and self.minimum > value:
+    @staticmethod
+    def validate_field_value(field: BaseField, value: object) -> object:
+        if not isinstance(value, (int, float, decimal.Decimal)):
+            return value
+        errors: List[InitErrorDetails] = []
+        alias = field.alias or field.name or ""
+        if field.minimum and field.minimum > value:
             errors.append(
                 {
-                    "loc": (self.alias,),
+                    "loc": (alias,),
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must be greater than or equals to "
-                            f"{self.minimum}"
-                        ),
+                        "Value must be greater than or equals to {minimum}",
+                        {"minimum": field.minimum},
                     ),
                 }
             )
-        if self.maximum and self.maximum < value:
+        if field.maximum and field.maximum < value:
             errors.append(
                 {
-                    "loc": (self.alias,),
+                    "loc": (alias,),
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must be less than or equals to "
-                            f"{self.maximum}"
-                        ),
+                        "Value must be less than or equals to {maximum}",
+                        {"maximum": field.maximum},
                     ),
                 }
             )
         if errors:
             raise ValidationError.from_exception_data(
-                title=f"Validation error for field {self.alias}",
+                title=f"Validation error for field {alias}",
                 line_errors=errors,
             )
         return value
 
 
-class Integer(Number, int):
+class Integer(Number[int], int):
     """
     Integer field factory that construct Field classes and populated their values.
     """
@@ -283,56 +282,15 @@ class Integer(Number, int):
         maximum: Optional[int] = None,
         multiple_of: Optional[int] = None,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> int:
         kwargs = {
             **kwargs,
-            **{
-                k: v
-                for k, v in locals().items()
-                if k not in ["cls", "__class__", "kwargs"]
-            },
+            **{k: v for k, v in locals().items() if k not in ["cls", "__class__", "kwargs"]},
         }
         return super().__new__(cls, **kwargs)
 
-    def validate_field_value(self, value: int) -> Union[Type["Integer"], int]:
-        errors = []
-        if self.minimum and self.minimum > value:
-            errors.append(
-                {
-                    "loc": (self.alias,),
-                    "input": value,
-                    "type": pydantic_core.PydanticCustomError(
-                        "value_error",
-                        (
-                            "Value must be greater than or equals to "
-                            f"{self.minimum}"
-                        ),
-                    ),
-                }
-            )
-        if self.maximum and self.maximum < value:
-            errors.append(
-                {
-                    "loc": (self.alias,),
-                    "input": value,
-                    "type": pydantic_core.PydanticCustomError(
-                        "value_error",
-                        (
-                            "Value must be less than or equals to "
-                            f"{self.maximum}"
-                        ),
-                    ),
-                }
-            )
-        if errors:
-            raise ValidationError.from_exception_data(
-                title=f"Validation error for field {self.alias}",
-                line_errors=errors,
-            )
-        return value
 
-
-class Double(Number, float):
+class Double(Number[float], float):
     """Representation of a int32 and int64"""
 
     _type = float
@@ -344,38 +302,30 @@ class Double(Number, float):
         maximun: Optional[float] = None,
         multiple_of: Optional[int] = None,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> float:
         kwargs = {
             **kwargs,
-            **{
-                key: value
-                for key, value in locals().items()
-                if key not in CLASS_DEFAULTS
-            },
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
         return super().__new__(cls, **kwargs)
 
 
-class Decimal(Number, decimal.Decimal):
+class Decimal(Number[decimal.Decimal], decimal.Decimal):
     _type = Union[decimal.Decimal, Decimal128]
 
     def __new__(
         cls,
         *,
-        minimum: float = None,
-        maximum: float = None,
-        multiple_of: int = None,
-        max_digits: int = None,
-        decimal_places: int = None,
+        minimum: Optional[float] = None,
+        maximum: Optional[float] = None,
+        multiple_of: Optional[int] = None,
+        max_digits: Optional[int] = None,
+        decimal_places: Optional[int] = None,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> decimal.Decimal:
         kwargs = {
             **kwargs,
-            **{
-                k: v
-                for k, v in locals().items()
-                if k not in ["cls", "__class__", "kwargs"]
-            },
+            **{k: v for k, v in locals().items() if k not in ["cls", "__class__", "kwargs"]},
         }
         return super().__new__(cls, **kwargs)
 
@@ -385,114 +335,111 @@ class Decimal(Number, decimal.Decimal):
 
         max_digits = kwargs.get("max_digits")
         decimal_places = kwargs.get("decimal_places")
-        if (
-            max_digits is None
-            or max_digits < 0
-            or decimal_places is None
-            or decimal_places < 0
-        ):
+        if max_digits is None or max_digits < 0 or decimal_places is None or decimal_places < 0:
             raise FieldDefinitionError(
                 "max_digits and decimal_places are required for DecimalField"
             )
 
-    def validate_field_value(
-        self, value: Union[Type["Decimal"], float]
-    ) -> Union[Type["Decimal"], float]:
-        errors = []
-        dec = decimal.Decimal(str(value))
+    @staticmethod
+    def validate_field_value(field: BaseField, value: object) -> object:
+        if isinstance(value, Decimal128):
+            validation_value: Union[int, float, str, decimal.Decimal] = value.to_decimal()
+        elif isinstance(value, (int, float, str, decimal.Decimal)):
+            validation_value = value
+        else:
+            return value
+        errors: List[InitErrorDetails] = []
+        alias = field.alias or field.name or ""
+        dec = decimal.Decimal(str(validation_value))
 
-        def get_decimal_parts(value: Union[Type["Decimal"], float]) -> tuple:
+        def get_decimal_parts(
+            value: Union[int, float, str, decimal.Decimal],
+        ) -> tuple[int, int, int]:
             dec = decimal.Decimal(str(value))
             # Precision check
             sign, digits, exponent = dec.as_tuple()
             digits_count = len(digits)
 
             # Count fractional digits
-            frac_digit = -exponent if exponent < 0 else 0  # type: ignore
+            frac_digit = -exponent if isinstance(exponent, int) and exponent < 0 else 0
             int_digits = digits_count - frac_digit
             return int_digits, frac_digit, digits_count
 
-        if self.minimum and self.minimum > dec:
+        if field.minimum and field.minimum > dec:
             errors.append(
                 {
-                    "loc": (self.alias,),
+                    "loc": (alias,),
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must be greater than or equals to "
-                            f"{self.minimum}"
-                        ),
+                        "Value must be greater than or equals to {minimum}",
+                        {"minimum": field.minimum},
                     ),
                 }
             )
-        if self.maximum and self.maximum < dec:
+        if field.maximum and field.maximum < dec:
             errors.append(
                 {
-                    "loc": (self.alias,),
+                    "loc": (alias,),
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must be less than or equals to "
-                            f"{self.maximum}"
-                        ),
+                        "Value must be less than or equals to {maximum}",
+                        {"maximum": field.maximum},
                     ),
                 }
             )
 
         # Rule 1: Fractional digits <= scale
 
-        int_digits, frac_digit, digits_count = get_decimal_parts(value)
-        if frac_digit > self.decimal_places:
+        int_digits, frac_digit, digits_count = get_decimal_parts(validation_value)
+        assert field.decimal_places is not None
+        if frac_digit > field.decimal_places:
             value = float(
                 dec.quantize(
-                    decimal.Decimal(10) ** -self.decimal_places,
+                    decimal.Decimal(10) ** -field.decimal_places,
                     rounding=decimal.ROUND_DOWN,
                 )
             )
+            validation_value = value
 
         # Rule 2: Total digits <= precision
-        int_digits, frac_digit, digits_count = get_decimal_parts(value)
-        if digits_count > self.max_digits:
+        int_digits, frac_digit, digits_count = get_decimal_parts(validation_value)
+        assert field.max_digits is not None
+        if digits_count > field.max_digits:
             errors.append(
                 {
-                    "loc": (self.alias,),
+                    "loc": (alias,),
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            f"Value must have at most {self.max_digits} "
-                            "total digits"
-                        ),
+                        "Value must have at most {max_digits} total digits",
+                        {"max_digits": field.max_digits},
                     ),
                 }
             )
         # Check integer digits
-        if int_digits > (self.max_digits - self.decimal_places):
+        if int_digits > (field.max_digits - field.decimal_places):
             errors.append(
                 {
-                    "loc": (self.alias,),
+                    "loc": (alias,),
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must have at most "
-                            f"{self.max_digits - self.decimal_places} "
-                            "digits before the decimal point"
-                        ),
+                        ("Value must have at most {whole_digits} digits before the decimal point"),
+                        {"whole_digits": field.max_digits - field.decimal_places},
                     ),
                 }
             )
         if errors:
             raise ValidationError.from_exception_data(
-                title=f"Validation error for field {self.alias}",
+                title=f"Validation error for field {alias}",
                 line_errors=errors,
             )
         return value
 
 
-class Boolean(FieldFactory, int):
+class Boolean(FieldFactory[bool], int):
     """Representation of a boolean"""
 
     _type = bool
@@ -502,30 +449,24 @@ class Boolean(FieldFactory, int):
         *,
         default: Optional[bool] = False,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> bool:
         kwargs = {
             **kwargs,
-            **{
-                key: value
-                for key, value in locals().items()
-                if key not in CLASS_DEFAULTS
-            },
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
         return super().__new__(cls, **kwargs)
 
 
-class AutoNowMixin(FieldFactory):
+class AutoNowMixin(FieldFactory[FieldValue], Generic[FieldValue]):
     def __new__(
         cls,
         *,
         auto_now: Optional[bool] = False,
         auto_now_add: Optional[bool] = False,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> FieldValue:
         if auto_now_add and auto_now:
-            raise FieldDefinitionError(
-                "'auto_now' and 'auto_now_add' cannot be both True"
-            )
+            raise FieldDefinitionError("'auto_now' and 'auto_now_add' cannot be both True")
 
         if auto_now_add or auto_now:
             kwargs["read_only"] = True
@@ -537,7 +478,7 @@ class AutoNowMixin(FieldFactory):
         return super().__new__(cls, **kwargs)
 
 
-class DateTime(AutoNowMixin, datetime.datetime):
+class DateTime(AutoNowMixin[datetime.datetime], datetime.datetime):
     """Representation of a datetime field"""
 
     _type = datetime.datetime
@@ -548,7 +489,7 @@ class DateTime(AutoNowMixin, datetime.datetime):
         auto_now: Optional[bool] = False,
         auto_now_add: Optional[bool] = False,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> datetime.datetime:
         if auto_now_add or auto_now:
             kwargs["default"] = datetime.datetime.now
 
@@ -559,7 +500,7 @@ class DateTime(AutoNowMixin, datetime.datetime):
         return super().__new__(cls, **kwargs)
 
 
-class Date(AutoNowMixin, datetime.date):
+class Date(AutoNowMixin[datetime.date], datetime.date):
     """Representation of a date field"""
 
     _type = datetime.date
@@ -570,7 +511,7 @@ class Date(AutoNowMixin, datetime.date):
         auto_now: Optional[bool] = False,
         auto_now_add: Optional[bool] = False,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> datetime.date:
         if auto_now_add or auto_now:
             kwargs["default"] = datetime.date.today
 
@@ -581,12 +522,12 @@ class Date(AutoNowMixin, datetime.date):
         return super().__new__(cls, **kwargs)
 
 
-class Time(FieldFactory, datetime.time):
+class Time(FieldFactory[datetime.time], datetime.time):
     """Representation of a time field"""
 
     _type = datetime.time
 
-    def __new__(cls, **kwargs: Any) -> BaseField:
+    def __new__(cls, **kwargs: Any) -> datetime.time:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
@@ -594,20 +535,22 @@ class Time(FieldFactory, datetime.time):
         return super().__new__(cls, **kwargs)
 
 
-class Object(FieldFactory, pydantic.Json):
+# Pydantic exposes Json as a runtime class while typing it as an Annotated special form.
+JsonBase = cast(Type[Any], pydantic.Json)
+
+
+class Object(FieldFactory[Dict[str, Any]], JsonBase):
     """Representation of a JSONField"""
 
     _type = Any
 
 
-class Binary(FieldFactory, bytes):
+class Binary(FieldFactory[bytes], bytes):
     """Representation of a binary"""
 
     _type = bytes
 
-    def __new__(
-        cls, *, max_length: Optional[int] = 0, **kwargs: Any
-    ) -> BaseField:
+    def __new__(cls, *, max_length: Optional[int] = 0, **kwargs: Any) -> bytes:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
@@ -618,17 +561,15 @@ class Binary(FieldFactory, bytes):
     def validate_field(cls, **kwargs: Any) -> None:
         max_length = kwargs.get("max_length", None)
         if max_length is None or max_length <= 0:
-            raise FieldDefinitionError(
-                detail="Parameter 'max_length' is required for BinaryField"
-            )
+            raise FieldDefinitionError(detail="Parameter 'max_length' is required for BinaryField")
 
 
-class UUID(FieldFactory, uuid.UUID):
+class UUID(FieldFactory[uuid.UUID], uuid.UUID):
     """Representation of a uuid"""
 
     _type = uuid.UUID
 
-    def __new__(cls, **kwargs: Any) -> BaseField:
+    def __new__(cls, **kwargs: Any) -> uuid.UUID:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
@@ -640,14 +581,14 @@ class Email(String):
     _type = EmailStr
 
 
-class Array(FieldFactory, list):
+class Array(FieldFactory[List[ArrayValue]], list, Generic[ArrayValue]):
     _type = list
 
     def __new__(
         cls,
-        type_of: type,
+        type_of: Type[ArrayValue],
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> List[ArrayValue]:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
@@ -656,13 +597,13 @@ class Array(FieldFactory, list):
         return super().__new__(cls, **kwargs)
 
 
-class ArrayList(FieldFactory, list):
+class ArrayList(FieldFactory[List[Any]], list):
     _type = list
 
     def __new__(
         cls,
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> List[Any]:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
@@ -671,14 +612,14 @@ class ArrayList(FieldFactory, list):
         return super().__new__(cls, **kwargs)
 
 
-class Embed(FieldFactory):
+class Embed(FieldFactory[EmbeddedValue], Generic[EmbeddedValue]):
     _type = None
 
     def __new__(
         cls,
-        document: Type["EmbeddedDocument"],
+        document: Type[EmbeddedValue],
         **kwargs: Any,
-    ) -> BaseField:
+    ) -> EmbeddedValue:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
@@ -691,6 +632,10 @@ class Embed(FieldFactory):
         from mongoz.core.db.documents.document import EmbeddedDocument
 
         document = kwargs.get("document")
+        if not isinstance(document, type):
+            raise FieldDefinitionError(
+                "'document' must be of type mongoz.Document or mongoz.EmbeddedDocument"
+            )
         if not issubclass(document, EmbeddedDocument):
             raise FieldDefinitionError(
                 "'document' must be of type mongoz.Document or mongoz.EmbeddedDocument"

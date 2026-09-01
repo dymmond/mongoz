@@ -22,7 +22,7 @@ class ProxyDocument:
         *,
         bases: Union[Tuple[Type["Document"]], None] = None,
         definitions: Union[Dict[Any, Any], None] = None,
-        metadata: Union[Type["MetaInfo"], None] = None,
+        metadata: Union["MetaInfo", None] = None,
         qualname: Union[str, None] = None,
         config: Union[ConfigDict, None] = None,
         proxy: bool = True,
@@ -32,12 +32,12 @@ class ProxyDocument:
         self.__module__: str = module
         self.__bases__: Union[Tuple[Type["Document"]], None] = bases
         self.__definitions__: Union[Dict[Any, Any], None] = definitions
-        self.__metadata__: Union[Type["MetaInfo"], None] = metadata
+        self.__metadata__: Union["MetaInfo", None] = metadata
         self.__qualname__: Union[str, None] = qualname
         self.__config__: Union[ConfigDict, None] = config
         self.__proxy__: bool = proxy
         self.__pydantic_extra__ = pydantic_extra
-        self.__model__ = None
+        self.__model__: Union[Type["Document"], None] = None
 
     def build(self) -> "ProxyDocument":
         """
@@ -56,7 +56,7 @@ class ProxyDocument:
             __proxy__=self.__proxy__,
             __pydantic_extra__=self.__pydantic_extra__,
         )
-        self.__model__ = model  # type: ignore
+        self.__model__ = model
         return self
 
     @property
@@ -65,7 +65,7 @@ class ProxyDocument:
 
     @model.setter
     def model(self, value: Type["Document"]) -> None:
-        self.__model__ = value  # type: ignore
+        self.__model__ = value
 
     def __repr__(self) -> str:
         name = f"Proxy{self.__name__}"

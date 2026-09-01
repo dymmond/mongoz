@@ -14,11 +14,11 @@ from typing import (
     Type,
     Union,
     cast,
-    no_type_check,
 )
 
-from motor.motor_asyncio import AsyncIOMotorCollection
 from pydantic._internal._model_construction import ModelMetaclass
+from pymongo.asynchronous.collection import AsyncCollection
+from typing_extensions import dataclass_transform
 
 from mongoz.core.connection.collections import Collection
 from mongoz.core.connection.database import Database
@@ -26,18 +26,17 @@ from mongoz.core.connection.registry import Registry
 from mongoz.core.db.datastructures import Index
 from mongoz.core.db.fields import ObjectId
 from mongoz.core.db.fields.base import BaseField, MongozField
+from mongoz.core.db.fields.core import FieldFactory
 from mongoz.core.db.querysets.core.manager import Manager
 from mongoz.core.signals import Broadcaster, Signal
 from mongoz.core.utils.functional import (
     extract_field_annotations_and_defaults,
     mongoz_setattr,
 )
-from mongoz.core.utils.sync import run_sync
 from mongoz.exceptions import ImproperlyConfigured, IndexError
 
 if TYPE_CHECKING:
-    from mongoz.core.db.documents import Document
-    from mongoz.core.db.documents.document_proxy import ProxyDocument
+    from mongoz.core.db.documents import Document, EmbeddedDocument
 
 
 class MetaInfo:
@@ -60,32 +59,26 @@ class MetaInfo:
     def __init__(self, meta: Any = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.pk: Optional[BaseField] = None
-        self.id_attribute: Union[BaseField, str] = getattr(
-            meta, "id_attribute", ""
-        )
+        self.id_attribute: Union[BaseField, str] = getattr(meta, "id_attribute", "")
         self.abstract: bool = getattr(meta, "abstract", False)
         self.fields: Dict[str, BaseField] = {}
-        self.registry: Optional[Type[Registry]] = getattr(
-            meta, "registry", None
-        )
-        self.collection: Optional[Collection] = getattr(
-            meta, "collection", None
-        )
+        self.registry: Optional[Registry] = getattr(meta, "registry", None)
+        self.collection: Union[str, Collection, None] = getattr(meta, "collection", None)
         self.parents: Any = getattr(meta, "parents", None) or []
-        self.indexes: List[Index] = cast(
-            List[Index], getattr(meta, "indexes", None)
+        raw_indexes = getattr(meta, "indexes", None)
+        if raw_indexes is not None and not isinstance(raw_indexes, (list, tuple)):
+            value_type = type(raw_indexes).__name__
+            raise ImproperlyConfigured(
+                f"indexes must be a tuple or list. Got {value_type} instead."
+            )
+        self.indexes: List[Index] = copy.deepcopy(list(raw_indexes or []))
+        self.database: Union["str", Database, None] = cast(
+            Union["str", Database, None], getattr(meta, "database", None)
         )
-        self.database: Union["str", Database] = cast(
-            Union["str", Database], getattr(meta, "database", None)
-        )
-        self.signals: Optional[Broadcaster] = {}  # type: ignore
+        self.signals: Broadcaster = Broadcaster()
         self.manager: "Manager" = getattr(meta, "manager", Manager())
-        self.autogenerate_index: bool = getattr(
-            meta, "autogenerate_index", False
-        )
-        self.from_collection: Union[AsyncIOMotorCollection, None] = getattr(
-            meta, "from_collection", None
-        )
+        self.autogenerate_index: bool = getattr(meta, "autogenerate_index", False)
+        self.from_collection: Union[AsyncCollection, None] = getattr(meta, "from_collection", None)
 
     def model_dump(self) -> Dict[Any, Any]:
         return {k: getattr(self, k, None) for k in self.__slots__}
@@ -99,7 +92,7 @@ class MetaInfo:
 
 
 def _check_manager_for_bases(
-    base: Tuple[Type, ...],
+    base: Type,
     attrs: Any,
     meta: Optional[MetaInfo] = None,
 ) -> None:
@@ -117,19 +110,17 @@ def _check_manager_for_bases(
                     attrs[key] = value.__class__()
 
 
-def _check_document_inherited_registry(
-    bases: Tuple[Type, ...]
-) -> Type[Registry]:
+def _check_document_inherited_registry(bases: Tuple[Type, ...]) -> Registry:
     """
     When a registry is missing from the Meta class, it should look up for the bases
     and obtain the first found registry.
 
     If not found, then a ImproperlyConfigured exception is raised.
     """
-    found_registry: Optional[Type[Registry]] = None
+    found_registry: Optional[Registry] = None
     for base in bases:
-        meta: MetaInfo = getattr(base, "meta", None)  # type: ignore
-        if not meta:
+        meta = getattr(base, "meta", None)
+        if not isinstance(meta, MetaInfo):
             continue
 
         if getattr(meta, "registry", None) is not None:
@@ -148,14 +139,18 @@ def _check_document_inherited_indexes(bases: Tuple[Type, ...]) -> List[Any]:
     Checks if there are any indexes from the inherited document.
     """
     found_indexes: List[Any] = []
+    inherited_by_name: Dict[str, Index] = {}
     for base in bases:
-        meta: MetaInfo = getattr(base, "meta", None)  # type: ignore
-        if not meta:
+        meta = getattr(base, "meta", None)
+        if not isinstance(meta, MetaInfo):
             continue
 
-        if getattr(meta, "indexes", None) is not None:
-            found_indexes.extend(meta.indexes)
-            break
+        for index in copy.deepcopy(meta.indexes):
+            inherited = inherited_by_name.get(index.name)
+            if inherited is not None and inherited.document == index.document:
+                continue
+            found_indexes.append(index)
+            inherited_by_name[index.name] = index
 
     return found_indexes
 
@@ -172,8 +167,8 @@ def _check_document_inherited_database(
     found_database: Union[str, Database, None] = None
 
     for base in bases:
-        meta: MetaInfo = getattr(base, "meta", None)  # type: ignore
-        if not meta:
+        meta = getattr(base, "meta", None)
+        if not isinstance(meta, MetaInfo):
             continue
 
         if getattr(meta, "database", None) is not None:
@@ -216,10 +211,12 @@ def handle_annotations(
     initialiasation.
     """
     for base in bases:
-        if hasattr(base, "__init_annotations__") and base.__init_annotations__:
-            base_annotations.update(base.__init_annotations__)
-        elif hasattr(base, "__annotations__") and base.__annotations__:
-            base_annotations.update(base.__annotations__)
+        init_annotations = getattr(base, "__init_annotations__", None)
+        class_annotations = getattr(base, "__annotations__", None)
+        if isinstance(init_annotations, Mapping) and init_annotations:
+            base_annotations.update(init_annotations)
+        elif isinstance(class_annotations, Mapping) and class_annotations:
+            base_annotations.update(class_annotations)
 
     annotations: Dict[str, Any] = (
         copy.copy(attrs["__init_annotations__"])
@@ -229,10 +226,11 @@ def handle_annotations(
     annotations.update(base_annotations)
     return annotations
 
-class BaseModelMeta(ModelMetaclass):
-    __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]] = {}
 
-    @no_type_check
+@dataclass_transform(kw_only_default=True, field_specifiers=(FieldFactory, ObjectId))
+class BaseModelMeta(ModelMetaclass):
+    __mongoz_fields__: ClassVar[Mapping[str, "MongozField"]] = {}
+
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
         annotations = dict(attrs.get("__annotations__", {}))
         attrs["__annotations__"] = annotations
@@ -246,11 +244,10 @@ class BaseModelMeta(ModelMetaclass):
         meta_class: "object" = attrs.get("Meta", type("Meta", (), {}))
         id_attribute: str = "id"
         id_attribute_alias: str = "_id"
-        registry: Any = None
         base_annotations: Dict[str, Any] = {}
 
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
-        cls.__mongoz_fields__ = model_fields
+        declared_managers = [key for key, value in attrs.items() if isinstance(value, Manager)]
 
         # Searching for fields "Field" in the class hierarchy.
         def __search_for_fields(base: Type, attrs: Any) -> None:
@@ -305,33 +302,26 @@ class BaseModelMeta(ModelMetaclass):
         model_class = super().__new__
 
         # Handle annotations
-        annotations: Dict[str, Any] = handle_annotations( # type: ignore
-            bases, base_annotations, attrs
-        )
+        annotations: Dict[str, Any] = handle_annotations(bases, base_annotations, attrs)
         annotations["meta"] = ClassVar[MetaInfo]
 
         # Ensure the initialization is only performed for subclasses of Model
         attrs["__init_annotations__"] = annotations
 
         # Ensure the initialization is only performed for subclasses of Document
-        parents = [
-            parent for parent in bases if isinstance(parent, BaseModelMeta)
-        ]
+        parents = [parent for parent in bases if isinstance(parent, BaseModelMeta)]
         if not parents:
             return model_class(cls, name, bases, attrs)
 
         meta.parents = parents
-        new_class = cast(
-            "Type[Document]", model_class(cls, name, bases, attrs)
-        )
+        new_class = cast("Type[Document]", model_class(cls, name, bases, attrs))
 
         # Update the model_fields are updated to the latest
         new_class.model_fields.update(model_fields)
 
         # Abstract classes do not allow multiple managers. This make sure it is enforced.
         if meta.abstract:
-            managers = [k for k, v in attrs.items() if isinstance(v, Manager)]
-            if len(managers) > 1:
+            if len(declared_managers) > 1:
                 raise ImproperlyConfigured(
                     "Multiple managers are not allowed in abstract classes."
                 )
@@ -341,10 +331,7 @@ class BaseModelMeta(ModelMetaclass):
 
         # Handle the registry of models
         if getattr(meta, "registry", None) is None:
-            if (
-                hasattr(new_class, "__db_document__")
-                and new_class.__db_document__
-            ):
+            if hasattr(new_class, "__db_document__") and new_class.__db_document__:
                 meta.registry = _check_document_inherited_registry(bases)
             else:
                 return new_class
@@ -354,16 +341,16 @@ class BaseModelMeta(ModelMetaclass):
         if getattr(meta, "collection", None) is None:
             collection_name = f"{name.lower()}s"
         else:
-            if not isinstance(meta.collection, str):
+            if isinstance(meta.collection, Collection):
                 collection_name = meta.collection.name
             else:
                 collection_name = meta.collection
 
         # Assert the databse is also specified
+        if meta.registry is None:
+            raise ImproperlyConfigured("A document registry is required")
         if getattr(meta, "database", None) is None:
-            meta.database = _check_document_inherited_database(
-                bases, registry=meta.registry
-            )
+            meta.database = _check_document_inherited_database(bases, registry=meta.registry)
         else:
             if isinstance(meta.database, str):
                 meta.database = meta.registry.get_database(meta.database)
@@ -372,32 +359,27 @@ class BaseModelMeta(ModelMetaclass):
                     "database must be a string name or an instance of mongoz.Database."
                 )
 
-        # Handle indexes
-        if getattr(meta, "indexes", None) is not None:
-            indexes = meta.indexes
-            if not isinstance(indexes, (list, tuple)):
-                value_type = type(indexes).__name__
-                raise ImproperlyConfigured(
-                    f"indexes must be a tuple or list. Got {value_type} instead."
-                )
-            else:
-                if not all(isinstance(value, Index) for value in indexes):
-                    raise ValueError(
-                        "Meta.indexes must be a list of Index types."
-                    )
-
-                # Extend existing indexes.
-                indexes.extend(_check_document_inherited_indexes(bases))
+        # Index metadata is copied per model and inherited additively.
+        indexes = meta.indexes
+        if not all(isinstance(value, Index) for value in indexes):
+            raise ValueError("Meta.indexes must be a list of Index types.")
+        indexes.extend(_check_document_inherited_indexes(bases))
+        declared_index_names: set[str] = set()
+        for index in indexes:
+            if index.name in declared_index_names:
+                raise IndexError(f"There is already an index with the name `{index.name}`")
+            declared_index_names.add(index.name)
 
         for _, field in meta.fields.items():
-            field.registry = registry
+            field.registry = meta.registry
 
         # Making sure it does not generate tables if abstract it set
-        registry = meta.registry
         if not meta.abstract:
-            registry.documents[name] = new_class
+            meta.registry.documents[name] = new_class
 
         new_class.__db_document__ = True
+        assert isinstance(meta.database, Database)
+        assert collection_name is not None
         meta.collection = meta.database.get_collection(collection_name)
 
         mongoz_fields: Dict[str, MongozField] = {}
@@ -406,9 +388,11 @@ class BaseModelMeta(ModelMetaclass):
                 field.alias = field_name
             elif field_name == id_attribute:
                 field.alias = id_attribute_alias
-            new_field = MongozField(
-                pydantic_field=field, model_class=field.annotation
-            )
+            if field.validation_alias is None:
+                field.validation_alias = field.alias
+            if field.serialization_alias is None:
+                field.serialization_alias = field.alias
+            new_field = MongozField(pydantic_field=field, model_class=field.annotation)
             mongoz_fields[field_name] = new_field
 
         # For inherited fields
@@ -449,12 +433,14 @@ class BaseModelMeta(ModelMetaclass):
         for _, value in attrs.items():
             if isinstance(value, Manager):
                 value.model_class = new_class
+                assert isinstance(new_class.meta.collection, Collection)
                 value._collection = new_class.meta.collection._collection
 
         # Register the signals
         _register_document_signals(new_class)
 
-        new_class.Meta = meta
+        metadata_attribute = "Meta"
+        setattr(new_class, metadata_attribute, meta)
         new_class.__mongoz_fields__ = mongoz_fields
 
         # Update the model references with the validations of the model
@@ -463,20 +449,15 @@ class BaseModelMeta(ModelMetaclass):
         # Making sure the core model where the fields are inherited
         # And mapped contains the main proxy_document
         if not new_class.__is_proxy_document__ and not new_class.meta.abstract:
-            proxy_document: "ProxyDocument" = (
-                new_class.generate_proxy_document()
-            )
+            proxy_document = new_class.generate_proxy_document()
             new_class.__proxy_document__ = proxy_document
-            new_class.__proxy_document__.parent = new_class
-            new_class.__proxy_document__.model_rebuild(force=True)
+            parent_attribute = "parent"
+            setattr(proxy_document, parent_attribute, new_class)
+            proxy_document.model_rebuild(force=True)
+            assert meta.registry is not None
             meta.registry.documents[new_class.__name__] = new_class
 
         new_class.model_rebuild(force=True)
-
-        # Build the indexes
-        if not meta.abstract and meta.indexes and meta.autogenerate_index:
-            if not new_class.__is_proxy_document__:
-                run_sync(new_class.create_indexes())
 
         # Protect the model namespaces to avoid UserWarnings on overriding the fields.
         document_namespace = f"{new_class.__name__.lower()}_model_"
@@ -503,10 +484,10 @@ class BaseModelMeta(ModelMetaclass):
         return super().__getattribute__(name)
 
 
+@dataclass_transform(kw_only_default=True, field_specifiers=(FieldFactory, ObjectId))
 class EmbeddedModelMetaClass(ModelMetaclass):
-    __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]]
+    __mongoz_fields__: ClassVar[Mapping[str, "MongozField"]]
 
-    @no_type_check
     def __new__(cls, name: str, bases: Tuple[Type, ...], attrs: Any) -> Any:
         # Always ensure annotations exist and are concrete
         annotations = dict(attrs.get("__annotations__", {}))
@@ -514,7 +495,6 @@ class EmbeddedModelMetaClass(ModelMetaclass):
 
         # Extract fields first (so runtime values like ObjectId are removed)
         attrs, model_fields = extract_field_annotations_and_defaults(attrs)
-        cls.__mongoz_fields__ = model_fields
 
         # Mark any remaining runtime-only attributes as ClassVar[Any]
         for key, _ in list(attrs.items()):
@@ -522,7 +502,7 @@ class EmbeddedModelMetaClass(ModelMetaclass):
                 annotations[key] = ClassVar[Any]
 
         # Construct the Pydantic model normally
-        new_class = super().__new__(cls, name, bases, attrs)
+        new_class = cast("Type[EmbeddedDocument]", super().__new__(cls, name, bases, attrs))
 
         # Build Mongoz field wrappers
         mongoz_fields: Dict[str, MongozField] = {}
@@ -534,4 +514,3 @@ class EmbeddedModelMetaClass(ModelMetaclass):
 
         new_class.__mongoz_fields__ = mongoz_fields
         return new_class
-
