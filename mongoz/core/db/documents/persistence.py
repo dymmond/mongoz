@@ -62,7 +62,20 @@ async def get_or_create_document(
     normalized_defaults = {
         (key if isinstance(key, str) else key._name): value for key, value in defaults.items()
     }
-    equality_values = get_or_create_values(expressions)
+    allowed_fields = set(model_class.model_fields)
+    allowed_fields.update(
+        field.alias for field in model_class.model_fields.values() if field.alias is not None
+    )
+    lookup_equalities = get_or_create_values(expressions)
+    invalid_equalities = set(lookup_equalities).difference(allowed_fields)
+    if invalid_equalities:
+        names = ", ".join(sorted(invalid_equalities))
+        raise InvalidKeyError(
+            f"get_or_create equality predicates must use direct declared fields: {names}"
+        )
+    equality_values = {
+        key: value for key, value in lookup_equalities.items() if key not in {"_id", "id"}
+    }
     creation_values = {**normalized_defaults, **equality_values}
     candidate = model_class(**creation_values)
     model = await collection.find_one_and_update(
@@ -86,7 +99,7 @@ async def patch_many(
     values: Mapping[str, Any],
     driver_options: Mapping[str, Any],
 ) -> Tuple[ValidatedUpdate, List[Any]]:
-    """Validate a patch, capture its exact target ids, and apply one atomic update-many."""
+    """Validate a patch, capture candidate ids, and apply one bounded atomic update-many."""
     from mongoz.core.db.querysets.expressions import Expression
 
     update = validate_update_values(model_class, values)

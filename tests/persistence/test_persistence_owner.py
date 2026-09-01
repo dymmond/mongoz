@@ -2,10 +2,11 @@ import asyncio
 from typing import AsyncGenerator
 
 import pytest
+from bson import ObjectId
 
 import mongoz
 from mongoz import Document
-from mongoz.exceptions import InvalidKeyError
+from mongoz.exceptions import DocumentNotFound, InvalidKeyError
 from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
@@ -93,6 +94,16 @@ async def test_save_explicitly_synchronizes_all_model_fields() -> None:
     assert stored["note"] == "original"
 
 
+async def test_acknowledged_instance_writes_reject_missing_persisted_ids() -> None:
+    record = PersistenceRecord(tenant="one", title="missing", count=1)
+    record.id = ObjectId()
+
+    with pytest.raises(DocumentNotFound):
+        await record.update(count=2)
+    with pytest.raises(DocumentNotFound):
+        await record.save()
+
+
 async def test_update_many_returns_only_the_original_targets_without_mutating_filter() -> None:
     await PersistenceRecord(tenant="one", title="target", count=1, note="one").create()
     unrelated = await PersistenceRecord(tenant="two", title="other", count=0, note="two").create()
@@ -118,6 +129,11 @@ async def test_get_or_create_keeps_operator_predicates_out_of_creation_values() 
         mongoz.Q.nor_(PersistenceRecord.count < 100)
     ).get_or_create({"tenant": "two", "title": "logical", "count": 101, "note": "created"})
     assert logical.title == "logical"
+
+    with pytest.raises(InvalidKeyError, match="unknown"):
+        await PersistenceRecord.objects.raw({"unknown": "value"}).get_or_create(
+            {"tenant": "three", "title": "invalid", "count": 1}
+        )
 
 
 async def test_concurrent_get_or_create_uses_one_unique_document() -> None:

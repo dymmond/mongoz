@@ -41,7 +41,7 @@ from mongoz.core.db.fields.base import MongozField
 from mongoz.core.db.querysets.base import Manager
 from mongoz.core.utils.cursors import closing_cursor
 from mongoz.core.utils.hashable import make_hashable
-from mongoz.exceptions import InvalidKeyError, MongozException
+from mongoz.exceptions import DocumentNotFound, InvalidKeyError, MongozException
 from mongoz.utils.mixins import is_operation_allowed
 
 T = TypeVar("T", bound="Document")
@@ -106,7 +106,11 @@ class Document(DocumentRow):
         values = validate_update_values(type(self), kwargs)
         await self.signals.pre_update.send(sender=self.__class__, instance=self)
         collection = type(self).get_collection(collection)
-        await collection.update_one({"_id": self.id}, {"$set": values.storage}, session=session)
+        result = await collection.update_one(
+            {"_id": self.id}, {"$set": values.storage}, session=session
+        )
+        if result.acknowledged and result.matched_count == 0:
+            raise DocumentNotFound()
         for field_name, value in values.attributes.items():
             setattr(self, field_name, value)
         await self.signals.post_update.send(sender=self.__class__, instance=self)
@@ -484,11 +488,13 @@ class Document(DocumentRow):
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         collection = type(self).get_collection(collection)
-        await collection.update_one(
+        result = await collection.update_one(
             {"_id": self.id},
             {"$set": dump_document(self)},
             session=session,
         )
+        if result.acknowledged and result.matched_count == 0:
+            raise DocumentNotFound()
         for k, v in self.model_dump(exclude={"id"}).items():
             setattr(self, k, v)
 
