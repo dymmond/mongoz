@@ -108,6 +108,8 @@ async def test_acknowledged_instance_writes_reject_missing_persisted_ids() -> No
         await record.update(count=2)
     with pytest.raises(DocumentNotFound):
         await record.save()
+    with pytest.raises(DocumentNotFound):
+        await record.delete()
 
 
 async def test_update_many_returns_only_the_original_targets_without_mutating_filter() -> None:

@@ -418,6 +418,8 @@ class Document(DocumentRow):
         await self.signals.pre_delete.send(sender=self.__class__, instance=self)
         collection = type(self).get_collection(collection)
         result = await collection.delete_one({"_id": self.id}, session=session)
+        if result.acknowledged and result.deleted_count == 0:
+            raise DocumentNotFound()
         await self.signals.post_delete.send(sender=self.__class__, instance=self)
         return result.deleted_count
 
