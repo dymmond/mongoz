@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, Sequence, Type, Union, cast
 
-from motor.motor_asyncio import AsyncIOMotorCollection
+from pymongo.asynchronous.collection import AsyncCollection
 
 from mongoz import settings
 from mongoz.core.db.documents.base import MongozBaseModel
@@ -24,7 +24,7 @@ class DocumentRow(MongozBaseModel):
         is_defer_fields: bool = False,
         only_fields: Union[Sequence[str], None] = None,
         defer_fields: Union[Sequence[str], None] = None,
-        from_collection: Union[AsyncIOMotorCollection, None] = None,
+        from_collection: Union[AsyncCollection, None] = None,
     ) -> Union[Type["Document"], None]:
         """
         Class method to convert a dictionary row result into a Document row type.

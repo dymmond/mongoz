@@ -17,8 +17,8 @@ from typing import (
 import bson
 import pydantic
 from bson.errors import InvalidId
-from motor.motor_asyncio import AsyncIOMotorCollection
 from pydantic import BaseModel
+from pymongo.asynchronous.collection import AsyncCollection
 
 from mongoz.core.connection.collections import Collection
 from mongoz.core.db.documents._internal import ModelDump
@@ -39,7 +39,7 @@ class Document(DocumentRow):
 
     async def create(
         self: "Document",
-        collection: Union[AsyncIOMotorCollection, None] = None,
+        collection: Union[AsyncCollection, None] = None,
     ) -> "Document":
         """
         Inserts a document.
@@ -63,14 +63,14 @@ class Document(DocumentRow):
 
     async def update(
         self,
-        collection: Union[AsyncIOMotorCollection, None] = None,
+        collection: Union[AsyncCollection, None] = None,
         **kwargs: Any,
     ) -> "Document":
         """
         Updates a record on an instance level.
         """
         if collection is None:
-            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
+            if isinstance(self.meta.from_collection, AsyncCollection):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection._collection
@@ -108,7 +108,7 @@ class Document(DocumentRow):
     async def create_many(
         cls: Type["Document"],
         models: List["Document"],
-        collection: Union[Collection, AsyncIOMotorCollection, None] = None,
+        collection: Union[Collection, AsyncCollection, None] = None,
     ) -> List["Document"]:
         """
         Insert many documents
@@ -121,7 +121,7 @@ class Document(DocumentRow):
         data = (model.model_dump(exclude={"id"}) for model in models)
         if isinstance(collection, Collection):
             results = await collection._collection.insert_many(data)
-        elif isinstance(collection, AsyncIOMotorCollection):
+        elif isinstance(collection, AsyncCollection):
             results = await collection.insert_many(data)
         else:
             results = await cls.meta.collection._collection.insert_many(data)  # type: ignore
@@ -133,8 +133,8 @@ class Document(DocumentRow):
 
     @classmethod
     def get_collection(
-        cls, collection: Union[AsyncIOMotorCollection, None] = None
-    ) -> AsyncIOMotorCollection:
+        cls, collection: Union[AsyncCollection, None] = None
+    ) -> AsyncCollection:
         """
         Get the collection object associated with the document class.
         """
@@ -144,7 +144,7 @@ class Document(DocumentRow):
     async def create_index(
         cls,
         name: str,
-        collection: Union[Collection, AsyncIOMotorCollection, None] = None,
+        collection: Union[Collection, AsyncCollection, None] = None,
     ) -> str:
         """
         Creates an index from the list of indexes of the Meta object.
@@ -155,7 +155,7 @@ class Document(DocumentRow):
             if index.name == name:
                 if isinstance(collection, Collection):
                     await collection._collection.create_indexes([index])
-                elif isinstance(collection, AsyncIOMotorCollection):
+                elif isinstance(collection, AsyncCollection):
                     await collection.create_indexes([index])
                 else:
                     await cls.meta.collection._collection.create_indexes([index])  # type: ignore
@@ -164,7 +164,7 @@ class Document(DocumentRow):
 
     @classmethod
     async def create_indexes(
-        cls, collection: Union[Collection, AsyncIOMotorCollection, None] = None
+        cls, collection: Union[Collection, AsyncCollection, None] = None
     ) -> List[str]:
         """
         Create indexes defined for the collection or drop for existing ones.
@@ -182,7 +182,7 @@ class Document(DocumentRow):
             return await collection._collection.create_indexes(
                 cls.meta.indexes
             )  # noqa
-        elif isinstance(collection, AsyncIOMotorCollection):
+        elif isinstance(collection, AsyncCollection):
             return await collection.create_indexes(cls.meta.indexes)
         else:
             return await cls.meta.collection._collection.create_indexes(cls.meta.indexes)  # type: ignore
@@ -272,8 +272,8 @@ class Document(DocumentRow):
 
     @classmethod
     async def list_indexes(
-        cls, collection: Union[Collection, AsyncIOMotorCollection, None] = None
-    ) -> List[Dict[str, Any]]:
+        cls, collection: Union[Collection, AsyncCollection, None] = None
+    ) -> List[Mapping[str, Any]]:
         """
         List all indexes in the collection.
 
@@ -287,23 +287,27 @@ class Document(DocumentRow):
         """
         is_operation_allowed(cls)
 
-        collection_indexes = []
+        collection_indexes: List[Mapping[str, Any]] = []
         if isinstance(collection, Collection):
             collection = collection._collection
-        elif isinstance(collection, AsyncIOMotorCollection):
+        elif isinstance(collection, AsyncCollection):
             pass
         else:
             collection = cls.meta.collection._collection  # type: ignore
 
-        async for index in collection.list_indexes():
-            collection_indexes.append(index)
+        cursor = await collection.list_indexes()
+        try:
+            async for index in cursor:
+                collection_indexes.append(index)
+        finally:
+            await cursor.close()
         return collection_indexes
 
     @classmethod
     async def check_indexes(
         cls,
         force_drop: bool = False,
-        collection: Union[AsyncIOMotorCollection, None] = None,
+        collection: Union[AsyncCollection, None] = None,
     ) -> None:
         """
         Check the indexes defined in the Meta object and perform any possible drop operation.
@@ -358,13 +362,13 @@ class Document(DocumentRow):
                 await cls.drop_index(name, collection)
 
     async def delete(
-        self, collection: Union[AsyncIOMotorCollection, None] = None
+        self, collection: Union[AsyncCollection, None] = None
     ) -> int:
         """Delete the document."""
         is_operation_allowed(self)
 
         if collection is None:
-            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
+            if isinstance(self.meta.from_collection, AsyncCollection):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection._collection
@@ -380,7 +384,7 @@ class Document(DocumentRow):
 
     @classmethod
     async def drop_index(
-        cls, name: str, collection: Union[AsyncIOMotorCollection, None] = None
+        cls, name: str, collection: Union[AsyncCollection, None] = None
     ) -> str:
         """Drop single index from Meta indexes by name.
 
@@ -399,7 +403,7 @@ class Document(DocumentRow):
     async def drop_indexes(
         cls,
         force: bool = False,
-        collection: Union[AsyncIOMotorCollection, None] = None,
+        collection: Union[AsyncCollection, None] = None,
     ) -> Union[List[str], None]:
         """Drop all indexes defined for the collection.
 
@@ -411,7 +415,7 @@ class Document(DocumentRow):
         if force:
             if isinstance(collection, Collection):
                 return await collection._collection.drop_indexes()  # type: ignore
-            elif isinstance(collection, AsyncIOMotorCollection):
+            elif isinstance(collection, AsyncCollection):
                 return await collection.drop_indexes()  # type: ignore
             else:
                 return await cls.meta.collection._collection.drop_indexes()  # type: ignore
@@ -422,7 +426,7 @@ class Document(DocumentRow):
 
     async def save(
         self: "Document",
-        collection: Union[AsyncIOMotorCollection, None] = None,
+        collection: Union[AsyncCollection, None] = None,
     ) -> "Document":
         """Save the document.
 
@@ -442,7 +446,7 @@ class Document(DocumentRow):
         """
         is_operation_allowed(self)
         if collection is None:
-            if isinstance(self.meta.from_collection, AsyncIOMotorCollection):
+            if isinstance(self.meta.from_collection, AsyncCollection):
                 collection = self.meta.from_collection
             elif isinstance(self.meta.collection, Collection):
                 collection = self.meta.collection._collection

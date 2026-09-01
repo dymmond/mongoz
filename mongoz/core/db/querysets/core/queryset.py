@@ -22,7 +22,11 @@ from bson import Code
 from mongoz.core.db.datastructures import Order
 from mongoz.core.db.fields import base
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
-from mongoz.exceptions import DocumentNotFound, FieldDefinitionError, MultipleDocumentsReturned
+from mongoz.exceptions import (
+    DocumentNotFound,
+    FieldDefinitionError,
+    MultipleDocumentsReturned,
+)
 from mongoz.protocols.queryset import QuerySetProtocol
 
 if TYPE_CHECKING:
@@ -123,8 +127,11 @@ class QuerySet(BaseQuerySet[T]):
         filter_query = Expression.compile_many(self._filter)
         cursor = self._collection.find(filter_query)
 
-        async for document in cursor:
-            yield self.model_class(**document)
+        try:
+            async for document in cursor:
+                yield self.model_class(**document)
+        finally:
+            await cursor.close()
 
     async def none(self) -> "QuerySet[T]":
         """
@@ -153,16 +160,19 @@ class QuerySet(BaseQuerySet[T]):
         is_only_fields = True if self._only_fields else False
         is_defer_fields = True if self._defer_fields else False
 
-        results: List[T] = [
-            self.model_class.from_row(
-                document,
-                is_only_fields=is_only_fields,
-                only_fields=self._only_fields,
-                is_defer_fields=is_defer_fields,
-                defer_fields=self._defer_fields,
-            )
-            async for document in cursor
-        ]
+        try:
+            results: List[T] = [
+                self.model_class.from_row(
+                    document,
+                    is_only_fields=is_only_fields,
+                    only_fields=self._only_fields,
+                    is_defer_fields=is_defer_fields,
+                    defer_fields=self._defer_fields,
+                )
+                async for document in cursor
+            ]
+        finally:
+            await cursor.close()
 
         return results
 
@@ -262,7 +272,10 @@ class QuerySet(BaseQuerySet[T]):
 
         filter_query = Expression.compile_many(self._filter)
         cursor = self._collection.find(filter_query).where(condition)
-        return [self.model_class(**document) async for document in cursor]
+        try:
+            return [self.model_class(**document) async for document in cursor]
+        finally:
+            await cursor.close()
 
     async def bulk_create(self, models: List["Document"]) -> List["Document"]:
         """

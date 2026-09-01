@@ -3,20 +3,20 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from bson import CodecOptions, UuidRepresentation
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo.asynchronous.database import AsyncDatabase
 
 from mongoz.core.connection.collections import Collection
 
 
 class Database:
     """
-    MongoDB database object referencing Motor database
+    MongoDB database object referencing a PyMongo Async database.
     """
 
     def __init__(
         self,
         name: str,
-        database: AsyncIOMotorDatabase,
+        database: AsyncDatabase[Dict[str, Any]],
         codec_options: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._db = database

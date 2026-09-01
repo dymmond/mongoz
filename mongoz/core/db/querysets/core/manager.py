@@ -481,8 +481,11 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         filter_query = Expression.compile_many(self._filter)
         cursor = self._collection.find(filter_query)
 
-        async for document in cursor:
-            yield self.model_class(**document)
+        try:
+            async for document in cursor:
+                yield self.model_class(**document)
+        finally:
+            await cursor.close()
 
     def __await__(
         self,
@@ -527,23 +530,26 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             pipeline.append({"$limit": manager._limit_count})
 
         # Execute aggregation
-        cursor = manager._collection.aggregate(pipeline)
+        cursor = await manager._collection.aggregate(pipeline)
 
         # For only fields
         is_only_fields = True if manager._only_fields else False
         is_defer_fields = True if manager._defer_fields else False
 
-        results: List[T] = [
-            manager.model_class.from_row(
-                document,
-                is_only_fields=is_only_fields,
-                only_fields=manager._only_fields,
-                is_defer_fields=is_defer_fields,
-                defer_fields=manager._defer_fields,
-                from_collection=manager._collection,
-            )
-            async for document in cursor
-        ]
+        try:
+            results: List[T] = [
+                manager.model_class.from_row(
+                    document,
+                    is_only_fields=is_only_fields,
+                    only_fields=manager._only_fields,
+                    is_defer_fields=is_defer_fields,
+                    defer_fields=manager._defer_fields,
+                    from_collection=manager._collection,
+                )
+                async for document in cursor
+            ]
+        finally:
+            await cursor.close()
 
         return results
 
@@ -680,7 +686,10 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
         filter_query = Expression.compile_many(manager._filter)
         cursor = manager._collection.find(filter_query).where(condition)
-        return [manager.model_class(**document) async for document in cursor]
+        try:
+            return [manager.model_class(**document) async for document in cursor]
+        finally:
+            await cursor.close()
 
     async def update(self, **kwargs: Any) -> List["Document"]:
         """

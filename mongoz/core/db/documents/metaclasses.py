@@ -17,8 +17,8 @@ from typing import (
     no_type_check,
 )
 
-from motor.motor_asyncio import AsyncIOMotorCollection
 from pydantic._internal._model_construction import ModelMetaclass
+from pymongo.asynchronous.collection import AsyncCollection
 
 from mongoz.core.connection.collections import Collection
 from mongoz.core.connection.database import Database
@@ -32,7 +32,6 @@ from mongoz.core.utils.functional import (
     extract_field_annotations_and_defaults,
     mongoz_setattr,
 )
-from mongoz.core.utils.sync import run_sync
 from mongoz.exceptions import ImproperlyConfigured, IndexError
 
 if TYPE_CHECKING:
@@ -83,7 +82,7 @@ class MetaInfo:
         self.autogenerate_index: bool = getattr(
             meta, "autogenerate_index", False
         )
-        self.from_collection: Union[AsyncIOMotorCollection, None] = getattr(
+        self.from_collection: Union[AsyncCollection, None] = getattr(
             meta, "from_collection", None
         )
 
@@ -473,11 +472,6 @@ class BaseModelMeta(ModelMetaclass):
 
         new_class.model_rebuild(force=True)
 
-        # Build the indexes
-        if not meta.abstract and meta.indexes and meta.autogenerate_index:
-            if not new_class.__is_proxy_document__:
-                run_sync(new_class.create_indexes())
-
         # Protect the model namespaces to avoid UserWarnings on overriding the fields.
         document_namespace = f"{new_class.__name__.lower()}_model_"
         new_class.model_config["protected_namespaces"] = (document_namespace,)
@@ -534,4 +528,3 @@ class EmbeddedModelMetaClass(ModelMetaclass):
 
         new_class.__mongoz_fields__ = mongoz_fields
         return new_class
-
