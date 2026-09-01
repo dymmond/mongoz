@@ -81,7 +81,7 @@ def release_notes(version: str) -> str:
     body = content[match.end() : end].strip()
     if not body:
         raise RuntimeError(f"release-note section for {version} is empty")
-    if re.search(r"\btests?\b", body, flags=re.IGNORECASE):
+    if re.search(r"\b(?:pytest|test(?:s|ing|ed)?)\b", body, flags=re.IGNORECASE):
         raise RuntimeError(f"release-note section for {version} must not mention tests")
     missing = [
         topic
