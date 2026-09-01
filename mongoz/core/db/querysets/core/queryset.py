@@ -263,9 +263,9 @@ class QuerySet(BaseQuerySet[T]):
 
         E.g.: Movie.query().where('this.a < (this.b + this.c)')
         """
-        assert isinstance(
-            condition, (str, Code)
-        ), "The where clause must be a string or a bson.Code"
+        assert isinstance(condition, (str, Code)), (
+            "The where clause must be a string or a bson.Code"
+        )
 
         filter_query = Expression.compile_many(self._filter)
         cursor = self._collection.find(filter_query).where(condition)
@@ -338,7 +338,10 @@ class QuerySet(BaseQuerySet[T]):
             raise FieldDefinitionError(detail="Fields must be an iterable.")
 
         if not fields:
-            documents = [document.model_dump(exclude=exclude, exclude_none=exclude_none) for document in documents]
+            documents = [
+                document.model_dump(exclude=exclude, exclude_none=exclude_none)
+                for document in documents
+            ]
         else:
             documents = [
                 document.model_dump(exclude=exclude, exclude_none=exclude_none, include=fields)

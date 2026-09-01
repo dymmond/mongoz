@@ -118,9 +118,7 @@ async def test_cross_event_loop_close_does_not_mark_registry_closed(
 
 
 async def test_server_selection_failure_is_preserved_and_cleanup_still_works() -> None:
-    registry = Registry(
-        "mongodb://127.0.0.1:1/?serverSelectionTimeoutMS=50&connectTimeoutMS=50"
-    )
+    registry = Registry("mongodb://127.0.0.1:1/?serverSelectionTimeoutMS=50&connectTimeoutMS=50")
 
     with pytest.raises(ServerSelectionTimeoutError):
         await registry.get_database("test_db")._db.command("ping")

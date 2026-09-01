@@ -55,9 +55,7 @@ async def prepare_database() -> AsyncGenerator:
 
 async def test_model_create() -> None:
     producer = Producer(name="Harshali", gender="F")
-    movie = await Movie.objects.create(
-        name="Barbie", year=2023, movie_type="K", producer=producer
-    )
+    movie = await Movie.objects.create(name="Barbie", year=2023, movie_type="K", producer=producer)
     assert movie.name == "Barbie"
     assert movie.year == 2023
     assert movie.movie_type == "K"
@@ -74,7 +72,4 @@ async def test_model_create() -> None:
             movie_type="K2",
         )
     except ValueError as exc:
-        assert (
-            exc.__str__()
-            == "Invalid choice for field 'movie_type'. Input provided as 'K2'"
-        )
+        assert exc.__str__() == "Invalid choice for field 'movie_type'. Input provided as 'K2'"

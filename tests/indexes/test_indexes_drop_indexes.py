@@ -50,9 +50,7 @@ async def prepare_database() -> AsyncGenerator:
 
 async def test_drops_indexes() -> None:
     await AnotherMovie.create_indexes()
-    await AnotherMovie.objects.create(
-        name="Mongoz", email="mongoz@mongoz.com", year=2023
-    )
+    await AnotherMovie.objects.create(name="Mongoz", email="mongoz@mongoz.com", year=2023)
 
     total_indexes = await AnotherMovie.list_indexes()
 

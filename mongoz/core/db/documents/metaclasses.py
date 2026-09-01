@@ -59,32 +59,20 @@ class MetaInfo:
     def __init__(self, meta: Any = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.pk: Optional[BaseField] = None
-        self.id_attribute: Union[BaseField, str] = getattr(
-            meta, "id_attribute", ""
-        )
+        self.id_attribute: Union[BaseField, str] = getattr(meta, "id_attribute", "")
         self.abstract: bool = getattr(meta, "abstract", False)
         self.fields: Dict[str, BaseField] = {}
-        self.registry: Optional[Type[Registry]] = getattr(
-            meta, "registry", None
-        )
-        self.collection: Optional[Collection] = getattr(
-            meta, "collection", None
-        )
+        self.registry: Optional[Type[Registry]] = getattr(meta, "registry", None)
+        self.collection: Optional[Collection] = getattr(meta, "collection", None)
         self.parents: Any = getattr(meta, "parents", None) or []
-        self.indexes: List[Index] = cast(
-            List[Index], getattr(meta, "indexes", None)
-        )
+        self.indexes: List[Index] = cast(List[Index], getattr(meta, "indexes", None))
         self.database: Union["str", Database] = cast(
             Union["str", Database], getattr(meta, "database", None)
         )
         self.signals: Optional[Broadcaster] = {}  # type: ignore
         self.manager: "Manager" = getattr(meta, "manager", Manager())
-        self.autogenerate_index: bool = getattr(
-            meta, "autogenerate_index", False
-        )
-        self.from_collection: Union[AsyncCollection, None] = getattr(
-            meta, "from_collection", None
-        )
+        self.autogenerate_index: bool = getattr(meta, "autogenerate_index", False)
+        self.from_collection: Union[AsyncCollection, None] = getattr(meta, "from_collection", None)
 
     def model_dump(self) -> Dict[Any, Any]:
         return {k: getattr(self, k, None) for k in self.__slots__}
@@ -116,9 +104,7 @@ def _check_manager_for_bases(
                     attrs[key] = value.__class__()
 
 
-def _check_document_inherited_registry(
-    bases: Tuple[Type, ...]
-) -> Type[Registry]:
+def _check_document_inherited_registry(bases: Tuple[Type, ...]) -> Type[Registry]:
     """
     When a registry is missing from the Meta class, it should look up for the bases
     and obtain the first found registry.
@@ -228,6 +214,7 @@ def handle_annotations(
     annotations.update(base_annotations)
     return annotations
 
+
 class BaseModelMeta(ModelMetaclass):
     __mongoz_fields__: ClassVar[Mapping[str, Type["MongozField"]]] = {}
 
@@ -304,7 +291,7 @@ class BaseModelMeta(ModelMetaclass):
         model_class = super().__new__
 
         # Handle annotations
-        annotations: Dict[str, Any] = handle_annotations( # type: ignore
+        annotations: Dict[str, Any] = handle_annotations(  # type: ignore
             bases, base_annotations, attrs
         )
         annotations["meta"] = ClassVar[MetaInfo]
@@ -313,16 +300,12 @@ class BaseModelMeta(ModelMetaclass):
         attrs["__init_annotations__"] = annotations
 
         # Ensure the initialization is only performed for subclasses of Document
-        parents = [
-            parent for parent in bases if isinstance(parent, BaseModelMeta)
-        ]
+        parents = [parent for parent in bases if isinstance(parent, BaseModelMeta)]
         if not parents:
             return model_class(cls, name, bases, attrs)
 
         meta.parents = parents
-        new_class = cast(
-            "Type[Document]", model_class(cls, name, bases, attrs)
-        )
+        new_class = cast("Type[Document]", model_class(cls, name, bases, attrs))
 
         # Update the model_fields are updated to the latest
         new_class.model_fields.update(model_fields)
@@ -340,10 +323,7 @@ class BaseModelMeta(ModelMetaclass):
 
         # Handle the registry of models
         if getattr(meta, "registry", None) is None:
-            if (
-                hasattr(new_class, "__db_document__")
-                and new_class.__db_document__
-            ):
+            if hasattr(new_class, "__db_document__") and new_class.__db_document__:
                 meta.registry = _check_document_inherited_registry(bases)
             else:
                 return new_class
@@ -360,9 +340,7 @@ class BaseModelMeta(ModelMetaclass):
 
         # Assert the databse is also specified
         if getattr(meta, "database", None) is None:
-            meta.database = _check_document_inherited_database(
-                bases, registry=meta.registry
-            )
+            meta.database = _check_document_inherited_database(bases, registry=meta.registry)
         else:
             if isinstance(meta.database, str):
                 meta.database = meta.registry.get_database(meta.database)
@@ -381,9 +359,7 @@ class BaseModelMeta(ModelMetaclass):
                 )
             else:
                 if not all(isinstance(value, Index) for value in indexes):
-                    raise ValueError(
-                        "Meta.indexes must be a list of Index types."
-                    )
+                    raise ValueError("Meta.indexes must be a list of Index types.")
 
                 # Extend existing indexes.
                 indexes.extend(_check_document_inherited_indexes(bases))
@@ -405,9 +381,7 @@ class BaseModelMeta(ModelMetaclass):
                 field.alias = field_name
             elif field_name == id_attribute:
                 field.alias = id_attribute_alias
-            new_field = MongozField(
-                pydantic_field=field, model_class=field.annotation
-            )
+            new_field = MongozField(pydantic_field=field, model_class=field.annotation)
             mongoz_fields[field_name] = new_field
 
         # For inherited fields
@@ -462,9 +436,7 @@ class BaseModelMeta(ModelMetaclass):
         # Making sure the core model where the fields are inherited
         # And mapped contains the main proxy_document
         if not new_class.__is_proxy_document__ and not new_class.meta.abstract:
-            proxy_document: "ProxyDocument" = (
-                new_class.generate_proxy_document()
-            )
+            proxy_document: "ProxyDocument" = new_class.generate_proxy_document()
             new_class.__proxy_document__ = proxy_document
             new_class.__proxy_document__.parent = new_class
             new_class.__proxy_document__.model_rebuild(force=True)

@@ -69,11 +69,7 @@ async def test_model_query_builder() -> None:
     assert movie.name == "Downfall"
     assert movie.year == 2004
 
-    movie = (
-        await Movie.query(Movie.name == "Casablanca")
-        .query(Movie.year == 1942)
-        .get()
-    )
+    movie = await Movie.query(Movie.name == "Casablanca").query(Movie.year == 1942).get()
     assert movie.name == "Casablanca"
     assert movie.year == 1942
 
@@ -82,10 +78,6 @@ async def test_model_query_builder() -> None:
     assert movie.year == 2002
 
     assert (
-        await Movie.query(Movie.name == "Casablanca")
-        .query(Movie.year == 1942)
-        .get()
-        == await Movie.query(
-            Movie.name == "Casablanca", Movie.year == 1942
-        ).get()
+        await Movie.query(Movie.name == "Casablanca").query(Movie.year == 1942).get()
+        == await Movie.query(Movie.name == "Casablanca", Movie.year == 1942).get()
     )

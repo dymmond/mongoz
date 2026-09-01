@@ -77,20 +77,16 @@ class BaseField(FieldInfo, _repr.Representation):
         self.owner: Any = kwargs.pop("owner", None)
         self.name: str = kwargs.pop("name", None)
         self.alias: str = kwargs.pop("alias", None)
-        self.min_length: Optional[Union[int, float, decimal.Decimal]] = (
-            kwargs.pop("min_length", None)
+        self.min_length: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop(
+            "min_length", None
         )
-        self.max_length: Optional[Union[int, float, decimal.Decimal]] = (
-            kwargs.pop("max_length", None)
+        self.max_length: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop(
+            "max_length", None
         )
-        self.minimum: Optional[Union[int, float, decimal.Decimal]] = (
-            kwargs.pop("minimum", None)
-        )
-        self.maximum: Optional[Union[int, float, decimal.Decimal]] = (
-            kwargs.pop("maximum", None)
-        )
-        self.multiple_of: Optional[Union[int, float, decimal.Decimal]] = (
-            kwargs.pop("multiple_of", None)
+        self.minimum: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop("minimum", None)
+        self.maximum: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop("maximum", None)
+        self.multiple_of: Optional[Union[int, float, decimal.Decimal]] = kwargs.pop(
+            "multiple_of", None
         )
         self.registry: Registry = kwargs.pop("registry", None)
         self.database: Database = kwargs.pop("database", None)
@@ -110,9 +106,7 @@ class BaseField(FieldInfo, _repr.Representation):
         if isinstance(self.default, bool):
             self.null = True
 
-        self.__namespace__ = {
-            k: v for k, v in self.__dict__.items() if k != "__namespace__"
-        }
+        self.__namespace__ = {k: v for k, v in self.__dict__.items() if k != "__namespace__"}
 
     @property
     def namespace(self) -> Any:
@@ -187,9 +181,7 @@ class MongozField:
                 f"Model '{self.model_class.__class__.__name__}' has no attribute '{name}'"
             )
 
-        child_field: Type[MongozField] = self.model_class.__mongoz_fields__[
-            name
-        ]
+        child_field: Type[MongozField] = self.model_class.__mongoz_fields__[name]
         return MongozField(
             pydantic_field=child_field.pydantic_field,
             model_class=child_field.model_class,

@@ -60,9 +60,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         if self.__is_proxy_document__:
-            values = self.extract_default_values_from_field(
-                is_proxy=True, **data
-            )
+            values = self.extract_default_values_from_field(is_proxy=True, **data)
             self.__dict__ = values  # type: ignore
         else:
             self.extract_default_values_from_field()
@@ -92,9 +90,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                 and not isinstance(value, bson.ObjectId)  # type: ignore
                 and value
             ):
-                validated_value = self.model_fields[
-                    field_name
-                ].validate_field_value(value)
+                validated_value = self.model_fields[field_name].validate_field_value(value)
                 setattr(self, field_name, validated_value)
 
     def extract_default_values_from_field(
@@ -112,10 +108,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         for key, value in kwargs.items():
             if key not in self.meta.fields:
                 if not hasattr(self, key):
-                    raise ValueError(
-                        f"Invalid keyword {key} for class "
-                        f"{self.__class__.__name__}"
-                    )
+                    raise ValueError(f"Invalid keyword {key} for class {self.__class__.__name__}")
             # For non values. Example: bool
             if value is not None:
                 # Checks if the default is a callable and executes it.
@@ -123,11 +116,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                     setattr(self, key, value())
                 else:
                     field_obj = self.meta.fields.get(key)
-                    if (
-                        field_obj
-                        and hasattr(field_obj, "choices")
-                        and field_obj.choices
-                    ):
+                    if field_obj and hasattr(field_obj, "choices") and field_obj.choices:
                         is_matched = False
                         for option_key, option_value in field_obj.choices:
                             if isinstance(option_value, (list, tuple, set)):
@@ -146,8 +135,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
                                 break
                         if is_matched is False:
                             raise ValueError(
-                                f"Invalid choice for field '{key}'. Input "
-                                f"provided as '{value}'"
+                                f"Invalid choice for field '{key}'. Input provided as '{value}'"
                             )
                     else:
                         setattr(self, key, value)
@@ -179,9 +167,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
         if cls.__proxy_document__:
             return cls.__proxy_document__
 
-        fields = {
-            key: copy.copy(field) for key, field in cls.meta.fields.items()
-        }
+        fields = {key: copy.copy(field) for key, field in cls.meta.fields.items()}
         proxy_document = ProxyDocument(
             name=cls.__name__,
             module=cls.__module__,
@@ -205,9 +191,7 @@ class BaseMongoz(BaseModel, metaclass=BaseModelMeta):
             return QuerySet(model_class=cls)
 
         for arg in values:
-            assert isinstance(
-                arg, (dict, Expression)
-            ), "Invalid argument to Query"
+            assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
             if isinstance(arg, dict):
                 query_expressions = Expression.unpack(arg)
                 filter_by.extend(query_expressions)

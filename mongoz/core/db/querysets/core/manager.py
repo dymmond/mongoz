@@ -105,12 +105,8 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             - return the self instance.
         """
         manager: "Manager" = self.clone()
-        database = manager.model_class.meta.registry.get_database(
-            database_name
-        )
-        manager._collection = database.get_collection(
-            manager._collection.name
-        )._collection
+        database = manager.model_class.meta.registry.get_database(database_name)
+        manager._collection = database.get_collection(manager._collection.name)._collection
         return manager
 
     def clone(self) -> Any:
@@ -131,9 +127,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
     def validate_only_and_defer(self) -> None:
         if self._only_fields and self._defer_fields:
-            raise FieldDefinitionError(
-                "You cannot use .only() and .defer() at the same time."
-            )
+            raise FieldDefinitionError("You cannot use .only() and .defer() at the same time.")
 
     def get_operator(self, name: str) -> Expression:
         """
@@ -149,9 +143,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             return cast(str, self.model_class.id.pydantic_field.alias)  # type: ignore
         return key
 
-    def filter_only_and_defer(
-        self, *fields: Sequence[str], is_only: bool = False
-    ) -> "Manager":
+    def filter_only_and_defer(self, *fields: Sequence[str], is_only: bool = False) -> "Manager":
         """
         Validates if should be defer or only and checks it out
         """
@@ -169,9 +161,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         setattr(manager, only_or_defer, document_fields)
         return manager
 
-    def _refs_expression(
-        self, lookup_parts: List, operators: Dict
-    ) -> List[Any]:
+    def _refs_expression(self, lookup_parts: List, operators: Dict) -> List[Any]:
         """
         Check if the lookup_parts contains references to the given operators set.
         Because the LOOKUP_SEP is contained in the default operators names, check
@@ -204,9 +194,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
             if "__" in key:
                 parts = key.split("__")
-                lookup_fields = self._refs_expression(
-                    parts, settings.filter_operators
-                )
+                lookup_fields = self._refs_expression(parts, settings.filter_operators)
                 lookup_operator = parts[-1]
                 field_name = self._find_and_replace_id(parts[-2])
                 refrence_field = ""
@@ -236,36 +224,27 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                     )
                     refrence_field = field
                 if refrence_field and ref_field:
-                    ref_field = (
-                        settings.lookup_prefix
-                        + refrence_field
-                        + "."
-                        + ref_field
-                    )
+                    ref_field = settings.lookup_prefix + refrence_field + "." + ref_field
                 if refrence_field:
                     ref_field = settings.lookup_prefix + refrence_field
 
-                assert (
-                    lookup_operator in settings.filter_operators
-                ), f"`{lookup_operator}` is not a valid lookup operator. Valid operators: {settings.stringified_operators}"
+                assert lookup_operator in settings.filter_operators, (
+                    f"`{lookup_operator}` is not a valid lookup operator. Valid operators: {settings.stringified_operators}"
+                )
 
                 # For "eq", "neq", "contains", "where", "pattern", "startswith", "endswith", "istartswith", "iendswith"
                 if lookup_operator in VALUE_EQUALITY:
                     operator = self.get_operator(lookup_operator)
                     expression = operator(
-                        (
-                            ref_field + "." + field_name
-                            if ref_field
-                            else field_name
-                        ),
+                        (ref_field + "." + field_name if ref_field else field_name),
                         value,
                     )  # type: ignore
 
                 # For "in" and "not_in"
                 elif lookup_operator in LIST_EQUALITY:
-                    assert isinstance(
-                        value, (tuple, list)
-                    ), f"Using the operator `{lookup_operator}` it requires the value to be a list or a tuple, got {type(value)}"
+                    assert isinstance(value, (tuple, list)), (
+                        f"Using the operator `{lookup_operator}` it requires the value to be a list or a tuple, got {type(value)}"
+                    )
 
                     # For tuples, convert to a list
                     if isinstance(value, tuple):
@@ -273,11 +252,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
                     operator = self.get_operator(lookup_operator)
                     expression = operator(
-                        (
-                            ref_field + "." + field_name
-                            if ref_field
-                            else field_name
-                        ),
+                        (ref_field + "." + field_name if ref_field else field_name),
                         value,
                     )  # type: ignore
 
@@ -292,26 +267,16 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                         and value
                     ):
                         asc_or_desc = lookup_operator
-                    elif (
-                        lookup_operator == OrderEnum.ASCENDING
-                        and value is False
-                    ):
+                    elif lookup_operator == OrderEnum.ASCENDING and value is False:
                         asc_or_desc = OrderEnum.DESCENDING
-                    elif (
-                        lookup_operator == OrderEnum.DESCENDING
-                        and value is False
-                    ):
+                    elif lookup_operator == OrderEnum.DESCENDING and value is False:
                         asc_or_desc = OrderEnum.ASCENDING
                     else:
                         asc_or_desc = OrderEnum.ASCENDING
 
                     operator = self.get_operator(asc_or_desc)
                     expression = operator(
-                        (
-                            ref_field + "." + field_name
-                            if ref_field
-                            else field_name
-                        )
+                        (ref_field + "." + field_name if ref_field else field_name)
                     )  # type: ignore
                     sort_clauses.append(expression)
                     continue
@@ -320,36 +285,22 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 elif lookup_operator in GREATNESS_EQUALITY:
                     operator = self.get_operator(lookup_operator)
                     expression = operator(
-                        (
-                            ref_field + "." + field_name
-                            if ref_field
-                            else field_name
-                        ),
+                        (ref_field + "." + field_name if ref_field else field_name),
                         value,
                     )  # type: ignore
 
                 # For "date"
                 elif lookup_operator == "date":
                     operator = self.get_operator("gte")
-                    from_datetime = datetime.combine(
-                        value, datetime.min.time()
-                    )
+                    from_datetime = datetime.combine(value, datetime.min.time())
                     expression1 = operator(
-                        (
-                            ref_field + "." + field_name
-                            if ref_field
-                            else field_name
-                        ),
+                        (ref_field + "." + field_name if ref_field else field_name),
                         from_datetime,
                     )  # type: ignore
                     clauses.append(expression1)
                     operator = self.get_operator("lt")
                     expression = operator(
-                        (
-                            ref_field + "." + field_name
-                            if ref_field
-                            else field_name
-                        ),
+                        (ref_field + "." + field_name if ref_field else field_name),
                         from_datetime + timedelta(days=1),
                     )  # type: ignore
 
@@ -358,9 +309,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
             else:
                 operator = self.get_operator("exact")
-                expression = operator(
-                    (ref_field + "." + key if ref_field else key), value
-                )  # type: ignore
+                expression = operator((ref_field + "." + key if ref_field else key), value)  # type: ignore
 
                 clauses.append(expression)
 
@@ -400,9 +349,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         """
         manager: "Manager" = self.clone()
         for value in values:
-            assert isinstance(
-                value, (dict, Expression)
-            ), "Invalid argument to Raw"
+            assert isinstance(value, (dict, Expression)), "Invalid argument to Raw"
             if isinstance(value, dict):
                 query_expressions = Expression.unpack(value)
                 manager._filter.extend(query_expressions)
@@ -452,9 +399,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager: "Manager" = self.clone()
 
         if kwargs:
-            assert (
-                len(kwargs) == 1
-            ), "`sort` only allows one field per sort. Use `sort(field).sort(field) for multiple fields instead"
+            assert len(kwargs) == 1, (
+                "`sort` only allows one field per sort. Use `sort(field).sort(field) for multiple fields instead"
+            )
             return manager.filter_query(**kwargs)
 
         direction = direction or Order.ASCENDING
@@ -506,10 +453,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             pipeline.extend(manager._lookup_queries)  # list of lookup dicts
 
         # Add unwind stages (if any)
-        if (
-            getattr(manager, "_unwound_fields", None)
-            and manager._unwound_fields is None
-        ):
+        if getattr(manager, "_unwound_fields", None) and manager._unwound_fields is None:
             pipeline.extend(manager._unwound_fields.values())
 
         # Initial filter (same as find)
@@ -557,18 +501,14 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager: "Manager" = self.clone()
 
         filter_query = Expression.compile_many(manager._filter)
-        return cast(
-            int, await manager._collection.count_documents(filter_query)
-        )
+        return cast(int, await manager._collection.count_documents(filter_query))
 
     async def create(self, **kwargs: Any) -> "Document":
         """
         Creates a mongo db document.
         """
         manager: "Manager" = self.clone()
-        instance = await manager.model_class(**kwargs).create(
-            manager._collection
-        )
+        instance = await manager.model_class(**kwargs).create(manager._collection)
         return cast("Document", instance)
 
     async def delete(self) -> int:
@@ -631,19 +571,14 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             raise MultipleDocumentsReturned()
         return cast(T, objects[0])
 
-    async def get_or_create(
-        self, defaults: Union[Dict[str, Any], None] = None
-    ) -> T:
+    async def get_or_create(self, defaults: Union[Dict[str, Any], None] = None) -> T:
         manager: "Manager" = self.clone()
         if not defaults:
             defaults = {}
 
-        data = {
-            expression.key: expression.value for expression in manager._filter
-        }
+        data = {expression.key: expression.value for expression in manager._filter}
         defaults = {
-            (key if isinstance(key, str) else key._name): value
-            for key, value in defaults.items()
+            (key if isinstance(key, str) else key._name): value for key, value in defaults.items()
         }
 
         try:
@@ -675,9 +610,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
         E.g.: Movie.objects.where('this.a < (this.b + this.c)')
         """
-        assert isinstance(
-            condition, (str, Code)
-        ), "The where clause must be a string or a bson.Code"
+        assert isinstance(condition, (str, Code)), (
+            "The where clause must be a string or a bson.Code"
+        )
 
         manager: "Manager" = self.clone()
 
@@ -717,21 +652,12 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             values = model.model_dump()
 
             filter_query = Expression.compile_many(manager._filter)
-            await manager._collection.update_many(
-                filter_query, {"$set": values}
-            )
+            await manager._collection.update_many(filter_query, {"$set": values})
 
             _filter = [
-                expression
-                for expression in manager._filter
-                if expression.key not in values
+                expression for expression in manager._filter if expression.key not in values
             ]
-            _filter.extend(
-                [
-                    Expression(key, "$eq", value)
-                    for key, value in values.items()
-                ]
-            )
+            _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
 
             manager._filter = _filter
         return await manager._all()
@@ -741,9 +667,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         Creates many documents (bulk create).
         """
         manager: "Manager" = self.clone()
-        return await manager.model_class.create_many(
-            models=models, collection=manager._collection
-        )
+        return await manager.model_class.create_many(models=models, collection=manager._collection)
 
     async def bulk_create(self, models: List["Document"]) -> List["Document"]:
         """
@@ -756,9 +680,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager: "Manager" = self.clone()
         return await manager.update_many(**kwargs)
 
-    async def get_document_by_id(
-        self, id: Union[str, bson.ObjectId]
-    ) -> "Document":
+    async def get_document_by_id(self, id: Union[str, bson.ObjectId]) -> "Document":
         """
         Gets a document by the id
         """
@@ -778,9 +700,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 for i, s in enumerate(sub):
                     if i == 0:
                         parts.append(
-                            self.model_class.model_fields[
-                                s
-                            ].refer_to.meta.collection.name
+                            self.model_class.model_fields[s].refer_to.meta.collection.name
                         )
                     else:
                         parts.append(s)

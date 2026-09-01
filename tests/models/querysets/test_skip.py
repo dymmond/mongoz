@@ -43,9 +43,7 @@ async def test_model_skip() -> None:
     await Movie(name="Oppenheimer", year=2003).create()
     await Movie(name="Batman", year=2022).create()
 
-    movies = (
-        await Movie.query().sort(Movie.name, Order.ASCENDING).skip(1).all()
-    )
+    movies = await Movie.query().sort(Movie.name, Order.ASCENDING).skip(1).all()
     assert len(movies) == 1
     assert movies[0].name == "Oppenheimer"
 

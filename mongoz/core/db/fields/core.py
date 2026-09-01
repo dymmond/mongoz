@@ -26,8 +26,8 @@ from pydantic._internal._schema_generation_shared import (
     GetJsonSchemaHandler as GetJsonSchemaHandler,
 )
 from pydantic.json_schema import JsonSchemaValue as JsonSchemaValue
-from pydantic_core.core_schema import CoreSchema
 from pydantic_core.core_schema import (
+    CoreSchema,
     with_info_plain_validator_function as general_plain_validator_function,
 )
 
@@ -148,11 +148,7 @@ class NullableObjectId(FieldFactory, ObjectId):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{
-                key: value
-                for key, value in locals().items()
-                if key not in CLASS_DEFAULTS
-            },
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
         return super().__new__(cls, **kwargs)
 
@@ -172,11 +168,7 @@ class ForeignKey(FieldFactory, ObjectId):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{
-                key: value
-                for key, value in locals().items()
-                if key not in CLASS_DEFAULTS
-            },
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
         field = super().__new__(cls, **kwargs)
 
@@ -210,11 +202,7 @@ class String(FieldFactory, str):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{
-                key: value
-                for key, value in locals().items()
-                if key not in CLASS_DEFAULTS
-            },
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
 
         return super().__new__(cls, **kwargs)
@@ -227,9 +215,7 @@ class Number(FieldFactory):
         maximum = kwargs.get("maximum", None)
 
         if (minimum is not None and maximum is not None) and minimum > maximum:
-            raise FieldDefinitionError(
-                detail="'minimum' cannot be bigger than 'maximum'"
-            )
+            raise FieldDefinitionError(detail="'minimum' cannot be bigger than 'maximum'")
 
     def validate_field_value(self, value: int) -> Union[Type["Number"], int]:
         errors = []
@@ -240,10 +226,7 @@ class Number(FieldFactory):
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must be greater than or equals to "
-                            f"{self.minimum}"
-                        ),
+                        (f"Value must be greater than or equals to {self.minimum}"),
                     ),
                 }
             )
@@ -254,10 +237,7 @@ class Number(FieldFactory):
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must be less than or equals to "
-                            f"{self.maximum}"
-                        ),
+                        (f"Value must be less than or equals to {self.maximum}"),
                     ),
                 }
             )
@@ -286,11 +266,7 @@ class Integer(Number, int):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{
-                k: v
-                for k, v in locals().items()
-                if k not in ["cls", "__class__", "kwargs"]
-            },
+            **{k: v for k, v in locals().items() if k not in ["cls", "__class__", "kwargs"]},
         }
         return super().__new__(cls, **kwargs)
 
@@ -303,10 +279,7 @@ class Integer(Number, int):
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must be greater than or equals to "
-                            f"{self.minimum}"
-                        ),
+                        (f"Value must be greater than or equals to {self.minimum}"),
                     ),
                 }
             )
@@ -317,10 +290,7 @@ class Integer(Number, int):
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must be less than or equals to "
-                            f"{self.maximum}"
-                        ),
+                        (f"Value must be less than or equals to {self.maximum}"),
                     ),
                 }
             )
@@ -347,11 +317,7 @@ class Double(Number, float):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{
-                key: value
-                for key, value in locals().items()
-                if key not in CLASS_DEFAULTS
-            },
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
         return super().__new__(cls, **kwargs)
 
@@ -371,11 +337,7 @@ class Decimal(Number, decimal.Decimal):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{
-                k: v
-                for k, v in locals().items()
-                if k not in ["cls", "__class__", "kwargs"]
-            },
+            **{k: v for k, v in locals().items() if k not in ["cls", "__class__", "kwargs"]},
         }
         return super().__new__(cls, **kwargs)
 
@@ -385,12 +347,7 @@ class Decimal(Number, decimal.Decimal):
 
         max_digits = kwargs.get("max_digits")
         decimal_places = kwargs.get("decimal_places")
-        if (
-            max_digits is None
-            or max_digits < 0
-            or decimal_places is None
-            or decimal_places < 0
-        ):
+        if max_digits is None or max_digits < 0 or decimal_places is None or decimal_places < 0:
             raise FieldDefinitionError(
                 "max_digits and decimal_places are required for DecimalField"
             )
@@ -419,10 +376,7 @@ class Decimal(Number, decimal.Decimal):
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must be greater than or equals to "
-                            f"{self.minimum}"
-                        ),
+                        (f"Value must be greater than or equals to {self.minimum}"),
                     ),
                 }
             )
@@ -433,10 +387,7 @@ class Decimal(Number, decimal.Decimal):
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            "Value must be less than or equals to "
-                            f"{self.maximum}"
-                        ),
+                        (f"Value must be less than or equals to {self.maximum}"),
                     ),
                 }
             )
@@ -461,10 +412,7 @@ class Decimal(Number, decimal.Decimal):
                     "input": value,
                     "type": pydantic_core.PydanticCustomError(
                         "value_error",
-                        (
-                            f"Value must have at most {self.max_digits} "
-                            "total digits"
-                        ),
+                        (f"Value must have at most {self.max_digits} total digits"),
                     ),
                 }
             )
@@ -505,11 +453,7 @@ class Boolean(FieldFactory, int):
     ) -> BaseField:
         kwargs = {
             **kwargs,
-            **{
-                key: value
-                for key, value in locals().items()
-                if key not in CLASS_DEFAULTS
-            },
+            **{key: value for key, value in locals().items() if key not in CLASS_DEFAULTS},
         }
         return super().__new__(cls, **kwargs)
 
@@ -523,9 +467,7 @@ class AutoNowMixin(FieldFactory):
         **kwargs: Any,
     ) -> BaseField:
         if auto_now_add and auto_now:
-            raise FieldDefinitionError(
-                "'auto_now' and 'auto_now_add' cannot be both True"
-            )
+            raise FieldDefinitionError("'auto_now' and 'auto_now_add' cannot be both True")
 
         if auto_now_add or auto_now:
             kwargs["read_only"] = True
@@ -605,9 +547,7 @@ class Binary(FieldFactory, bytes):
 
     _type = bytes
 
-    def __new__(
-        cls, *, max_length: Optional[int] = 0, **kwargs: Any
-    ) -> BaseField:
+    def __new__(cls, *, max_length: Optional[int] = 0, **kwargs: Any) -> BaseField:
         kwargs = {
             **kwargs,
             **{k: v for k, v in locals().items() if k not in CLASS_DEFAULTS},
@@ -618,9 +558,7 @@ class Binary(FieldFactory, bytes):
     def validate_field(cls, **kwargs: Any) -> None:
         max_length = kwargs.get("max_length", None)
         if max_length is None or max_length <= 0:
-            raise FieldDefinitionError(
-                detail="Parameter 'max_length' is required for BinaryField"
-            )
+            raise FieldDefinitionError(detail="Parameter 'max_length' is required for BinaryField")
 
 
 class UUID(FieldFactory, uuid.UUID):

@@ -37,7 +37,9 @@ class DocumentRow(MongozBaseModel):
                 only_fields
                 if is_only_fields
                 else [
-                    cls.validate_id_field(name) for name in row.keys() if name not in defer_fields  # type: ignore
+                    cls.validate_id_field(name)
+                    for name in row.keys()
+                    if name not in defer_fields  # type: ignore
                 ]
             )
 
@@ -59,23 +61,15 @@ class DocumentRow(MongozBaseModel):
                 column = cls.validate_id_field(column)
                 if column not in item:
                     if settings.lookup_prefix in column:
-                        loopkup_field = column.split(settings.lookup_prefix)[
-                            -1
-                        ]
+                        loopkup_field = column.split(settings.lookup_prefix)[-1]
                         values = []
                         for data in value:
                             if data.get("_id"):
                                 data["id"] = data.pop("_id", None)
-                            values.append(
-                                cls.model_fields[loopkup_field].refer_to(
-                                    **data
-                                )
-                            )
-                        item[
-                            cls.model_fields[
-                                loopkup_field
-                            ].refer_to.meta.collection.name
-                        ] = values
+                            values.append(cls.model_fields[loopkup_field].refer_to(**data))
+                        item[cls.model_fields[loopkup_field].refer_to.meta.collection.name] = (
+                            values
+                        )
                     else:
                         item[column] = value
 

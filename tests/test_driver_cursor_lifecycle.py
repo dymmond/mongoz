@@ -64,9 +64,7 @@ class AggregateCollection:
         self.cursor = cursor
         self.pipelines: List[List[Dict[str, Any]]] = []
 
-    async def aggregate(
-        self, pipeline: List[Dict[str, Any]]
-    ) -> RecordingCursor:
+    async def aggregate(self, pipeline: List[Dict[str, Any]]) -> RecordingCursor:
         self.pipelines.append(pipeline)
         return self.cursor
 

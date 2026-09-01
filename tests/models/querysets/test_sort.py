@@ -81,11 +81,6 @@ async def test_model_sort() -> None:
     assert movies[0].name == "Batman"
     assert movies[1].name == "Oppenheimer"
 
-    movies = (
-        await Movie.query()
-        .sort(Q.desc(Movie.name))
-        .sort(Q.asc(Movie.year))
-        .all()
-    )
+    movies = await Movie.query().sort(Q.desc(Movie.name)).sort(Q.asc(Movie.year)).all()
     assert movies[0].name == "Oppenheimer"
     assert movies[1].name == "Batman"

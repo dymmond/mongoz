@@ -72,9 +72,7 @@ def integration_client():
 
 async def test_lilya_integration_create(integration_client: TestClient) -> None:
     integration_client.post("/clear")
-    response = integration_client.post(
-        "/create", json={"name": "Barbie", "year": 2023}
-    )
+    response = integration_client.post("/create", json={"name": "Barbie", "year": 2023})
 
     assert response.json()["name"] == "Barbie"
     assert response.json()["year"] == 2023

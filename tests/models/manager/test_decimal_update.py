@@ -18,9 +18,7 @@ class Badges(mongoz.EmbeddedDocument):
 
 class Achievement(mongoz.Document):
     name: str = mongoz.String()
-    total_score: Decimal = mongoz.Decimal(
-        max_digits=5, decimal_places=2, null=True
-    )  # noqa
+    total_score: Decimal = mongoz.Decimal(max_digits=5, decimal_places=2, null=True)  # noqa
     badges: List[Badges] = mongoz.Array(Badges, null=True)
 
     class Meta:
@@ -50,8 +48,6 @@ async def test_decimal_on_update() -> None:
 
     arch = await Achievement.objects.last()
 
-    await Achievement.objects.filter().update(
-        total_score=Decimal("40"), badges=badges
-    )
+    await Achievement.objects.filter().update(total_score=Decimal("40"), badges=badges)
 
     arch = await Achievement.objects.last()

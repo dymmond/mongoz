@@ -44,20 +44,12 @@ async def test_exists_true() -> None:
     movies = await Movie.objects.all()
     assert len(movies) == 0
 
-    await Movie.objects.create(
-        name="Forrest Gump", year=2003, is_published=True
-    )
+    await Movie.objects.create(name="Forrest Gump", year=2003, is_published=True)
 
     assert await Movie.objects.exists(name="Forrest Gump") is True
     assert await Movie.objects.exists(name="Forrest Gump", year=2003) is True
     assert await Movie.objects.exists(name="Forrest Gump", year=2004) is False
 
     assert await Movie.objects.filter(name="Forrest Gump").exists() is True
-    assert (
-        await Movie.objects.filter(name="Forrest Gump", year=2003).exists()
-        is True
-    )
-    assert (
-        await Movie.objects.filter(name="Forrest Gump", year=2004).exists()
-        is False
-    )
+    assert await Movie.objects.filter(name="Forrest Gump", year=2003).exists() is True
+    assert await Movie.objects.filter(name="Forrest Gump", year=2004).exists() is False

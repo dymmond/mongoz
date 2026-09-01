@@ -43,18 +43,10 @@ async def test_model_limit() -> None:
     await Movie(name="Oppenheimer", year=2023).create()
     await Movie(name="Batman", year=2022).create()
 
-    movies = (
-        await Movie.query().sort(Movie.name, Order.ASCENDING).limit(1).all()
-    )
+    movies = await Movie.query().sort(Movie.name, Order.ASCENDING).limit(1).all()
     assert len(movies) == 1
     assert movies[0].name == "Batman"
 
-    movies = (
-        await Movie.query()
-        .sort(Movie.name, Order.ASCENDING)
-        .skip(1)
-        .limit(1)
-        .all()
-    )
+    movies = await Movie.query().sort(Movie.name, Order.ASCENDING).skip(1).limit(1).all()
     assert len(movies) == 1
     assert movies[0].name == "Oppenheimer"
