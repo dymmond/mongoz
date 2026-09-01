@@ -383,6 +383,11 @@ This is a classic operation that is very useful depending on which operations yo
 Used to save an existing object in the database. Slighly different from the [update](#update) and
 simpler to read.
 
+`save()` synchronizes every modeled field from the instance with `$set`. It is intentionally the
+full modeled-state API: if another writer changes a modeled field after this instance was read,
+`save()` can overwrite that change. Use `update(field=value)` when you intend to patch selected
+fields without overwriting unrelated concurrent changes.
+
 === "Manager"
 
     ```python
@@ -473,7 +478,11 @@ Or directly in the instance.
 
 ### Update
 
-You can update document instances by calling this operator.
+You can patch document instances by calling this operator. Only supplied fields are sent in the
+atomic MongoDB `$set`; inherited fields, aliases, validators, BSON conversion, and false/zero/empty
+values are preserved. Unknown fields and the immutable identifier raise `InvalidKeyError` instead
+of disappearing silently. Field removal with `$unset` is not modeled by this API; use the native
+[bulk write escape hatch](#collection-level-bulk-write) when that MongoDB operation is required.
 
 === "Manager"
 
@@ -929,7 +938,7 @@ a new one in case of not existing.
 === "Manager"
 
     ```python
-    user = await User.objects.get_or_create(email="foo@bar.com", defaults={
+    user = await User.objects.filter(email="foo@bar.com").get_or_create(defaults={
         "is_active": False, "first_name": "Foo"
     })
     ```
@@ -937,13 +946,18 @@ a new one in case of not existing.
 === "QuerySet"
 
     ```python
-    user = await User.query().get_or_create(
-        {User.is_active: False, User.first_name: "Foo", User.email: "foo@bar.com"}
+    user = await User.query(User.email == "foo@bar.com").get_or_create(
+        {"is_active": False, "first_name": "Foo"}
     )
     ```
 
 This will query the `User` document with the `email` as the lookup key. If it doesn't exist, then it
 will use that value with the `defaults` provided to create a new instance.
+
+The lookup and creation documents are distinct. Equality predicates contribute creation values;
+comparison, regex, inclusion, logical, and raw operator predicates remain lookup-only. The helper
+uses one atomic MongoDB upsert. Concurrent callers are deterministic when a unique index protects
+the lookup key; native `DuplicateKeyError` is preserved for other uniqueness races.
 
 ### Bulk create
 
@@ -1004,6 +1018,46 @@ When you need to update many instances in one go, or `in bulk`.
 
     await User.query().bulk_update(is_active=False)
     ```
+
+### Aggregation
+
+`Document.aggregate()` is a deliberately native, materialized aggregation escape hatch. It accepts
+a PyMongo-compatible pipeline, an optional collection override, an explicit session, and native
+aggregate keyword arguments. Mongoz closes the cursor after materialization.
+
+```python
+totals = await User.aggregate(
+    [
+        {"$match": {"is_active": True}},
+        {"$group": {"_id": "$country", "total": {"$sum": 1}}},
+    ],
+    session=session,
+)
+```
+
+Typed aggregation expressions and a streaming aggregation DSL are deliberately deferred. Use the
+native pipeline semantics directly.
+
+### Collection-level bulk write
+
+`Document.bulk_write()` accepts PyMongo write models and returns the native `BulkWriteResult`.
+Ordered/unordered behavior, partial failures, `BulkWriteError`, sessions, and collection overrides
+retain their PyMongo meanings.
+
+```python
+from pymongo import InsertOne, UpdateOne
+
+result = await User.bulk_write(
+    [
+        InsertOne({"email": "first@example.com", "is_active": True}),
+        UpdateOne({"email": "second@example.com"}, {"$set": {"is_active": False}}),
+    ],
+    ordered=False,
+    session=session,
+)
+```
+
+This is a collection-level escape hatch. Client-level multi-namespace bulk write is not wrapped.
 
 ## Note
 

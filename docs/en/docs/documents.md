@@ -273,6 +273,17 @@ For example, using the previous `User` document, it would be something like this
 await User.create_indexes()
 ```
 
+Index reconciliation has separate inspection, planning, and execution stages. Use
+`await User.plan_indexes()` to inspect a collection without changing it. Each `IndexPlanEntry`
+reports `already_correct`, `create`, `recreate`, `retain_unmanaged`, or `name_conflict`.
+`create_indexes()` and `check_indexes()` create missing declarations but never delete `_id_` or an
+unmanaged/manual index.
+
+If a declared name exists with a different specification, normal reconciliation stops before
+mutation. `await User.check_indexes(force_drop=True)` explicitly authorizes dropping and recreating
+that same declared name only. An equivalent specification under a different name is an explicit
+conflict because Mongoz cannot safely infer ownership of the existing index.
+
 #### Create individual indexes
 
 What if you only want to manually create an index? Well that is also possible by calling
@@ -340,8 +351,10 @@ await User.drop_index("name")
 
 #### Document checks
 
-If you also want to make sure that you run the proper checks for the indexes, for example, an index was dropped
-from the document and you want to make sure that is reflected, you can also do it.
+Use `check_indexes()` to execute a previously inspectable reconciliation policy. Removing an index
+from model metadata does not authorize deleting the existing database index; it becomes unmanaged
+and is retained. Delete it by exact name through an explicit migration or use `drop_indexes()` only
+when the requested destructive scope is intentional.
 
 The syntax is very clear ans simple:
 

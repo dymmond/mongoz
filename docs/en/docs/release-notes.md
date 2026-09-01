@@ -4,6 +4,17 @@
 
 ### Changed
 
+- Instance `update()` and query updates now validate inherited fields and aliases and write only the
+  requested patch. Unknown update keys raise `InvalidKeyError`; `save()` remains the explicit
+  all-modeled-fields synchronization API.
+- `get_or_create()` now keeps operator predicates out of insertion values and performs a native
+  atomic upsert while preserving duplicate-key errors.
+- Index reconciliation now exposes a side-effect-free `IndexPlan`, retains unmanaged and `_id_`
+  indexes, scopes all inspection/execution to the selected collection, and requires explicit
+  authorization for same-name destructive recreation.
+- `Document.aggregate()` and `Document.bulk_write()` provide session-aware, collection-targeted
+  PyMongo-compatible escape hatches with native results and errors.
+
 - Replaced Motor with native PyMongo Async. Mongoz now requires `pymongo>=4.13,<5.0`; 4.13 is
   the first release where the async API is generally available.
 - `Registry` now owns one reusable `AsyncMongoClient`, provides idempotent async `close()`, supports
