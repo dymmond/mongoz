@@ -1,0 +1,54 @@
+---
+name: Security
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" # v4
+      - uses: "github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938" # v4
+        with:
+          languages: python
+      - uses: "github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938" # v4
+
+  dependency-audit:
+    name: Dependency vulnerability audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" # v4
+      - uses: "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" # v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install "hatch==1.16.5"
+      - run: hatch run security:audit
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" # v4
+      - uses: "actions/dependency-review-action@3c4e3dcb1aa7874d2c16be7d79418e9b7efd6261" # v4.8.2

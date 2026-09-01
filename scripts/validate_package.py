@@ -36,6 +36,54 @@ def run(command: list[str], *, cwd: Path = ROOT, env: dict[str, str] | None = No
     subprocess.run(command, cwd=cwd, env=env, check=True)
 
 
+def build_smoke_source(checkout: Path) -> str:
+    """Build credential-independent source for an installed-wheel smoke process."""
+    return textwrap.dedent(
+        f"""
+        import asyncio
+        import os
+        from importlib.metadata import metadata, version
+        from pathlib import Path
+
+        import mongoz
+
+        checkout = Path({str(checkout)!r}).resolve()
+        imported = Path(mongoz.__file__).resolve()
+        if imported == checkout or checkout in imported.parents:
+            raise RuntimeError(f"wheel smoke imported checkout source: {{imported}}")
+        if version("mongoz") != mongoz.__version__:
+            raise RuntimeError(
+                f"version mismatch: metadata={{version('mongoz')}} module={{mongoz.__version__}}"
+            )
+        requirements = metadata("mongoz").get_all("Requires-Dist") or []
+        if any(requirement.lower().startswith("orjson") for requirement in requirements):
+            raise RuntimeError(f"unused orjson dependency remains: {{requirements}}")
+        for required_name in ("pydantic", "pydantic-settings", "pymongo"):
+            if not any(
+                requirement.lower().startswith(required_name) for requirement in requirements
+            ):
+                raise RuntimeError(
+                    f"missing direct runtime dependency {{required_name}}: {{requirements}}"
+                )
+
+        async def smoke() -> None:
+            registry = mongoz.Registry(os.environ["DATABASE_URI"])
+            try:
+                result = await registry.driver.admin.command("ping")
+                if result.get("ok") != 1.0:
+                    raise RuntimeError(f"installed-wheel MongoDB ping failed: {{result}}")
+            finally:
+                await registry.close()
+
+        asyncio.run(smoke())
+        print(
+            f"Imported installed wheel from {{imported}} "
+            f"with PyMongo {{version('pymongo')}}"
+        )
+        """
+    )
+
+
 def main() -> None:
     """Build, inspect, install, import, and exercise the wheel."""
     ty_requirement = get_ty_requirement()
@@ -81,6 +129,7 @@ def main() -> None:
 
         clean_environment = os.environ.copy()
         clean_environment.pop("PYTHONPATH", None)
+        clean_environment.setdefault("DATABASE_URI", DEFAULT_DATABASE_URI)
         run(
             [str(python), "-m", "pip", "install", "--disable-pip-version-check", str(wheels[0])],
             cwd=isolated_root,
@@ -132,39 +181,7 @@ def main() -> None:
             env=clean_environment,
         )
 
-        smoke = textwrap.dedent(
-            f"""
-            import asyncio
-            from importlib.metadata import version
-            from pathlib import Path
-
-            import mongoz
-
-            checkout = Path({str(ROOT)!r}).resolve()
-            imported = Path(mongoz.__file__).resolve()
-            if imported == checkout or checkout in imported.parents:
-                raise RuntimeError(f"wheel smoke imported checkout source: {{imported}}")
-            if version("mongoz") != mongoz.__version__:
-                raise RuntimeError(
-                    f"version mismatch: metadata={{version('mongoz')}} module={{mongoz.__version__}}"
-                )
-
-            async def smoke() -> None:
-                registry = mongoz.Registry({os.environ.get("DATABASE_URI", DEFAULT_DATABASE_URI)!r})
-                try:
-                    result = await registry.driver.admin.command("ping")
-                    if result.get("ok") != 1.0:
-                        raise RuntimeError(f"installed-wheel MongoDB ping failed: {{result}}")
-                finally:
-                    await registry.close()
-
-            asyncio.run(smoke())
-            print(
-                f"Imported installed wheel from {{imported}} "
-                f"with PyMongo {{version('pymongo')}}"
-            )
-            """
-        )
+        smoke = build_smoke_source(ROOT)
         run([str(python), "-I", "-c", smoke], cwd=isolated_root, env=clean_environment)
 
         run(
@@ -176,6 +193,8 @@ def main() -> None:
                 "--disable-pip-version-check",
                 "--force-reinstall",
                 "pymongo==4.13.0",
+                "pydantic==2.10.0",
+                "pydantic-settings==2.9.0",
             ],
             cwd=isolated_root,
             env=clean_environment,
@@ -185,6 +204,12 @@ def main() -> None:
             """
             if version("pymongo") != "4.13.0":
                 raise RuntimeError(f"PyMongo floor mismatch: {version('pymongo')}")
+            if version("pydantic") != "2.10.0":
+                raise RuntimeError(f"Pydantic floor mismatch: {version('pydantic')}")
+            if version("pydantic-settings") != "2.9.0":
+                raise RuntimeError(
+                    f"Pydantic Settings floor mismatch: {version('pydantic-settings')}"
+                )
             """
         )
         run(

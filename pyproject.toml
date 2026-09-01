@@ -37,7 +37,11 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP",
 ]
-dependencies = ["pymongo>=4.13,<5.0", "pydantic-settings>=2.9.0", "orjson>=3.9.5"]
+dependencies = [
+    "pydantic>=2.10,<3.0",
+    "pydantic-settings>=2.9,<3.0",
+    "pymongo>=4.13,<5.0",
+]
 keywords = ["mongoz", "odm", "nosql", "mongodb"]
 
 [project.urls]
@@ -57,7 +61,6 @@ testing = [
     "anyio==4.14.2",
     "httpx==0.28.1",
     "lilya==0.27.1",
-    "orjson==3.12.0",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
     "pymongo==4.17.0",
@@ -104,11 +107,11 @@ dependencies = [
 clean_pyc = "find . -type f -name \"*.pyc\" -delete"
 clean_pyi = "find . -type f -name \"*.pyi\" -delete"
 clean_pycache = "find . -type d -name \"*__pycache__*\" -delete"
-lint = "ruff check mongoz tests scripts {args}"
-format-check = "ruff format --check mongoz tests scripts {args}"
+lint = "ruff check mongoz tests scripts benchmarks {args}"
+format-check = "ruff format --check mongoz tests scripts benchmarks {args}"
 format = [
-    "ruff check --fix mongoz tests scripts {args}",
-    "ruff format mongoz tests scripts {args}",
+    "ruff check --fix mongoz tests scripts benchmarks {args}",
+    "ruff format mongoz tests scripts benchmarks {args}",
 ]
 typing = "ty check {args}"
 typing-negative = "python scripts/validate_negative_typing.py {args}"
@@ -171,6 +174,12 @@ dependencies = []
 
 [tool.hatch.envs.package.scripts]
 validate = "python scripts/validate_package.py {args}"
+
+[tool.hatch.envs.security]
+dependencies = ["pip-audit==2.10.1"]
+
+[tool.hatch.envs.security.scripts]
+audit = "pip-audit --strict . {args}"
 
 
 [tool.ty.src]
