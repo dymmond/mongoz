@@ -16,6 +16,7 @@ EXPECTED_RULES = {
     "query_result.py": ["invalid-assignment"],
     "registry_url.py": ["invalid-argument-type"],
     "session_binding.py": ["invalid-argument-type"],
+    "signal_receiver.py": ["invalid-argument-type"],
 }
 
 

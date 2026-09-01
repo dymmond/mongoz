@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-import asyncio
-from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Type, Union
+import inspect
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Tuple, Type, Union
 
 from mongoz.exceptions import SignalError
 from mongoz.utils.inspect import func_accepts_kwargs
 
 if TYPE_CHECKING:
     from mongoz import Document
+
+
+Receiver = Callable[..., Awaitable[object]]
 
 
 def make_id(target: Any) -> Union[int, Tuple[int, int]]:
@@ -28,14 +31,20 @@ class Signal:
         """
         Creates a new signal.
         """
-        self.receivers: Dict[Union[int, Tuple[int, int]], Callable] = {}
+        self.receivers: Dict[Union[int, Tuple[int, int]], Receiver] = {}
 
-    def connect(self, receiver: Callable) -> None:
+    def connect(self, receiver: Receiver) -> None:
         """
         Connects a given receiver to the the signal.
         """
         if not callable(receiver):
-            raise SignalError("The signals should be callables")
+            raise SignalError("Signal receivers must be callable.")
+
+        receiver_call = type(receiver).__call__
+        if not (
+            inspect.iscoroutinefunction(receiver) or inspect.iscoroutinefunction(receiver_call)
+        ):
+            raise SignalError("Signal receivers must be async callables.")
 
         if not func_accepts_kwargs(receiver):
             raise SignalError("Signal receivers must accept keyword arguments (**kwargs).")
@@ -44,20 +53,20 @@ class Signal:
         if key not in self.receivers:
             self.receivers[key] = receiver
 
-    def disconnect(self, receiver: Callable) -> bool:
+    def disconnect(self, receiver: Receiver) -> bool:
         """
         Removes the receiver from the signal.
         """
         key = make_id(receiver)
-        func: Union[Callable, None] = self.receivers.pop(key, None)
+        func: Union[Receiver, None] = self.receivers.pop(key, None)
         return True if func is not None else False
 
     async def send(self, sender: Type["Document"], **kwargs: Any) -> None:
         """
         Sends the notification to all the receivers.
         """
-        receivers = [func(sender=sender, **kwargs) for func in self.receivers.values()]
-        await asyncio.gather(*receivers)
+        for receiver in tuple(self.receivers.values()):
+            await receiver(sender=sender, **kwargs)
 
 
 class Broadcaster(dict):
@@ -66,5 +75,5 @@ class Broadcaster(dict):
 
     def __setattr__(self, __name: str, __value: Signal) -> None:
         if not isinstance(__value, Signal):
-            raise SignalError(f"{__value} is not valid signal")
+            raise SignalError(f"{__value!r} is not a valid Signal.")
         self[__name] = __value
