@@ -12,8 +12,8 @@ from pymongo.results import BulkWriteResult
 from typing_extensions import assert_type
 
 import mongoz
-from mongoz import Database, Document, IndexPlan, Manager, QuerySet, Registry
-from mongoz.core.connection.collections import Collection
+from mongoz import Collection, Database, Document, IndexPlan, Manager, QuerySet, Registry
+from mongoz.protocols import QuerySetProtocol
 
 registry = Registry("mongodb://localhost:27017")
 database = registry.get_database("typing")
@@ -76,6 +76,8 @@ assert_type(registry, Registry)
 assert_type(database, Database)
 assert_type(collection, Collection)
 assert_type(registry.driver, AsyncMongoClient[Dict[str, Any]])
+assert_type(database.driver, AsyncDatabase[Dict[str, Any]])
+assert_type(collection.driver, AsyncCollection[Dict[str, Any]])
 assert_type(database._db, AsyncDatabase[Dict[str, Any]])
 assert_type(collection._collection, AsyncCollection[Dict[str, Any]])
 
@@ -95,6 +97,8 @@ async def verify_async_contracts(session: AsyncClientSession) -> None:
     assert_type(await chained.values_list("name", flat=True), list[Any])
 
     query = User.query().using_session(session)
+    protocol_query: QuerySetProtocol[User] = query
+    assert_type(await protocol_query.all(), list[User])
     assert_type(query, QuerySet[User])
     assert_type(await query.all(), list[User])
     assert_type(await query.first(), Optional[User])

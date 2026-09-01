@@ -46,6 +46,11 @@ class Database:
     def codec_options(self) -> CodecOptions:
         return CodecOptions(**self._codec_options)
 
+    @property
+    def driver(self) -> AsyncDatabase[Dict[str, Any]]:
+        """Expose the registry-owned native PyMongo Async database."""
+        return self._db
+
     def get_collection(self, name: str) -> Collection:
         collection = self._db.get_collection(name, codec_options=self.codec_options)
         return Collection(name, collection=collection)

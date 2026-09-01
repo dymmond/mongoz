@@ -2,6 +2,7 @@ __version__ = "0.13.3"
 
 from .conf import settings
 from .conf.global_settings import MongozSettings
+from .core.connection.collections import Collection
 from .core.connection.database import Database
 from .core.connection.registry import Registry
 from .core.db import fields
@@ -59,6 +60,7 @@ __all__ = [
     "ArrayList",
     "Binary",
     "Boolean",
+    "Collection",
     "Database",
     "Date",
     "DateTime",

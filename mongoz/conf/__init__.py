@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, cast
+from typing import cast
+
+from pydantic import ValidationError
 
 from mongoz.conf.functional import LazyObject, empty
+from mongoz.conf.global_settings import MongozSettings
 from mongoz.conf.module_import import import_string
 from mongoz.exceptions import ImproperlyConfigured
-
-if TYPE_CHECKING:
-    from mongoz.conf.global_settings import MongozSettings
 
 ENVIRONMENT_VARIABLE = "MONGOZ_SETTINGS_MODULE"
 
@@ -30,13 +30,30 @@ class MongozLazySettings(LazyObject):
             ENVIRONMENT_VARIABLE, "mongoz.conf.global_settings.MongozSettings"
         )
 
-        settings: type[MongozSettings] = import_string(settings_module)
+        try:
+            settings_class = import_string(settings_module)
+        except (ImportError, AttributeError) as exc:
+            raise ImproperlyConfigured(
+                f"Could not import settings class {settings_module!r}: {exc}"
+            ) from exc
 
-        for setting, _ in settings().model_dump().items():
+        if not isinstance(settings_class, type) or not issubclass(settings_class, MongozSettings):
+            raise ImproperlyConfigured(
+                f"Settings class {settings_module!r} must inherit from MongozSettings."
+            )
+
+        try:
+            configured_settings = settings_class()
+        except (TypeError, ValidationError) as exc:
+            raise ImproperlyConfigured(
+                f"Could not configure settings class {settings_module!r}: {exc}"
+            ) from exc
+
+        for setting in configured_settings.model_dump():
             if not setting.islower():
                 raise ImproperlyConfigured(f"Setting {setting!r} must be lowercase.")
 
-        self._wrapped = settings()
+        self._wrapped = configured_settings
 
     def __repr__(self: MongozLazySettings) -> str:
         # Hardcode the class name as otherwise it yields 'MongozSettings'.
@@ -45,7 +62,7 @@ class MongozLazySettings(LazyObject):
         return f'<MongozLazySettings "{self._wrapped.__class__.__name__}">'
 
     @property
-    def configured(self) -> Any:
+    def configured(self) -> bool:
         """Return True if the settings have already been configured."""
         return self._wrapped is not empty
 

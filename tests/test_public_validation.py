@@ -58,6 +58,7 @@ async def test_query_operator_validation_is_not_assertion_based() -> None:
 
 
 async def test_unrelated_nested_field_access_has_context() -> None:
+    assert hasattr(ValidationDocument.name, "__func__") is False
     with pytest.raises(InvalidKeyError, match=r"name.*missing"):
         _ = ValidationDocument.name.missing
 

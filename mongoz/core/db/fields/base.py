@@ -180,6 +180,9 @@ class MongozField:
         return super().__hash__()
 
     def __getattr__(self, name: str) -> Any:
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
+
         model_class = self.model_class
         model_fields = getattr(model_class, "__mongoz_fields__", None)
         if model_class is None or not isinstance(model_fields, dict):

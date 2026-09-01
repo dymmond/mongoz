@@ -81,7 +81,7 @@ class Registry:
         if not isinstance(database, Database):
             await self._client.drop_database(database)
         else:
-            await self._client.drop_database(database._db)
+            await self._client.drop_database(database.driver)
 
     def get_database(self, name: str) -> Database:
         self._ensure_open()
