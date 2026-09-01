@@ -6,7 +6,8 @@
 
 - Instance `update()` and query updates now validate inherited fields and aliases and write only the
   requested patch. Unknown update keys raise `InvalidKeyError`; `save()` remains the explicit
-  all-modeled-fields synchronization API.
+  all-modeled-fields synchronization API. Acknowledged instance writes raise `DocumentNotFound`
+  when their persisted identifier no longer exists.
 - `get_or_create()` now keeps operator predicates out of insertion values and performs a native
   atomic upsert while preserving duplicate-key errors.
 - Index reconciliation now exposes a side-effect-free `IndexPlan`, retains unmanaged and `_id_`

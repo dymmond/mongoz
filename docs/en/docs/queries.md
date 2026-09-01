@@ -386,7 +386,8 @@ simpler to read.
 `save()` synchronizes every modeled field from the instance with `$set`. It is intentionally the
 full modeled-state API: if another writer changes a modeled field after this instance was read,
 `save()` can overwrite that change. Use `update(field=value)` when you intend to patch selected
-fields without overwriting unrelated concurrent changes.
+fields without overwriting unrelated concurrent changes. An acknowledged save whose identifier no
+longer exists raises `DocumentNotFound` instead of reporting a silent success.
 
 === "Manager"
 
@@ -482,7 +483,8 @@ You can patch document instances by calling this operator. Only supplied fields 
 atomic MongoDB `$set`; inherited fields, aliases, validators, BSON conversion, and false/zero/empty
 values are preserved. Unknown fields and the immutable identifier raise `InvalidKeyError` instead
 of disappearing silently. Field removal with `$unset` is not modeled by this API; use the native
-[bulk write escape hatch](#collection-level-bulk-write) when that MongoDB operation is required.
+[bulk write escape hatch](#collection-level-bulk-write) when that MongoDB operation is required. An
+acknowledged instance patch whose identifier no longer exists raises `DocumentNotFound`.
 
 === "Manager"
 
