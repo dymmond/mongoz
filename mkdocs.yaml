@@ -101,6 +101,7 @@ nav:
       - Troubleshooting: operations/troubleshooting.md
   - Project:
       - Contributing: project/contributing.md
+      - Releasing: project/releasing.md
       - Portuguese documentation: project/portuguese.md
       - Release notes: release-notes.md
       - Sponsorship: project/sponsorship.md

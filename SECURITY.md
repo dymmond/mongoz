@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-Mongoz is currently pre-1.0. Security fixes are made on the latest maintained
-release line and the default development branch. Older releases should be
+Security fixes are made on the latest maintained Mongoz 0.x release line and
+the default development branch. Older releases should be
 upgraded to the latest release before a report is assessed. Maintainers may
 announce a backport when the affected population or upgrade risk justifies one.
 
