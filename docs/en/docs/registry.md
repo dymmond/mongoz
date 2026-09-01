@@ -54,6 +54,26 @@ async with Registry(url="mongodb://localhost:27017") as registry:
 `registry.driver` exposes the registry-owned native PyMongo `AsyncMongoClient`. Its lifecycle still
 belongs to the Registry; use `registry.close()` for cleanup.
 
+## Sessions and transactions
+
+PyMongo remains the owner of session and transaction lifecycle. Start a session from
+`registry.driver`, then bind it to an isolated manager or queryset with `using_session()`. The bound
+session is propagated to reads, creates, updates, deletes, counts, and distinct queries. Instance
+writes accept the same session explicitly through `create(session=...)`,
+`save(session=...)`, `update(session=...)`, and `delete(session=...)`.
+
+```python
+async with registry.driver.start_session() as session:
+    async with await session.start_transaction():
+        user = await User.objects.using_session(session).create(name="Mongoz")
+        user.name = "MongoZ"
+        await user.save(session=session)
+```
+
+A PyMongo session is sequential and must not be used concurrently by multiple tasks. Mongoz does
+not create an ambient or implicit session; every operation that belongs to the transaction must use
+the session-bound query or pass the session to the instance write.
+
 ## Custom registry
 
 Can you have your own custom Registry? Yes, of course! You simply need to subclass the `Registry`

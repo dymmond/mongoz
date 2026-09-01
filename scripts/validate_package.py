@@ -80,10 +80,39 @@ def main() -> None:
                     await registry.close()
 
             asyncio.run(smoke())
-            print(f"Imported installed wheel from {{imported}}")
+            print(
+                f"Imported installed wheel from {{imported}} "
+                f"with PyMongo {{version('pymongo')}}"
+            )
             """
         )
         run([str(python), "-I", "-c", smoke], cwd=isolated_root, env=clean_environment)
+
+        run(
+            [
+                str(python),
+                "-m",
+                "pip",
+                "install",
+                "--disable-pip-version-check",
+                "--force-reinstall",
+                "pymongo==4.13.0",
+            ],
+            cwd=isolated_root,
+            env=clean_environment,
+        )
+        run([str(python), "-m", "pip", "check"], cwd=isolated_root, env=clean_environment)
+        floor_smoke = smoke + textwrap.dedent(
+            """
+            if version("pymongo") != "4.13.0":
+                raise RuntimeError(f"PyMongo floor mismatch: {version('pymongo')}")
+            """
+        )
+        run(
+            [str(python), "-I", "-c", floor_smoke],
+            cwd=isolated_root,
+            env=clean_environment,
+        )
 
 
 if __name__ == "__main__":

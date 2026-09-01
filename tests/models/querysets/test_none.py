@@ -31,7 +31,11 @@ async def prepare_database() -> AsyncGenerator:
 
 
 async def test_model_none() -> None:
+    await Movie(name="Visible", year=2026).create()
+
     queryset = await Movie.query().none()
 
     assert isinstance(queryset, QuerySet)
     assert queryset._collection == Movie.meta.collection._collection
+    assert await queryset.all() == []
+    assert await queryset.count() == 0

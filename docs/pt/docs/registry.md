@@ -32,6 +32,26 @@ Execute `await registry.close()` durante o encerramento da aplicação. O encerr
 e definitivo; um registo fechado não cria outro cliente. Para trabalho delimitado, também pode usar
 `async with Registry(...) as registry`.
 
+## Sessões e transações
+
+O PyMongo continua a gerir o ciclo de vida das sessões e transações. Inicie uma sessão através de
+`registry.driver` e associe-a a um manager ou queryset isolado com `using_session()`. A sessão é
+propagada para leituras, criações, atualizações, eliminações, contagens e consultas distintas. As
+operações de instância aceitam a mesma sessão através de `create(session=...)`, `save(session=...)`,
+`update(session=...)` e `delete(session=...)`.
+
+```python
+async with registry.driver.start_session() as session:
+    async with await session.start_transaction():
+        user = await User.objects.using_session(session).create(name="Mongoz")
+        user.name = "MongoZ"
+        await user.save(session=session)
+```
+
+Uma sessão do PyMongo é sequencial e não deve ser usada concorrentemente por várias tarefas. O
+Mongoz não cria sessões implícitas; cada operação pertencente à transação deve usar a pesquisa com
+sessão ou passar a sessão à operação de instância.
+
 ## Registo personalizado
 
 É possível ter o seu próprio Registo personalizado? Sim, claro! Basta criar uma subclasse da classe `Registry` e continuar a partir daí, como qualquer outra classe Python.

@@ -6,6 +6,7 @@ import pytest
 
 import mongoz
 from mongoz import Document, Index, IndexType, ObjectId, Order
+from mongoz.exceptions import OperatorInvalid
 from tests.conftest import client
 
 pytestmark = pytest.mark.anyio
@@ -155,5 +156,10 @@ async def test_query_builder_in_list_raise_assertation_error(values):
     await Movie.objects.create(name="Downfall", year=2004)
     await Movie.objects.create(name="The Two Towers", year=2002)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(OperatorInvalid):
         await Movie.objects.filter(year__not_in=values)
+
+
+async def test_invalid_lookup_operator_has_stable_runtime_error() -> None:
+    with pytest.raises(OperatorInvalid, match="not a valid lookup operator"):
+        Movie.objects.filter(year__unknown=2004)

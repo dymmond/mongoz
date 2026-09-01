@@ -16,6 +16,12 @@
 - Model construction, settings access, and JSON serialization now use supported Pydantic APIs.
   BSON `ObjectId` and signal JSON output is preserved without deprecated `json_encoders` config,
   and the warning gate rejects any reintroduced Pydantic deprecation.
+- Manager and queryset construction is clone-on-write, so sibling filters, ordering, projection,
+  and pagination no longer share mutable state.
+- `using_session()` binds a PyMongo session to a derived manager or queryset, while document
+  create/save/update/delete methods accept explicit sessions for transaction-safe instance writes.
+- Invalid manager lookup operators now raise `OperatorInvalid` even when Python assertions are
+  disabled.
 
 ### Migrating from Motor
 

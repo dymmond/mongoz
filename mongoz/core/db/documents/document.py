@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import partialmethod
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     Dict,
@@ -19,6 +20,9 @@ import pydantic
 from bson.errors import InvalidId
 from pydantic import BaseModel
 from pymongo.asynchronous.collection import AsyncCollection
+
+if TYPE_CHECKING:
+    from pymongo.asynchronous.client_session import AsyncClientSession
 
 from mongoz.core.connection.collections import Collection
 from mongoz.core.db.documents._internal import ModelDump
@@ -41,6 +45,8 @@ class Document(DocumentRow):
     async def create(
         self: "Document",
         collection: Union[AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
     ) -> "Document":
         """
         Inserts a document.
@@ -51,10 +57,10 @@ class Document(DocumentRow):
 
         data = self.model_dump(exclude={"id"})
         if collection is not None:
-            result = await collection.insert_one(data)
+            result = await collection.insert_one(data, session=session)
         else:
             if isinstance(self.meta.collection, Collection):
-                result = await self.meta.collection._collection.insert_one(data)  # noqa
+                result = await self.meta.collection._collection.insert_one(data, session=session)
         self.id = result.inserted_id
 
         await self.signals.post_save.send(sender=self.__class__, instance=self)
@@ -63,6 +69,8 @@ class Document(DocumentRow):
     async def update(
         self,
         collection: Union[AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
         **kwargs: Any,
     ) -> "Document":
         """
@@ -92,7 +100,7 @@ class Document(DocumentRow):
             data.update(values)
 
             await self.signals.pre_update.send(sender=self.__class__, instance=self)
-            await collection.update_one({"_id": self.id}, {"$set": data})  # type: ignore
+            await collection.update_one({"_id": self.id}, {"$set": data}, session=session)  # type: ignore
             await self.signals.post_update.send(sender=self.__class__, instance=self)
 
             for k, v in data.items():
@@ -104,6 +112,8 @@ class Document(DocumentRow):
         cls: Type["Document"],
         models: List["Document"],
         collection: Union[Collection, AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
     ) -> List["Document"]:
         """
         Insert many documents
@@ -115,11 +125,13 @@ class Document(DocumentRow):
 
         data = (model.model_dump(exclude={"id"}) for model in models)
         if isinstance(collection, Collection):
-            results = await collection._collection.insert_many(data)
+            results = await collection._collection.insert_many(data, session=session)
         elif isinstance(collection, AsyncCollection):
-            results = await collection.insert_many(data)
+            results = await collection.insert_many(data, session=session)
         else:
-            results = await cls.meta.collection._collection.insert_many(data)  # type: ignore
+            results = await cls.meta.collection._collection.insert_many(  # type: ignore
+                data, session=session
+            )
         for model, inserted_id in zip(models, results.inserted_ids, strict=True):
             model.id = inserted_id
         return models
@@ -340,7 +352,12 @@ class Document(DocumentRow):
             ):
                 await cls.drop_index(name, collection)
 
-    async def delete(self, collection: Union[AsyncCollection, None] = None) -> int:
+    async def delete(
+        self,
+        collection: Union[AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
+    ) -> int:
         """Delete the document."""
         is_operation_allowed(self)
 
@@ -351,7 +368,7 @@ class Document(DocumentRow):
                 collection = self.meta.collection._collection
         await self.signals.pre_delete.send(sender=self.__class__, instance=self)
 
-        result = await collection.delete_one({"_id": self.id})  # type: ignore
+        result = await collection.delete_one({"_id": self.id}, session=session)  # type: ignore
         await self.signals.post_delete.send(sender=self.__class__, instance=self)
         return cast(int, result.deleted_count)
 
@@ -396,6 +413,8 @@ class Document(DocumentRow):
     async def save(
         self: "Document",
         collection: Union[AsyncCollection, None] = None,
+        *,
+        session: Union["AsyncClientSession", None] = None,
     ) -> "Document":
         """Save the document.
 
@@ -421,12 +440,14 @@ class Document(DocumentRow):
                 collection = self.meta.collection._collection
 
         if not self.id:
-            return await self.create()
+            return await self.create(collection, session=session)
 
         await self.signals.pre_save.send(sender=self.__class__, instance=self)
 
         await collection.update_one(  # type: ignore
-            {"_id": self.id}, {"$set": self.model_dump(exclude={"id", "_id"})}
+            {"_id": self.id},
+            {"$set": self.model_dump(exclude={"id", "_id"})},
+            session=session,
         )
         for k, v in self.model_dump(exclude={"id"}).items():
             setattr(self, k, v)
@@ -435,7 +456,12 @@ class Document(DocumentRow):
         return self
 
     @classmethod
-    async def get_document_by_id(cls: Type[T], id: Union[str, bson.ObjectId]) -> "Document":
+    async def get_document_by_id(
+        cls: Type[T],
+        id: Union[str, bson.ObjectId],
+        *,
+        session: Union["AsyncClientSession", None] = None,
+    ) -> "Document":
         is_operation_allowed(cls)
 
         if isinstance(id, str):
@@ -444,7 +470,10 @@ class Document(DocumentRow):
             except InvalidId as e:
                 raise InvalidKeyError(f'"{id}" is not a valid ObjectId') from e
 
-        return await cls.query({"_id": id}).get()
+        queryset = cls.query({"_id": id})
+        if session is not None:
+            return await queryset.using_session(session).get()
+        return await queryset.get()
 
     def __repr__(self) -> str:
         return str(self)

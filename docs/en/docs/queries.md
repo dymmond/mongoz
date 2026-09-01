@@ -39,6 +39,12 @@ Let us assume you have the following `User` document defined.
 As mentioned before, Mongoz allows to use two ways of querying. Via `manager` and via `queryset`.
 Both allow chain calls, for instance, `sort()` with a `limit()` combined.
 
+Query construction is clone-on-write. Calls such as `filter()`, `query()`, `sort()`, `only()`,
+`defer()`, `skip()`, and `limit()` return an isolated derived query. Reusing a parent query, or
+building multiple siblings from it, does not leak filters, ordering, projection, or pagination
+between those queries. Executing the same query repeatedly also leaves its construction state
+unchanged.
+
 For instance, let us create a user.
 
 === "Manager"

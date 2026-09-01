@@ -31,7 +31,12 @@ async def prepare_database() -> AsyncGenerator:
 
 
 async def test_model_none() -> None:
+    await Movie.objects.create(name="Visible", year=2026)
+
     manager = await Movie.objects.none()
 
     assert isinstance(manager, Manager)
     assert manager._collection == Movie.meta.collection._collection
+    assert await manager.all() == []
+    assert await manager.count() == 0
+    assert await manager.exists() is False

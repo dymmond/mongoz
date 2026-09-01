@@ -5,6 +5,7 @@ import pytest
 
 from mongoz.core.db.querysets.core.manager import Manager
 from mongoz.core.db.querysets.core.queryset import QuerySet
+from mongoz.core.db.querysets.expressions import Expression
 
 pytestmark = pytest.mark.anyio
 
@@ -54,8 +55,8 @@ class FindCollection:
         self.cursor = cursor
         self.filters: List[Dict[str, Any]] = []
 
-    def find(self, filter_query: Dict[str, Any]) -> RecordingCursor:
-        self.filters.append(filter_query)
+    def find(self, filter_query: Dict[str, Any], **kwargs: Any) -> RecordingCursor:
+        self.filters.append({"filter": filter_query, **kwargs})
         return self.cursor
 
 
@@ -64,8 +65,8 @@ class AggregateCollection:
         self.cursor = cursor
         self.pipelines: List[List[Dict[str, Any]]] = []
 
-    async def aggregate(self, pipeline: List[Dict[str, Any]]) -> RecordingCursor:
-        self.pipelines.append(pipeline)
+    async def aggregate(self, pipeline: List[Dict[str, Any]], **kwargs: Any) -> RecordingCursor:
+        self.pipelines.append([*pipeline, {"__options__": kwargs}])
         return self.cursor
 
 
@@ -86,6 +87,7 @@ def make_queryset(collection: Any) -> QuerySet:
     queryset._limit_count = 0
     queryset._only_fields = []
     queryset._defer_fields = []
+    queryset._session = None
     return queryset
 
 
@@ -98,7 +100,7 @@ async def test_find_returns_cursor_without_await_and_early_close_releases_it() -
     await iterator.aclose()
 
     assert document.values == {"value": 1}
-    assert collection.filters == [{}]
+    assert collection.filters == [{"filter": {}}]
     assert cursor.close_count == 1
 
 
@@ -161,7 +163,7 @@ async def test_aggregate_is_awaited_and_materialized_once_then_closed() -> None:
         {"value": 1},
         {"value": 2},
     ]
-    assert collection.pipelines == [[]]
+    assert collection.pipelines == [[{"__options__": {}}]]
     assert cursor.close_count == 1
 
 
@@ -175,7 +177,7 @@ async def test_queryset_find_materializes_once_then_closes() -> None:
         {"value": 1},
         {"value": 2},
     ]
-    assert collection.filters == [{}]
+    assert collection.filters == [{"filter": {}}]
     assert cursor.close_count == 1
 
 
@@ -189,3 +191,53 @@ async def test_aggregate_cancellation_is_not_swallowed_and_releases_cursor() -> 
     with pytest.raises(asyncio.CancelledError):
         await operation
     assert cursor.close_count == 1
+
+
+async def test_manager_derivations_do_not_share_mutable_query_state() -> None:
+    parent = make_manager(AggregateCollection(RecordingCursor([])))
+
+    first = parent.raw(Expression("value", "$eq", 1)).sort("value")
+    second = parent.raw(Expression("value", "$eq", 2)).sort("other")
+
+    assert parent._filter == []
+    assert parent._sort == []
+    assert [(item.key, item.value) for item in first._filter] == [("value", 1)]
+    assert [item.key for item in first._sort] == ["value"]
+    assert [(item.key, item.value) for item in second._filter] == [("value", 2)]
+    assert [item.key for item in second._sort] == ["other"]
+
+
+async def test_queryset_derivations_do_not_share_mutable_query_state() -> None:
+    parent = make_queryset(FindCollection(RecordingCursor([])))
+
+    first = parent.query(Expression("value", "$eq", 1)).sort("value").limit(1)
+    second = parent.query(Expression("value", "$eq", 2)).sort("other").skip(2)
+
+    assert parent._filter == []
+    assert parent._sort == []
+    assert parent._limit_count == 0
+    assert parent._skip_count == 0
+    assert [(item.key, item.value) for item in first._filter] == [("value", 1)]
+    assert [item.key for item in first._sort] == ["value"]
+    assert first._limit_count == 1
+    assert [(item.key, item.value) for item in second._filter] == [("value", 2)]
+    assert [item.key for item in second._sort] == ["other"]
+    assert second._skip_count == 2
+
+
+async def test_manager_compiles_skip_once_and_propagates_session() -> None:
+    session = object()
+    collection = AggregateCollection(RecordingCursor([]))
+
+    await make_manager(collection).using_session(session).skip(3)._all()
+
+    assert collection.pipelines == [[{"$skip": 3}, {"__options__": {"session": session}}]]
+
+
+async def test_queryset_propagates_session_to_find() -> None:
+    session = object()
+    collection = FindCollection(RecordingCursor([]))
+
+    await make_queryset(collection).using_session(session).all()
+
+    assert collection.filters == [{"filter": {}, "session": session}]

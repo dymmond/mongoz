@@ -55,7 +55,8 @@ pip install hatch==1.16.5
 Hatch creates each environment on first use. The testing, documentation, quality, and packaging
 dependencies are pinned in `pyproject.toml`, so local gates and CI resolve the same tools. Mongoz
 does not use a lockfile: the isolated wheel proof deliberately resolves the published runtime
-dependency bounds and then runs `pip check`.
+dependency bounds and then runs `pip check`. It also reinstalls PyMongo 4.13.0 and repeats the
+installed-wheel MongoDB smoke so the declared driver floor remains executable.
 
 ### MongoDB test services
 

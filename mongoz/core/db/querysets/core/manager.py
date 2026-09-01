@@ -33,23 +33,27 @@ from mongoz.core.db.querysets.core.protocols import (
     AwaitableQuery,
     MongozDocument,
 )
+from mongoz.core.db.querysets.core.runtime import SessionBoundQuery
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.core.utils.cursors import closing_cursor
 from mongoz.exceptions import (
     DocumentNotFound,
     FieldDefinitionError,
     MultipleDocumentsReturned,
+    OperatorInvalid,
 )
 from mongoz.protocols.queryset import QuerySetProtocol
 from mongoz.utils.enums import OrderEnum
 
 if TYPE_CHECKING:
+    from pymongo.asynchronous.client_session import AsyncClientSession
+
     from mongoz.core.db.documents import Document
 
 T = TypeVar("T", bound="Document")
 
 
-class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
+class Manager(SessionBoundQuery, QuerySetProtocol, AwaitableQuery[MongozDocument]):
     def __init__(
         self,
         model_class: Union[Type["Document"], None] = None,
@@ -60,6 +64,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         unwound_fields: Union[Dict[str, Any], None] = None,
         lookups_on: Union[Dict[str, str], None] = None,
         lookup_queries: Union[List[Any], None] = None,
+        session: Union["AsyncClientSession", None] = None,
     ) -> None:
         self.model_class = model_class  # type: ignore
 
@@ -78,6 +83,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         self._lookup_queries: Union[List[Any], None] = lookup_queries
         self._unwound_fields: Union[Dict[str, Any], None] = unwound_fields
         self.extra: Dict[str, Any] = {}
+        self._session = session
 
     def __get__(self, instance: Any, owner: Any) -> "Manager":
         return self.__class__(model_class=owner)
@@ -112,17 +118,22 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
     def clone(self) -> Any:
         manager = self.__class__.__new__(self.__class__)
         manager.model_class = self.model_class
-        manager._filter = self._filter
+        manager._filter = list(self._filter)
         manager._limit_count = self._limit_count
         manager._skip_count = self._skip_count
-        manager._sort = self._sort
+        manager._sort = list(self._sort)
         manager._collection = self._collection
-        manager._only_fields = self._only_fields
-        manager._defer_fields = self._defer_fields
-        manager._lookups_on = self._lookups_on
-        manager._lookup_queries = self._lookup_queries
-        manager._unwound_fields = self._unwound_fields
-        manager.extra = self.extra
+        manager._only_fields = list(self._only_fields)
+        manager._defer_fields = list(self._defer_fields)
+        manager._lookups_on = None if self._lookups_on is None else dict(self._lookups_on)
+        manager._lookup_queries = (
+            None if self._lookup_queries is None else list(self._lookup_queries)
+        )
+        manager._unwound_fields = (
+            None if self._unwound_fields is None else dict(self._unwound_fields)
+        )
+        manager.extra = dict(self.extra)
+        manager._session = self._session
         return manager
 
     def validate_only_and_defer(self) -> None:
@@ -177,11 +188,11 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         Builds the filter query for the given manager.
         """
         clauses = []
-        filter_clauses = self._filter
-        sort_clauses = self._sort
-        lookups_on = {}
-        lookup_queries = []
-        unwound_fields = {}
+        filter_clauses = list(self._filter)
+        sort_clauses = list(self._sort)
+        lookups_on = {} if self._lookups_on is None else dict(self._lookups_on)
+        lookup_queries = [] if self._lookup_queries is None else list(self._lookup_queries)
+        unwound_fields = {} if self._unwound_fields is None else dict(self._unwound_fields)
 
         for key, value in kwargs.items():
             key = self._find_and_replace_id(key)
@@ -228,9 +239,11 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 if refrence_field:
                     ref_field = settings.lookup_prefix + refrence_field
 
-                assert lookup_operator in settings.filter_operators, (
-                    f"`{lookup_operator}` is not a valid lookup operator. Valid operators: {settings.stringified_operators}"
-                )
+                if lookup_operator not in settings.filter_operators:
+                    raise OperatorInvalid(
+                        f"`{lookup_operator}` is not a valid lookup operator. "
+                        f"Valid operators: {settings.stringified_operators}"
+                    )
 
                 # For "eq", "neq", "contains", "where", "pattern", "startswith", "endswith", "istartswith", "iendswith"
                 if lookup_operator in VALUE_EQUALITY:
@@ -242,9 +255,11 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
 
                 # For "in" and "not_in"
                 elif lookup_operator in LIST_EQUALITY:
-                    assert isinstance(value, (tuple, list)), (
-                        f"Using the operator `{lookup_operator}` it requires the value to be a list or a tuple, got {type(value)}"
-                    )
+                    if not isinstance(value, (tuple, list)):
+                        raise OperatorInvalid(
+                            f"Operator `{lookup_operator}` requires a list or tuple, "
+                            f"got {type(value).__name__}."
+                        )
 
                     # For tuples, convert to a list
                     if isinstance(value, tuple):
@@ -331,6 +346,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
                 unwound_fields=unwound_fields,
                 lookups_on=lookups_on,
                 lookup_queries=lookup_queries,
+                session=self._session,
             ),
         )
         manager._collection = self._collection
@@ -421,13 +437,13 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         """
         Returns an empty Manager.
         """
-        manager = self.__class__(model_class=self.model_class)
-        manager._collection = self.model_class.meta.collection._collection  # type: ignore
+        manager: "Manager" = self.clone()
+        manager._filter.append(Expression("$expr", "$eq", [1, 0]))
         return manager
 
     async def __aiter__(self) -> AsyncGenerator[T, None]:
         filter_query = Expression.compile_many(self._filter)
-        cursor = self._collection.find(filter_query)
+        cursor = self._collection.find(filter_query, **self._driver_options)
 
         async with closing_cursor(cursor):
             async for document in cursor:
@@ -452,10 +468,6 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         if getattr(manager, "_lookup_queries", None):
             pipeline.extend(manager._lookup_queries)  # list of lookup dicts
 
-        # Add unwind stages (if any)
-        if getattr(manager, "_unwound_fields", None) and manager._unwound_fields is None:
-            pipeline.extend(manager._unwound_fields.values())
-
         # Initial filter (same as find)
         if filter_query:
             pipeline.append({"$match": filter_query})
@@ -473,7 +485,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             pipeline.append({"$limit": manager._limit_count})
 
         # Execute aggregation
-        cursor = await manager._collection.aggregate(pipeline)
+        cursor = await manager._collection.aggregate(pipeline, **manager._driver_options)
 
         # For only fields
         is_only_fields = True if manager._only_fields else False
@@ -501,21 +513,26 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager: "Manager" = self.clone()
 
         filter_query = Expression.compile_many(manager._filter)
-        return cast(int, await manager._collection.count_documents(filter_query))
+        return cast(
+            int,
+            await manager._collection.count_documents(filter_query, **manager._driver_options),
+        )
 
     async def create(self, **kwargs: Any) -> "Document":
         """
         Creates a mongo db document.
         """
         manager: "Manager" = self.clone()
-        instance = await manager.model_class(**kwargs).create(manager._collection)
+        instance = await manager.model_class(**kwargs).create(
+            manager._collection, session=manager._session
+        )
         return cast("Document", instance)
 
     async def delete(self) -> int:
         """Delete documents matching the criteria."""
         manager: "Manager" = self.clone()
         filter_query = Expression.compile_many(manager._filter)
-        result = await manager._collection.delete_many(filter_query)
+        result = await manager._collection.delete_many(filter_query, **manager._driver_options)
 
         return cast(int, result.deleted_count)
 
@@ -592,6 +609,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             {"$setOnInsert": values},
             upsert=True,
             return_document=True,
+            **manager._driver_options,
         )
         return cast(T, manager.model_class(**model))
 
@@ -601,7 +619,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         """
         manager: "Manager" = self.clone()
         filter_query = Expression.compile_many(manager._filter)
-        values = await manager._collection.find(filter_query).distinct(key=key)
+        values = await manager._collection.find(filter_query, **manager._driver_options).distinct(
+            key=key
+        )
         return cast(List[Any], values)
 
     async def where(self, condition: Union[str, Code]) -> Any:
@@ -617,7 +637,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         manager: "Manager" = self.clone()
 
         filter_query = Expression.compile_many(manager._filter)
-        cursor = manager._collection.find(filter_query).where(condition)
+        cursor = manager._collection.find(filter_query, **manager._driver_options).where(condition)
         async with closing_cursor(cursor):
             return [manager.model_class(**document) async for document in cursor]
 
@@ -652,7 +672,9 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
             values = model.model_dump()
 
             filter_query = Expression.compile_many(manager._filter)
-            await manager._collection.update_many(filter_query, {"$set": values})
+            await manager._collection.update_many(
+                filter_query, {"$set": values}, **manager._driver_options
+            )
 
             _filter = [
                 expression for expression in manager._filter if expression.key not in values
@@ -667,7 +689,11 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         Creates many documents (bulk create).
         """
         manager: "Manager" = self.clone()
-        return await manager.model_class.create_many(models=models, collection=manager._collection)
+        return await manager.model_class.create_many(
+            models=models,
+            collection=manager._collection,
+            session=manager._session,
+        )
 
     async def bulk_create(self, models: List["Document"]) -> List["Document"]:
         """
@@ -685,7 +711,7 @@ class Manager(QuerySetProtocol, AwaitableQuery[MongozDocument]):
         Gets a document by the id
         """
         manager: "Manager" = self.clone()
-        return await manager.model_class.get_document_by_id(id)
+        return await manager.model_class.get_document_by_id(id, session=manager._session)
 
     def _rename_lookup(self, field: str) -> List[str]:
         """

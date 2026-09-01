@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Dict, List, Protocol, Tuple, TypeVar, Union, overload
 
 if TYPE_CHECKING:
+    from pymongo.asynchronous.client_session import AsyncClientSession
+
     from mongoz.core.db.datastructures import Order
     from mongoz.core.db.documents import Document
     from mongoz.core.db.querysets.base import QuerySet
@@ -13,6 +15,8 @@ T = TypeVar("T", bound="Document")
 
 
 class QuerySetProtocol(Protocol):
+    def using_session(self, session: "AsyncClientSession") -> "QuerySet[T]": ...
+
     async def all(self) -> List[T]: ...
 
     async def count(self) -> int: ...

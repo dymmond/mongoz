@@ -31,6 +31,11 @@ Vamos supor que tenha o seguinte documento `User` definido.
 Como mencionado anteriormente, o Mongoz permite usar duas formas de pesquisa. Através do `manager` e do `queryset`.
 Ambos permitem chamadas encadeadas, por exemplo, `sort()` com um `limit()` combinado.
 
+A construção de pesquisas utiliza cópia na escrita. Chamadas como `filter()`, `query()`, `sort()`,
+`only()`, `defer()`, `skip()` e `limit()` devolvem uma pesquisa derivada e isolada. Reutilizar uma
+pesquisa base, ou criar várias pesquisas a partir dela, não partilha filtros, ordenação, projeção ou
+paginação. Executar repetidamente a mesma pesquisa também não altera o seu estado.
+
 Por exemplo, vamos criar um utilizador.
 
 === "Manager"

@@ -21,6 +21,7 @@ from bson import Code
 
 from mongoz.core.db.datastructures import Order
 from mongoz.core.db.fields import base
+from mongoz.core.db.querysets.core.runtime import SessionBoundQuery
 from mongoz.core.db.querysets.expressions import Expression, SortExpression
 from mongoz.core.utils.cursors import closing_cursor
 from mongoz.exceptions import (
@@ -31,18 +32,21 @@ from mongoz.exceptions import (
 from mongoz.protocols.queryset import QuerySetProtocol
 
 if TYPE_CHECKING:
+    from pymongo.asynchronous.client_session import AsyncClientSession
+
     from mongoz.core.db.documents import Document
 
 T = TypeVar("T", bound="Document")
 
 
-class BaseQuerySet(QuerySetProtocol, Generic[T]):
+class BaseQuerySet(SessionBoundQuery, QuerySetProtocol, Generic[T]):
     def __init__(
         self,
         model_class: Type[T],
         filter_by: List[Expression] = None,
         only_fields: Union[str, None] = None,
         defer_fields: Union[str, None] = None,
+        session: Union["AsyncClientSession", None] = None,
     ) -> None:
         self.model_class = model_class
         self._collection = model_class.meta.collection._collection  # type: ignore
@@ -52,6 +56,21 @@ class BaseQuerySet(QuerySetProtocol, Generic[T]):
         self._sort: List[SortExpression] = []
         self._only_fields = [] if only_fields is None else only_fields
         self._defer_fields = [] if defer_fields is None else defer_fields
+        self._session = session
+
+    def clone(self) -> "BaseQuerySet[T]":
+        """Return an isolated query derivation with the same execution state."""
+        queryset = self.__class__.__new__(self.__class__)
+        queryset.model_class = self.model_class
+        queryset._collection = self._collection
+        queryset._filter = list(self._filter)
+        queryset._limit_count = self._limit_count
+        queryset._skip_count = self._skip_count
+        queryset._sort = list(self._sort)
+        queryset._only_fields = list(self._only_fields)
+        queryset._defer_fields = list(self._defer_fields)
+        queryset._session = self._session
+        return queryset
 
     def validate_only_and_defer(self) -> None:
         if self._only_fields and self._defer_fields:
@@ -63,7 +82,8 @@ class BaseQuerySet(QuerySetProtocol, Generic[T]):
         """
         Filters by the only fields.
         """
-        self.validate_only_and_defer()
+        queryset = self.clone()
+        queryset.validate_only_and_defer()
 
         document_fields: List[str] = list(fields)
         if any(not isinstance(name, str) for name in document_fields):
@@ -73,16 +93,18 @@ class BaseQuerySet(QuerySetProtocol, Generic[T]):
             document_fields.insert(0, self.model_class.meta.id_attribute)
         only_or_defer = "_only_fields" if is_only else "_defer_fields"
 
-        setattr(self, only_or_defer, document_fields)
-        return self
+        setattr(queryset, only_or_defer, document_fields)
+        return queryset
 
     def limit(self, count: int = 0) -> "BaseQuerySet[T]":
-        self._limit_count = count
-        return self
+        queryset = self.clone()
+        queryset._limit_count = count
+        return queryset
 
     def skip(self, count: int = 0) -> "BaseQuerySet[T]":
-        self._skip_count = count
-        return self
+        queryset = self.clone()
+        queryset._skip_count = count
+        return queryset
 
     def only(self, *fields: Sequence[str]) -> "BaseQuerySet[T]":
         """
@@ -98,35 +120,37 @@ class BaseQuerySet(QuerySetProtocol, Generic[T]):
 
     def sort(self, key: Any, direction: Union[Order, None] = None) -> "BaseQuerySet[T]":
         """Sort by (key, direction) or [(key, direction)]."""
+        queryset = self.clone()
 
         direction = direction or Order.ASCENDING
 
         if isinstance(key, list):
             for key_dir in key:
                 sort_expression = SortExpression(*key_dir)
-                self._sort.append(sort_expression)
+                queryset._sort.append(sort_expression)
         elif isinstance(key, (str, base.MongozField)):
             sort_expression = SortExpression(key, direction)
-            self._sort.append(sort_expression)
+            queryset._sort.append(sort_expression)
         else:
-            self._sort.append(key)
-        return self
+            queryset._sort.append(key)
+        return queryset
 
     def query(self, *args: Union[bool, Dict, Expression]) -> "BaseQuerySet[T]":
+        queryset = self.clone()
         for arg in args:
             assert isinstance(arg, (dict, Expression)), "Invalid argument to Query"
             if isinstance(arg, dict):
                 query_expressions = Expression.unpack(arg)
-                self._filter.extend(query_expressions)
+                queryset._filter.extend(query_expressions)
             else:
-                self._filter.append(arg)
-        return self
+                queryset._filter.append(arg)
+        return queryset
 
 
 class QuerySet(BaseQuerySet[T]):
     async def __aiter__(self) -> AsyncGenerator[T, None]:
         filter_query = Expression.compile_many(self._filter)
-        cursor = self._collection.find(filter_query)
+        cursor = self._collection.find(filter_query, **self._driver_options)
 
         async with closing_cursor(cursor):
             async for document in cursor:
@@ -136,14 +160,16 @@ class QuerySet(BaseQuerySet[T]):
         """
         Returns an empty QuerySet
         """
-        return self.__class__(model_class=self.model_class)
+        queryset = self.clone()
+        queryset._filter.append(Expression("$expr", "$eq", [1, 0]))
+        return cast("QuerySet[T]", queryset)
 
     async def all(self) -> List[T]:
         """
         Returns all the results for a given collection of a document
         """
         filter_query = Expression.compile_many(self._filter)
-        cursor = self._collection.find(filter_query)
+        cursor = self._collection.find(filter_query, **self._driver_options)
 
         if self._sort:
             sort_query = [expr.compile() for expr in self._sort]
@@ -179,12 +205,15 @@ class QuerySet(BaseQuerySet[T]):
         """
 
         filter_query = Expression.compile_many(self._filter)
-        return cast(int, await self._collection.count_documents(filter_query))
+        return cast(
+            int,
+            await self._collection.count_documents(filter_query, **self._driver_options),
+        )
 
     async def delete(self) -> int:
         """Delete documents matching the criteria."""
         filter_query = Expression.compile_many(self._filter)
-        result = await self._collection.delete_many(filter_query)
+        result = await self._collection.delete_many(filter_query, **self._driver_options)
 
         return cast(int, result.deleted_count)
 
@@ -246,6 +275,7 @@ class QuerySet(BaseQuerySet[T]):
             {"$setOnInsert": values},
             upsert=True,
             return_document=True,
+            **self._driver_options,
         )
         return self.model_class(**model)
 
@@ -254,7 +284,9 @@ class QuerySet(BaseQuerySet[T]):
         Returns a list of distinct values filtered by the key.
         """
         filter_query = Expression.compile_many(self._filter)
-        values = await self._collection.find(filter_query).distinct(key=key)
+        values = await self._collection.find(filter_query, **self._driver_options).distinct(
+            key=key
+        )
         return cast(List[Any], values)
 
     async def where(self, condition: Union[str, Code]) -> Any:
@@ -268,7 +300,7 @@ class QuerySet(BaseQuerySet[T]):
         )
 
         filter_query = Expression.compile_many(self._filter)
-        cursor = self._collection.find(filter_query).where(condition)
+        cursor = self._collection.find(filter_query, **self._driver_options).where(condition)
         async with closing_cursor(cursor):
             return [self.model_class(**document) async for document in cursor]
 
@@ -276,7 +308,7 @@ class QuerySet(BaseQuerySet[T]):
         """
         Creates many documents (bulk create).
         """
-        return await self.model_class.create_many(models=models)
+        return await self.model_class.create_many(models=models, session=self._session)
 
     async def update(self, **kwargs: Any) -> List[T]:
         """
@@ -290,6 +322,7 @@ class QuerySet(BaseQuerySet[T]):
     async def update_many(self, **kwargs: Any) -> List[T]:
         from mongoz.core.db.documents._internal import ModelDump
 
+        queryset = self.clone()
         field_definitions = {
             name: (annotations, ...)
             for name, annotations in self.model_class.__annotations__.items()
@@ -305,20 +338,24 @@ class QuerySet(BaseQuerySet[T]):
             model = pydantic_model.model_validate(kwargs)
             values = model.model_dump()
 
-            filter_query = Expression.compile_many(self._filter)
-            await self._collection.update_many(filter_query, {"$set": values})
+            filter_query = Expression.compile_many(queryset._filter)
+            await queryset._collection.update_many(
+                filter_query, {"$set": values}, **queryset._driver_options
+            )
 
-            _filter = [expression for expression in self._filter if expression.key not in values]
+            _filter = [
+                expression for expression in queryset._filter if expression.key not in values
+            ]
             _filter.extend([Expression(key, "$eq", value) for key, value in values.items()])
 
-            self._filter = _filter
-        return await self.all()
+            queryset._filter = _filter
+        return await queryset.all()
 
     async def get_document_by_id(self, id: Union[str, bson.ObjectId]) -> "Document":
         """
         Gets a document by the id.
         """
-        return await self.model_class.get_document_by_id(id)
+        return await self.model_class.get_document_by_id(id, session=self._session)
 
     async def values(
         self,
