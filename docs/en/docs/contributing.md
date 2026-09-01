@@ -45,60 +45,130 @@ After, clone your fork with the follow command replacing `YOUR-USERNAME` wih you
 $ git clone https://github.com/YOUR-USERNAME/mongoz
 ```
 
-Mongoz also uses [hatch](https://hatch.pypa.io/latest/) for its development, testing and release
-cycles.
-
-Please make sure you run:
+Mongoz uses [Hatch](https://hatch.pypa.io/latest/) as the command owner for development and
+validation. Install the same Hatch version used by CI:
 
 ```shell
-pip install hatch
+pip install hatch==1.16.5
 ```
 
-### Install the project dependencies
+Hatch creates each environment on first use. The testing, documentation, quality, and packaging
+dependencies are pinned in `pyproject.toml`, so local gates and CI resolve the same tools. Mongoz
+does not use a lockfile: the isolated wheel proof deliberately resolves the published runtime
+dependency bounds and then runs `pip check`.
 
-Not necessary because the dependencies are automatically installed by hatch.
-But if environments should be pre-initialized it can be done with `hatch env`
+### MongoDB test services
+
+The standalone and replica-set services use an immutable MongoDB 8.0.29 image. Their credentials
+are test-only, both ports bind only to localhost, and the project names keep their data isolated.
+
+Start, probe, and stop standalone MongoDB:
 
 ```shell
-$ cd mongoz
-$ hatch env create
-$ hatch env create test
-$ hatch env create docs
+hatch run mongodb-standalone-up
+hatch run mongodb-standalone-smoke
+hatch run mongodb-standalone-down
 ```
 
-!!! Tip
-    This is the recommended way but if you still feel you want your own virtual environment and
-    all the packages installed there, you can always run `scripts/install`.
+Start, prove transaction commit and rollback, and stop the replica set:
+
+```shell
+hatch run mongodb-replica-set-up
+hatch run mongodb-replica-set-smoke
+hatch run mongodb-replica-set-down
+```
+
+The `down` commands remove their project-owned volumes. Do not store development data in these
+test services.
+
+### Tests and coverage
+
+Tests require standalone MongoDB. Run the full suite or pass a focused pytest target:
+
+```shell
+hatch run test:test -q
+hatch run test:focused tests/registry/test_lifecycle.py -q
+```
+
+Run the supported standard CPython matrix (3.10 through 3.14; no free-threaded build):
+
+```shell
+hatch run matrix:test -q
+```
+
+Run corrected Mongoz source and branch coverage:
+
+```shell
+hatch run test:coverage -q
+```
+
+Coverage writes `coverage.xml` and `coverage.json` and fails below the 88.95% regression floor.
+The coverage command also enforces the warning ratchet. To run that policy without coverage:
+
+```shell
+hatch run test:warnings -q
+```
+
+The temporary warning ceiling contains only Pydantic/model-construction debt. New categories or
+growth fail the gate; Campaign 3 removes the existing exceptions rather than pinning an older
+Pydantic release to hide them.
+
+### Static quality
+
+All CI checks are read-only:
+
+```shell
+hatch run lint
+hatch run format-check
+hatch run typing
+```
+
+Ruff owns linting, import ordering, and formatting. Apply intentional formatting changes with:
+
+```shell
+hatch run format
+```
+
+The current mypy gate checks the `mongoz` package. It remains strict overall, but temporarily
+disables `attr-defined`, `arg-type`, `override`, `misc`, `valid-type`, `call-overload`, and
+`no-any-return`; Campaign 6 owns removing those suppressions.
 
 ### Enable pre-commit
 
-The project comes with a pre-commit hook configuration. To enable it, just run inside the clone:
+Pre-commit uses the same read-only Ruff checks as CI. Enable it inside the clone:
 
 ```shell
-$ hatch run pre-commit install
+hatch run pre-commit install
 ```
 
-### Run the tests
-
-To run the tests, use:
+Run every hook explicitly with:
 
 ```shell
-$ hatch run test:test
+hatch run pre-commit-check
 ```
 
-Because Mongoz uses pytest, any additional arguments will be passed. More info within the
-[pytest documentation](https://docs.pytest.org/en/latest/how-to/usage.html)
+### Documentation and package proof
 
-For example, to run a single test_script:
+Validate includes, internal links and anchors, Python example contracts, and strict English and
+Portuguese builds:
 
 ```shell
-$ hatch run test:test tests/test_managers.py
+hatch run docs:validate
 ```
 
-To run the linting, use:
+With standalone MongoDB running, build and check wheel/sdist, install the wheel into a clean
+environment, verify its metadata and dependencies, and run its real-MongoDB smoke:
 
 ```shell
-$ hatch run lint
+hatch run package:validate
+```
+
+### Full local acceptance
+
+The full command starts both isolated MongoDB topologies as needed and always tears them down:
+
+```shell
+hatch run acceptance
 ```
 
 ## Documentation
