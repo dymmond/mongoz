@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.15.0
+
+### Changed
+
+- Raised the AnyIO compatibility baseline to 4.15.0 while retaining support for Python 3.10
+  through Python 3.14.
+- Updated the static-analysis baseline to ty 0.0.78.
+
 ## 0.14.0
 
 ### Added
