@@ -50,7 +50,9 @@ hatch run mongodb-replica-set-down
 ```
 
 `hatch run acceptance` owns the complete local standalone, coverage, package, and replica-set flow.
-The hosted matrix adds Python 3.10–3.14, CodeQL/dependency checks, CodSpeed, and strict docs CI.
+The hosted Test Suite runs linting, typing, tests, and documentation validation across Python
+3.10–3.14 as applicable. Separate Docs Guard, CodeQL, and CodSpeed workflows cover documentation
+relevance, security analysis, and benchmark regressions.
 
 ## Documentation changes
 
