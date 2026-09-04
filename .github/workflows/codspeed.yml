@@ -29,7 +29,7 @@ jobs:
         run: |
           python -m pip install "hatch==1.16.5"
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@e736f0d2aeb36da38e9f08eca4dff7967408d154 # v4.8.2
+        uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1
         with:
           mode: simulation
           run: hatch run matrix.py3.13:focused benchmarks --codspeed
