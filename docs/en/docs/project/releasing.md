@@ -58,8 +58,8 @@ secret after the trusted publisher is confirmed.
 Create an annotated tag only after the release-ready commit is on the default branch:
 
 ```console
-git tag -a 0.14.0 -m "Mongoz 0.14.0"
-git push origin 0.14.0
+git tag -a 0.15.0 -m "Mongoz 0.15.0"
+git push origin 0.15.0
 ```
 
 The workflow rejects malformed, mismatched, non-default-branch, and already-published versions. It

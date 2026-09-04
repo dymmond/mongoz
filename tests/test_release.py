@@ -19,8 +19,8 @@ def test_database() -> None:
 def test_release_identity_matches_prepared_notes() -> None:
     version = release.canonical_version()
 
-    assert version == "0.14.0"
-    assert release.release_notes(version).startswith("### Added")
+    assert version == "0.15.0"
+    assert release.release_notes(version).startswith("### Changed")
 
 
 def test_release_version_rejects_other_release_lines(
@@ -114,7 +114,7 @@ def test_release_rejects_missing_distribution_pair(
 ) -> None:
     monkeypatch.setattr(package_validation, "DIST", tmp_path)
 
-    with pytest.raises(RuntimeError, match="expected only mongoz-0.14.0"):
+    with pytest.raises(RuntimeError, match="expected only mongoz-0.15.0"):
         package_validation.artifact_pair()
 
 

@@ -1,32 +1,286 @@
 ---
-name: Publish
+name: Release
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "docs/en/docs/project/releasing.md"
+      - "docs/en/docs/release-notes.md"
+      - "mongoz/__init__.py"
+      - "pyproject.toml"
+      - "scripts/acceptance.py"
+      - "scripts/release.py"
+      - "scripts/validate_package.py"
   push:
     tags:
-      - '*'
+      - "0.[0-9]+.[0-9]+"
+      - "0.[0-9]+.[0-9]+rc[0-9]+"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "release-${{ github.ref }}"
+  cancel-in-progress: false
+
+env:
+  DATABASE_URI: "mongodb://root:mongoadmin@localhost:27017/?authSource=admin"
+  HATCH_VERSION: "1.16.5"
 
 jobs:
-  publish:
-    name: "Publish release"
-    runs-on: "ubuntu-latest"
-
+  build:
+    name: Build release artifacts once
+    runs-on: ubuntu-latest
     steps:
-      - uses: "actions/checkout@v4"
-      - uses: "actions/setup-python@v5"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: "3.10"
-      - name: "Install dependencies"
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          pip install hatch
-      - name: "Build package"
-        run: "hatch run build_with_check"
-      - name: "Publish to PyPI"
-        run: "scripts/publish"
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install "hatch==${HATCH_VERSION}"
+      - name: Validate prepared release
+        run: hatch run release:validate
+      - name: Validate release tag
+        if: startsWith(github.ref, 'refs/tags/')
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      - name: "Deploy docs"
+          DEFAULT_BRANCH: "${{ github.event.repository.default_branch }}"
+          RELEASE_TAG: "${{ github.ref_name }}"
         run: |
-          curl -X POST '${{ secrets.DEPLOY_DOCS }}'
+          git fetch --no-tags origin "${DEFAULT_BRANCH}"
+          git merge-base --is-ancestor "${GITHUB_SHA}" "origin/${DEFAULT_BRANCH}"
+          hatch run release:validate --tag "${RELEASE_TAG}" --check-pypi
+      - name: Build wheel and source distribution
+        run: hatch build --clean
+      - name: Check distribution metadata
+        run: hatch run twine check dist/*
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-distributions
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  static-quality:
+    name: Static, typing, documentation, and dependency gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install "hatch==${HATCH_VERSION}"
+      - run: hatch run lint
+      - run: hatch run format-check
+      - run: hatch run typing
+      - run: hatch run typing-negative
+      - run: hatch run pre-commit-check
+      - run: hatch run docs:validate
+      - run: hatch run security:audit
+
+  python-matrix:
+    name: "Python ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "${{ matrix.python-version }}"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install "hatch==${HATCH_VERSION}"
+      - run: hatch run mongodb-standalone-up
+      - run: hatch run test:test -q
+      - if: always()
+        run: hatch run mongodb-standalone-down
+
+  coverage:
+    name: Coverage and warning ratchet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install "hatch==${HATCH_VERSION}"
+      - run: hatch run mongodb-standalone-up
+      - run: hatch run test:coverage -q
+      - if: always()
+        run: hatch run mongodb-standalone-down
+
+  replica-set:
+    name: Replica-set transactions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install "hatch==${HATCH_VERSION}"
+      - run: hatch run mongodb-replica-set-up
+      - run: hatch run mongodb-replica-set-smoke
+      - if: always()
+        run: hatch run mongodb-replica-set-down
+
+  package:
+    name: Exact artifact acceptance
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install "hatch==${HATCH_VERSION}"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-distributions
+          path: dist
+      - run: hatch run mongodb-standalone-up
+      - run: hatch run package:validate --no-build
+      - if: always()
+        run: hatch run mongodb-standalone-down
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          languages: python
+      - uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+
+  benchmarks:
+    name: CodSpeed regression gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install "hatch==${HATCH_VERSION}"
+      - uses: CodSpeedHQ/action@e736f0d2aeb36da38e9f08eca4dff7967408d154 # v4.8.2
+        with:
+          mode: simulation
+          run: hatch run matrix.py3.13:focused benchmarks --codspeed
+
+  attest:
+    name: Attest accepted artifacts
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build, static-quality, python-matrix, coverage, replica-set, package, codeql, benchmarks]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-distributions
+          path: dist
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: "dist/*"
+
+  publish:
+    name: Publish accepted artifacts to PyPI
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: attest
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mongoz
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-distributions
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@ec4db0b4ddc65acdf4bff5fa45ac92d78b56bdf0 # v1.9.0
+
+  github-release:
+    name: Create GitHub Release from committed notes
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-distributions
+          path: dist
+      - name: Create release with exact artifacts
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          RELEASE_TAG: "${{ github.ref_name }}"
+        run: |
+          python scripts/release.py notes --output release-body.md
+          sha256sum dist/* > SHA256SUMS
+          release_args=()
+          if [[ "${RELEASE_TAG}" == *rc* ]]; then
+            release_args+=(--prerelease)
+          fi
+          gh release create "${RELEASE_TAG}" dist/* SHA256SUMS \
+            --title "Mongoz ${RELEASE_TAG}" \
+            --notes-file release-body.md \
+            "${release_args[@]}"
+
+  deploy-docs:
+    name: Deploy committed documentation
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: github-release
+    runs-on: ubuntu-latest
+    environment: docs
+    permissions:
+      contents: read
+    steps:
+      - name: Trigger protected Render deployment
+        env:
+          DEPLOY_DOCS: "${{ secrets.DEPLOY_DOCS }}"
+        run: |
+          test -n "${DEPLOY_DOCS}"
+          curl --fail --show-error --silent --request POST "${DEPLOY_DOCS}"
