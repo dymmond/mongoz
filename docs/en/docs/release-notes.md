@@ -1,7 +1,5 @@
 # Release Notes
 
-## Unreleased
-
 ## 0.15.0
 
 ### Changed
