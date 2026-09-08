@@ -86,7 +86,7 @@ packaging = [
 
 docs = [
     "mkdocs-meta-descriptions-plugin==4.1.0",
-    "zensical==0.0.57",
+    "zensical==0.0.59",
 ]
 
 [tool.hatch.envs.default]
