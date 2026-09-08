@@ -62,7 +62,7 @@ testing = [
     "a2wsgi==1.10.10",
     "anyio==4.15.0",
     "httpx==0.28.1",
-    "lilya==0.27.1",
+    "lilya==0.28.0",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
     "pymongo==4.17.0",
