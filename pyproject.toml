@@ -60,7 +60,7 @@ path = "mongoz/__init__.py"
 [project.optional-dependencies]
 testing = [
     "a2wsgi==1.10.10",
-    "anyio==4.15.0",
+    "anyio==4.15.1",
     "httpx==0.28.1",
     "lilya==0.27.1",
     "pydantic==2.13.5",
