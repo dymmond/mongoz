@@ -75,7 +75,7 @@ testing = [
 
 quality = [
     "pre-commit==4.6.2",
-    "ruff==0.16.5",
+    "ruff==0.16.6",
     "ty==0.0.78",
 ]
 
